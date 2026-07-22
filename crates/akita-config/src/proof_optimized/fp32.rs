@@ -19,6 +19,13 @@ pub struct D64OneHot;
 #[derive(Clone, Copy, Debug, Default)]
 pub struct D128Full;
 
+/// Full-field `D=128` preset that caps decomposition at `log_basis = 3`.
+///
+/// This trades proof size for prover latency and enables the specialized
+/// two-round first-stage sumcheck at every recursive fold.
+#[derive(Clone, Copy, Debug, Default)]
+pub struct D128FullFastProver;
+
 /// Onehot `D=128` preset for planner-backed fp32 experiments.
 #[derive(Clone, Copy, Debug, Default)]
 pub struct D128OneHot;
@@ -57,6 +64,16 @@ impl_proof_optimized_preset!(
     128,
     32,
     32
+);
+impl_proof_optimized_preset!(
+    D128FullFastProver,
+    Field,
+    ExtensionField,
+    akita_types::SisModulusFamily::Q32,
+    128,
+    32,
+    32,
+    basis_range = (3, 3)
 );
 impl_proof_optimized_preset!(
     D128OneHot,

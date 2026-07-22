@@ -1,8 +1,6 @@
 use super::*;
 use akita_challenges::SparseChallengeConfig;
 #[cfg(feature = "schedules-default")]
-use akita_field::{CanonicalField, One};
-#[cfg(feature = "schedules-default")]
 use akita_planner::generated::GeneratedScheduleTable;
 #[cfg(feature = "schedules-default")]
 use akita_planner::schedule_from_entry;
@@ -17,6 +15,8 @@ use akita_schedules::{
 };
 #[cfg(feature = "schedules-default")]
 use akita_types::SisModulusFamily;
+#[cfg(feature = "schedules-default")]
+use akita_field::{CanonicalField, One};
 
 #[cfg(feature = "schedules-default")]
 const MAX_I8_LOG_BASIS: u32 = 6;
@@ -1195,6 +1195,7 @@ fn all_proof_optimized_presets_use_shared_ring_challenge() {
     assert_preset_uses_shared_ring_challenge::<fp32::D64Full>();
     assert_preset_uses_shared_ring_challenge::<fp32::D64OneHot>();
     assert_preset_uses_shared_ring_challenge::<fp32::D128Full>();
+    assert_preset_uses_shared_ring_challenge::<fp32::D128FullFastProver>();
     assert_preset_uses_shared_ring_challenge::<fp32::D128OneHot>();
     assert_preset_uses_shared_ring_challenge::<fp32::D256Full>();
     assert_preset_uses_shared_ring_challenge::<fp32::D256OneHot>();
@@ -1214,6 +1215,14 @@ fn all_proof_optimized_presets_use_shared_ring_challenge() {
     // Hand-written (non-macro) preset: guards that the bespoke impl still
     // routes through the shared policy.
     assert_preset_uses_shared_ring_challenge::<crate::tensor_verifier::fp128::D64OneHotTensor>();
+}
+
+#[test]
+fn fp32_d128_fast_prover_preset_pins_b8_decomposition() {
+    assert_eq!(
+        <fp32::D128FullFastProver as CommitmentConfig>::basis_range(),
+        (3, 3)
+    );
 }
 
 #[test]

@@ -14,9 +14,9 @@ pub(crate) use signed_sparse::SignedSparseScratch;
 pub(crate) use xof::XofCursor;
 
 use akita_field::AkitaError;
-use akita_field::{CanonicalField, FieldCore};
 use akita_transcript::labels::{ABSORB_SPARSE_CHALLENGE, CHALLENGE_SPARSE_CHALLENGE};
 use akita_transcript::Transcript;
+use akita_field::{CanonicalField, FieldCore};
 
 use crate::{SparseChallenge, SparseChallengeConfig};
 

@@ -143,10 +143,10 @@ mod tests {
 
     use akita_challenges::SparseChallengeConfig;
     use akita_field::AkitaError;
-    use akita_field::{CanonicalField, FieldCore, Prime128OffsetA7F7};
     use akita_serialization::{AkitaSerialize, Compress};
     use akita_sumcheck::EqFactoredUniPoly;
     use akita_sumcheck::{CompressedUniPoly, EqFactoredSumcheckProof, SumcheckProof};
+    use akita_field::{CanonicalField, FieldCore, Prime128OffsetA7F7};
 
     use crate::golomb_rice::golomb_rice_encode_vec;
     use crate::proof::{segment_typed_witness_shape_from_groups, SegmentTypedWitness};

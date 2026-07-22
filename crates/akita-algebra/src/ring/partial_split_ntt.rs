@@ -20,9 +20,9 @@
 
 use super::CyclotomicRing;
 use crate::{CanonicalField, FieldCore, HalvingField};
+use core::ops::{Add, Mul, Sub};
 use akita_field::packed::PackedField;
 use akita_field::Zero;
-use core::ops::{Add, Mul, Sub};
 use std::array::from_fn;
 
 const CLASS_D: usize = 16;

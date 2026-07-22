@@ -1,6 +1,6 @@
 use super::*;
-use akita_field::MulBaseUnreduced;
 use akita_types::dispatch_for_field;
+use akita_field::MulBaseUnreduced;
 
 /// Complete the ring switch after the caller has bound the next witness.
 ///
@@ -113,7 +113,10 @@ where
                 relation_matrix_row_layout,
             )?;
             let w_compact = build_w_evals_compact(w.as_i8_digits(), D, 1);
-            (Ok(relation_matrix_col_evals), w_compact)
+            (
+                Ok::<Vec<E>, AkitaError>(relation_matrix_col_evals),
+                w_compact,
+            )
         };
 
         let relation_matrix_col_evals = relation_matrix_col_evals_result?;

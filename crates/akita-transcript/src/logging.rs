@@ -1,10 +1,10 @@
 //! Logging transcript wrapper and test-time smell checks.
 
 use crate::{labels, Transcript};
-use akita_field::{CanonicalBytes, CanonicalField, FieldCore};
 use akita_serialization::AkitaSerialize;
 use blake2::digest::consts::U32;
 use blake2::{Blake2b, Digest};
+use akita_field::{CanonicalBytes, CanonicalField, FieldCore};
 use std::cell::RefCell;
 use std::collections::BTreeSet;
 

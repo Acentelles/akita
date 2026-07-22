@@ -6,11 +6,11 @@
 use super::CommitmentConfig;
 use crate::matrix_envelope::accumulate_matrix_envelope_for_level;
 use akita_field::AkitaError;
-use akita_field::{Ext2, FpExt4, Prime128OffsetA7F7, Prime32Offset99, Prime64Offset59};
 use akita_types::{
     AkitaExpandedSetup, AkitaScheduleLookupKey, LevelParams, OpeningClaimsLayout,
     PolynomialGroupLayout, Schedule, SetupMatrixEnvelope,
 };
+use akita_field::{Ext2, FpExt4, Prime128OffsetA7F7, Prime32Offset99, Prime64Offset59};
 use std::any::TypeId;
 use std::collections::HashMap;
 use std::sync::{LazyLock, Mutex};
@@ -364,10 +364,9 @@ fn root_commit_params_from_schedule(
 /// One macro covers every proof-optimized preset (fp128 and the small-field
 /// fp32/fp64 families): the fp128 presets are the special case where the
 /// extension field is the base field, `field_bits == 128`, and the SIS
-/// family is `Q128`. All proof-optimized presets share `log_basis = 3`, the
-/// shared ring-challenge policy, the shared setup-matrix sizer, and the
-/// `[PROOF_OPTIMIZED_LOG_BASIS_MIN, MAX]` basis range, so those are not
-/// parameters.
+/// family is `Q128`. Presets share `log_basis = 3`, the ring-challenge policy,
+/// and the setup-matrix sizer. Most search the full proof-optimized basis
+/// range; latency-oriented presets can provide a narrower range.
 macro_rules! impl_proof_optimized_preset {
     (@onehot_chunk_size $onehot_chunk_size:expr) => {
         $onehot_chunk_size
@@ -389,18 +388,21 @@ macro_rules! impl_proof_optimized_preset {
         }
     };
     ($cfg:ident, $field:ty, $ext_field:ty, $family:expr, $d:expr, $field_bits:expr, $log_commit_bound:expr) => {
-        impl_proof_optimized_preset!(@core $cfg, $field, $ext_field, $family, $d, $field_bits, $log_commit_bound, 1, none);
+        impl_proof_optimized_preset!(@core $cfg, $field, $ext_field, $family, $d, $field_bits, $log_commit_bound, 1, $crate::proof_optimized::PROOF_OPTIMIZED_LOG_BASIS_MIN, $crate::proof_optimized::PROOF_OPTIMIZED_LOG_BASIS_MAX, none);
+    };
+    ($cfg:ident, $field:ty, $ext_field:ty, $family:expr, $d:expr, $field_bits:expr, $log_commit_bound:expr, basis_range = ($basis_min:expr, $basis_max:expr)) => {
+        impl_proof_optimized_preset!(@core $cfg, $field, $ext_field, $family, $d, $field_bits, $log_commit_bound, 1, $basis_min, $basis_max, none);
     };
     ($cfg:ident, $field:ty, $ext_field:ty, $family:expr, $d:expr, $field_bits:expr, $log_commit_bound:expr, schedules = ($feat:literal, $family_name:literal, $table:ident)) => {
-        impl_proof_optimized_preset!(@core $cfg, $field, $ext_field, $family, $d, $field_bits, $log_commit_bound, 1, table, $feat, $family_name, $table);
+        impl_proof_optimized_preset!(@core $cfg, $field, $ext_field, $family, $d, $field_bits, $log_commit_bound, 1, $crate::proof_optimized::PROOF_OPTIMIZED_LOG_BASIS_MIN, $crate::proof_optimized::PROOF_OPTIMIZED_LOG_BASIS_MAX, table, $feat, $family_name, $table);
     };
     ($cfg:ident, $field:ty, $ext_field:ty, $family:expr, $d:expr, $field_bits:expr, $log_commit_bound:expr, $onehot_chunk_size:expr) => {
-        impl_proof_optimized_preset!(@core $cfg, $field, $ext_field, $family, $d, $field_bits, $log_commit_bound, $onehot_chunk_size, none);
+        impl_proof_optimized_preset!(@core $cfg, $field, $ext_field, $family, $d, $field_bits, $log_commit_bound, $onehot_chunk_size, $crate::proof_optimized::PROOF_OPTIMIZED_LOG_BASIS_MIN, $crate::proof_optimized::PROOF_OPTIMIZED_LOG_BASIS_MAX, none);
     };
     ($cfg:ident, $field:ty, $ext_field:ty, $family:expr, $d:expr, $field_bits:expr, $log_commit_bound:expr, $onehot_chunk_size:expr, schedules = ($feat:literal, $family_name:literal, $table:ident)) => {
-        impl_proof_optimized_preset!(@core $cfg, $field, $ext_field, $family, $d, $field_bits, $log_commit_bound, $onehot_chunk_size, table, $feat, $family_name, $table);
+        impl_proof_optimized_preset!(@core $cfg, $field, $ext_field, $family, $d, $field_bits, $log_commit_bound, $onehot_chunk_size, $crate::proof_optimized::PROOF_OPTIMIZED_LOG_BASIS_MIN, $crate::proof_optimized::PROOF_OPTIMIZED_LOG_BASIS_MAX, table, $feat, $family_name, $table);
     };
-    (@core $cfg:ident, $field:ty, $ext_field:ty, $family:expr, $d:expr, $field_bits:expr, $log_commit_bound:expr, $onehot_chunk:expr, none) => {
+    (@core $cfg:ident, $field:ty, $ext_field:ty, $family:expr, $d:expr, $field_bits:expr, $log_commit_bound:expr, $onehot_chunk:expr, $basis_min:expr, $basis_max:expr, none) => {
         impl $crate::CommitmentConfig for $cfg {
             type Field = $field;
             type ExtField = $ext_field;
@@ -439,10 +441,7 @@ macro_rules! impl_proof_optimized_preset {
             }
 
             fn basis_range() -> (u32, u32) {
-                (
-                    $crate::proof_optimized::PROOF_OPTIMIZED_LOG_BASIS_MIN,
-                    $crate::proof_optimized::PROOF_OPTIMIZED_LOG_BASIS_MAX,
-                )
+                ($basis_min, $basis_max)
             }
 
             fn onehot_chunk_size() -> usize {
@@ -460,7 +459,7 @@ macro_rules! impl_proof_optimized_preset {
             impl_proof_optimized_preset!(@schedule_catalog none);
         }
     };
-    (@core $cfg:ident, $field:ty, $ext_field:ty, $family:expr, $d:expr, $field_bits:expr, $log_commit_bound:expr, $onehot_chunk:expr, table, $feat:literal, $family_name:literal, $table:ident) => {
+    (@core $cfg:ident, $field:ty, $ext_field:ty, $family:expr, $d:expr, $field_bits:expr, $log_commit_bound:expr, $onehot_chunk:expr, $basis_min:expr, $basis_max:expr, table, $feat:literal, $family_name:literal, $table:ident) => {
         impl $crate::CommitmentConfig for $cfg {
             type Field = $field;
             type ExtField = $ext_field;
@@ -499,10 +498,7 @@ macro_rules! impl_proof_optimized_preset {
             }
 
             fn basis_range() -> (u32, u32) {
-                (
-                    $crate::proof_optimized::PROOF_OPTIMIZED_LOG_BASIS_MIN,
-                    $crate::proof_optimized::PROOF_OPTIMIZED_LOG_BASIS_MAX,
-                )
+                ($basis_min, $basis_max)
             }
 
             fn onehot_chunk_size() -> usize {

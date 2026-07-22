@@ -6,6 +6,7 @@
 
 use std::io::{Read, Write};
 
+
 /// Default maximum number of elements accepted by self-described validated
 /// vector decoding.
 ///

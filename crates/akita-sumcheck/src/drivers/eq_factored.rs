@@ -6,10 +6,10 @@ use crate::traits::{
 };
 use crate::types::{EqFactoredSumcheckProof, EqFactoredUniPoly};
 use akita_field::AkitaError;
-use akita_field::{CanonicalField, FieldCore};
 use akita_serialization::AkitaSerialize;
 use akita_transcript::labels;
 use akita_transcript::Transcript;
+use akita_field::{CanonicalField, FieldCore};
 
 /// Advance the scaled claim state for one eq-factored sumcheck round.
 #[doc(hidden)]

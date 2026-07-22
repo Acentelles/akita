@@ -9,7 +9,8 @@ use akita_algebra::eq_poly::EqPolynomial;
 use akita_algebra::offset_eq::eq_eval_at_index;
 use akita_algebra::ring::{eval_ring_at, eval_ring_at_pows_fast, scalar_powers};
 use akita_algebra::CyclotomicRing;
-use akita_field::{AkitaError, CanonicalField, FieldCore, MulBaseUnreduced};
+use akita_field::AkitaError;
+use akita_field::{CanonicalField, FieldCore, MulBaseUnreduced};
 use std::iter::repeat_n;
 
 /// Per-group row-count inputs for assembling the relation rhs vector.

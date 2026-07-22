@@ -5,12 +5,12 @@ use akita_challenges::{
     FoldDraw, LiveFoldDraw, PreviewFoldDraw, SparseChallenge, SparseChallengeConfig,
     TensorChallenges,
 };
-use akita_field::{CanonicalField, FieldCore, Fp64};
 use akita_transcript::labels::{
     ABSORB_TENSOR_FOLD_LEFT, CHALLENGE_TENSOR_FOLD_LEFT, CHALLENGE_TENSOR_FOLD_RIGHT,
     CHALLENGE_WITNESS_FOLD, DOMAIN_AKITA_PROTOCOL,
 };
 use akita_transcript::{AkitaTranscript, Transcript};
+use akita_field::{CanonicalField, FieldCore, Fp64};
 
 /// Stage-1 fold label bundle reused by every tensor-vs-flat sampling test.
 fn fold_challenge_labels() -> ChallengeLabels<'static> {

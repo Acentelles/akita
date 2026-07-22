@@ -1,9 +1,9 @@
 #![allow(missing_docs)]
 
+use criterion::{black_box, criterion_group, criterion_main, BenchmarkId, Criterion};
 use akita_field::fft::{field_pow, primitive_nth_root, rs_extend_fft, SmoothDomain};
 use akita_field::{Prime128Offset2355, Prime128OffsetA7F7};
 use akita_field::{RandomSampling, SmoothFftField};
-use criterion::{black_box, criterion_group, criterion_main, BenchmarkId, Criterion};
 use rand::{rngs::StdRng, SeedableRng};
 
 #[cfg(feature = "parallel")]

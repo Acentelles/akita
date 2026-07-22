@@ -11,7 +11,8 @@ use crate::{
 };
 use akita_algebra::CyclotomicRing;
 use akita_challenges::Challenges;
-use akita_field::{AkitaError, FieldCore};
+use akita_field::AkitaError;
+use akita_field::FieldCore;
 use akita_field::{CanonicalField, ExtField, FromPrimitiveInt};
 
 /// Ring-column counts per witness segment in emission order (`z ‖ e ‖ t ‖ …`).

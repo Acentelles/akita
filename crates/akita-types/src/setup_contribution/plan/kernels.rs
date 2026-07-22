@@ -2,9 +2,9 @@
 use akita_algebra::ring::eval_flat_ring_at_pows_fast;
 use akita_algebra::ring::eval_ring_at_pows_fast;
 use akita_algebra::CyclotomicRing;
-use akita_field::parallel::*;
 #[cfg(test)]
 use akita_field::AkitaError;
+use akita_field::parallel::*;
 use akita_field::{ExtField, FieldCore, MulBaseUnreduced};
 
 #[derive(Clone)]

@@ -7,10 +7,10 @@ use crate::CommitmentConfig;
 pub mod fp128 {
     use super::CommitmentConfig;
     use akita_challenges::TensorChallengeShape;
-    use akita_field::Prime128OffsetA7F7;
     use akita_types::{
         AkitaScheduleInputs, DecompositionParams, OpeningClaimsLayout, Schedule, SisModulusFamily,
     };
+    use akita_field::Prime128OffsetA7F7;
 
     /// Base field for the fp128 tensor-verifier presets.
     pub type Field = Prime128OffsetA7F7;

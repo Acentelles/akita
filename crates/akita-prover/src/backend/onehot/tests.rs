@@ -5,9 +5,9 @@ use crate::backend::test_support::{
 };
 use crate::compute::RootPolyMeta;
 use crate::DensePoly;
+use akita_types::FlatMatrix;
 use akita_field::RandomSampling;
 use akita_field::{Fp64, FpExt4, Prime128Offset275, Prime24Offset3, Prime32Offset99};
-use akita_types::FlatMatrix;
 use rand::rngs::StdRng;
 use rand::SeedableRng;
 
@@ -27,6 +27,22 @@ where
         coeffs[ring_idx].coeffs[coeff_idx] += F::one();
     }
     DensePoly::from_ring_coeffs(coeffs)
+}
+
+#[test]
+fn multi_chunk_tensor_root_projection_matches_dense_reference() {
+    type F = Prime32Offset99;
+    type E = FpExt4<F>;
+    const D: usize = 128;
+    let indices = (0..16)
+        .map(|index| (index < 11).then_some((index * 7 + 1) % 32))
+        .collect::<Vec<_>>();
+    let onehot = OneHotPoly::<F>::new(32, D, indices).unwrap();
+    let sparse = onehot.tensor_packed_sparse_ring_poly::<E, D>().unwrap();
+    let dense_source = materialize_onehot_as_dense::<F, D, _>(&onehot);
+    let dense = dense_source.tensor_packed_extension_poly::<E, D>().unwrap();
+
+    assert_eq!(sparse.direct_field_evals().unwrap(), dense.field_coeffs());
 }
 
 fn test_ring_scalar<F, const D: usize>(seed: u64) -> CyclotomicRing<F, D>

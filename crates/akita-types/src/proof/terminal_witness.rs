@@ -1,6 +1,7 @@
 //! Helpers for transcript-binding terminal cleartext witnesses.
 
-use akita_field::{AkitaError, FieldCore};
+use akita_field::AkitaError;
+use akita_field::FieldCore;
 
 use super::DigitBlocks;
 use crate::LevelParams;

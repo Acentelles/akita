@@ -1,11 +1,10 @@
 //! The multilinear-polynomial wrapper enum, its borrowed dispatch views, and
 //! the source-trait impls. The `CpuBackend` kernel impls live in [`super::ops`].
 
-use akita_field::unreduced::HasWide;
-use akita_field::{
-    AkitaError, CanonicalField, ExtField, FieldCore, FromPrimitiveInt, MulBaseUnreduced,
-};
+use akita_field::AkitaError;
 use akita_types::CleartextWitnessProof;
+use akita_field::unreduced::HasWide;
+use akita_field::{CanonicalField, ExtField, FieldCore, FromPrimitiveInt, MulBaseUnreduced};
 
 use crate::compute::{
     CpuBackend, CpuPreparedSetup, DirectRootWitnessSource, RootCommitSource, RootOpeningSource,

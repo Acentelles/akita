@@ -10,10 +10,11 @@ use crate::{
     AjtaiKeyParams, LevelParams, OpeningClaimsLayout, PolynomialGroupLayout,
     PrecommittedGroupParams, PrecommittedLevelParams, SisModulusFamily,
 };
-use akita_field::{AkitaError, FieldCore};
+use akita_field::AkitaError;
 use akita_serialization::{
     AkitaDeserialize, AkitaSerialize, Compress, SerializationError, Valid, Validate,
 };
+use akita_field::FieldCore;
 use std::cmp::Ordering;
 use std::collections::BTreeMap;
 use std::hash::{Hash, Hasher};

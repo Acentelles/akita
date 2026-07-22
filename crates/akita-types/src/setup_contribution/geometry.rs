@@ -4,7 +4,8 @@
 //! without fold challenges so NTT sizing, prefix offload, and envelope checks
 //! do not depend on `tau1`.
 
-use akita_field::{AkitaError, FieldCore};
+use akita_field::AkitaError;
+use akita_field::FieldCore;
 
 use crate::layout::RelationMatrixRowLayout;
 use crate::proof::AkitaExpandedSetup;

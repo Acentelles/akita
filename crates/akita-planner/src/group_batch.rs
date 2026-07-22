@@ -1,12 +1,12 @@
 //! Multi-group root-batch schedule planning.
 
 use akita_challenges::{SparseChallengeConfig, TensorChallengeShape};
-use akita_field::{AkitaError, Prime128OffsetA7F7};
+use akita_field::AkitaError;
 use akita_types::sis::{
     compute_num_digits_full_field, decomposed_s_block_ring_count, decomposed_t_ring_count,
     decomposed_w_ring_count, fold_witness_digit_plan, min_secure_rank, num_digits_open,
-    num_digits_s_commit, rounded_up_collision_inf_norm, rounded_up_role_a_inf_norm, AjtaiKeyParams,
-    FoldChallengeNorms, FoldWitnessLinfCapConfig, FoldWitnessNorms, SisTableKey,
+    rounded_up_collision_inf_norm, rounded_up_role_a_inf_norm, AjtaiKeyParams, FoldChallengeNorms,
+    FoldWitnessLinfCapConfig, FoldWitnessNorms, SisTableKey,
 };
 use akita_types::{
     active_setup_field_len, direct_witness_bytes, extension_opening_reduction_level_bytes,
@@ -16,6 +16,7 @@ use akita_types::{
     RelationMatrixRowLayout, Schedule, SetupContributionMode, Step, SETUP_OFFLOAD_D_SETUP,
     SETUP_OFFLOAD_MIN_PREFIX_FIELD_LEN,
 };
+use akita_field::Prime128OffsetA7F7;
 
 use crate::schedule_params::{
     derive_optimal_suffix_schedule, find_schedule, RingChallengeConfigFn, ScheduleMemo, SuffixCtx,
@@ -38,6 +39,12 @@ pub(crate) fn group_root_params_from_layout(
     fold_challenge_shape: TensorChallengeShape,
     conservative_b_rank: bool,
 ) -> Result<PrecommittedLevelParams, AkitaError> {
+    if !policy.root_log_basis_supported(layout.log_basis) {
+        return Err(AkitaError::InvalidSetup(
+            "multi-group root basis cannot encode tensor-projected one-hot coefficients"
+                .to_string(),
+        ));
+    }
     if conservative_b_rank {
         layout.validate_frozen_precommit(policy.ring_dimension, policy.basis_range.0)?;
     } else {
@@ -52,7 +59,7 @@ pub(crate) fn group_root_params_from_layout(
         log_basis: layout.log_basis,
         ..policy.decomposition
     };
-    let num_digits_commit = num_digits_s_commit(level_decomp, true);
+    let num_digits_commit = policy.root_num_digits_commit(layout.log_basis);
     let num_digits_open = num_digits_open(level_decomp);
     let num_blocks = 1usize.checked_shl(layout.r_vars as u32).ok_or_else(|| {
         AkitaError::InvalidSetup("multi-group root num_blocks overflow".to_string())
@@ -391,6 +398,9 @@ fn multi_group_root_main_level_params_candidate(
     r_vars: usize,
 ) -> Result<Option<LevelParams>, AkitaError> {
     let policy = ctx.policy;
+    if !policy.root_log_basis_supported(log_basis) {
+        return Ok(None);
+    }
     let d = policy.ring_dimension;
     let family = policy.sis_family;
     let decomp = policy.decomposition;
@@ -398,7 +408,7 @@ fn multi_group_root_main_level_params_candidate(
         log_basis,
         ..decomp
     };
-    let num_digits_commit = num_digits_s_commit(level_decomp, true);
+    let num_digits_commit = policy.root_num_digits_commit(log_basis);
     let num_digits_open = num_digits_open(level_decomp);
     let Some(num_blocks) = 1usize.checked_shl(r_vars as u32) else {
         return Ok(None);
@@ -821,11 +831,11 @@ pub fn find_group_batch_schedule(
 mod tests {
     use super::*;
     use crate::find_schedule;
-    use akita_field::Prime128OffsetA7F7;
     use akita_types::{
         AkitaScheduleLookupKey, DecompositionParams, PolynomialGroupLayout,
         RelationMatrixRowLayout, SisModulusFamily, DEFAULT_SIS_SECURITY_BITS,
     };
+    use akita_field::Prime128OffsetA7F7;
 
     fn flat_policy() -> PlannerPolicy {
         PlannerPolicy {

@@ -10,7 +10,8 @@ mod policy;
 
 use crate::layout::{CommitmentRingDims, RingRole};
 use akita_algebra::ntt::tables::{Q32_MODULUS, Q64_MODULUS};
-use akita_field::{AkitaError, CanonicalField};
+use akita_field::AkitaError;
+use akita_field::CanonicalField;
 
 pub use policy::{
     inner_ring_dim_supported_for_tier, ntt_max_ring_d, opening_ring_dim_supported_for_tier,

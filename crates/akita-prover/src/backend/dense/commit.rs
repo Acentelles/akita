@@ -3,7 +3,8 @@
 use super::poly::DensePoly;
 use crate::compute::{CommitmentComputeBackend, DenseCommitInput, DenseCommitRowsPlan};
 use akita_algebra::CyclotomicRing;
-use akita_field::{AkitaError, CanonicalField, FieldCore};
+use akita_field::AkitaError;
+use akita_field::{CanonicalField, FieldCore};
 
 impl<F> DensePoly<F>
 where

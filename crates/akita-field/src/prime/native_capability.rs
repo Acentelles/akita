@@ -95,7 +95,7 @@ impl_prime_native_capability!(Fp128<P: u128>, 16, 16);
 mod tests {
     //! Native byte / transcript / accumulator capability tests.
     //!
-    //! These exercise the Akita-owned traits directly (no `jolt_field` in scope),
+    //! These exercise the Akita-owned traits directly (no `akita_field` in scope),
     //! so they run under `--no-default-features` as well as the default build —
     //! complementing the Jolt-parity tests in `compat/jolt.rs`, which are gated on
     //! `jolt-compat`. Only the native traits are imported, so every method

@@ -13,7 +13,9 @@
 //! bit `k` of `b` equals `x[k]`. In other words, `r[0]` corresponds to the
 //! **least-significant bit** (bit 0) and `r[n-1]` to the MSB.
 
-use crate::{AkitaError, FieldCore};
+use akita_field::AkitaError;
+
+use crate::FieldCore;
 use std::marker::PhantomData;
 use std::mem;
 use std::panic::Location;

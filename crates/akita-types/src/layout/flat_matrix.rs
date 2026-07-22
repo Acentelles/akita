@@ -10,10 +10,11 @@
 //! the same underlying vector to serve multiple roles with different shapes.
 
 use akita_algebra::CyclotomicRing;
-use akita_field::{AkitaError, FieldCore};
+use akita_field::AkitaError;
 use akita_serialization::{
     AkitaDeserialize, AkitaSerialize, Compress, SerializationError, Valid, Validate,
 };
+use akita_field::FieldCore;
 use std::io::{Read, Write};
 
 /// Flat 1D vector of field elements, independent of ring dimension.

@@ -1,7 +1,8 @@
 use std::sync::Arc;
 
 use akita_algebra::eq_poly::EqPolynomial;
-use akita_field::{AkitaError, FieldCore};
+use akita_field::AkitaError;
+use akita_field::FieldCore;
 
 use crate::layout::{LevelParams, RelationMatrixRowLayout};
 

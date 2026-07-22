@@ -1,10 +1,7 @@
 #![allow(missing_docs)]
 
 use akita_algebra::poly::multilinear_eval;
-use akita_field::{
-    AkitaError, Ext2, ExtField, FieldCore, FpExt4, Prime128Offset275, Prime24Offset3,
-    Prime30Offset35, Prime31Offset19, Prime32Offset99, Prime64Offset59,
-};
+use akita_field::AkitaError;
 use akita_prover::protocol::extension_opening_reduction::{
     ExtensionOpeningReductionProver, ExtensionOpeningReductionTerm, SparseExtensionOpeningWitness,
     SPARSE_TENSOR_FACTOR_MAX_LAZY_ROUNDS,
@@ -20,6 +17,10 @@ use akita_types::{
     tensor_row_partials_from_columns, ExtensionOpeningFactorTerm, ExtensionOpeningReductionFactor,
     ExtensionOpeningReductionRoundResult, ExtensionOpeningTensorPartials,
     EXTENSION_OPENING_REDUCTION_DEGREE,
+};
+use akita_field::{
+    Ext2, ExtField, FieldCore, FpExt4, Prime128Offset275, Prime24Offset3, Prime30Offset35,
+    Prime31Offset19, Prime32Offset99, Prime64Offset59,
 };
 
 type F = Prime128Offset275;

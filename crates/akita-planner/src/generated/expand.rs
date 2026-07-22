@@ -299,8 +299,18 @@ impl GeneratedFoldStep {
             log_basis,
             ..policy.decomposition
         };
+        if is_root && !policy.root_log_basis_supported(log_basis) {
+            return Err(AkitaError::InvalidSetup(
+                "generated root basis cannot encode tensor-projected one-hot coefficients"
+                    .to_string(),
+            ));
+        }
         let ring_challenge_cfg = ring_challenge_config(ring_d)?;
-        let num_digits_commit = num_digits_s_commit(decomp, is_root);
+        let num_digits_commit = if is_root {
+            policy.root_num_digits_commit(log_basis)
+        } else {
+            num_digits_s_commit(decomp, false)
+        };
         let num_digits_open_val = num_digits_open(decomp);
 
         let inner_width = decomposed_s_block_ring_count(block_len, num_digits_commit)
@@ -554,8 +564,14 @@ impl GeneratedFoldStep {
             log_basis,
             ..policy.decomposition
         };
+        if !policy.root_log_basis_supported(log_basis) {
+            return Err(AkitaError::InvalidSetup(
+                "generated multi-group root basis cannot encode tensor-projected one-hot coefficients"
+                    .to_string(),
+            ));
+        }
         let ring_challenge_cfg = ring_challenge_config(ring_d)?;
-        let num_digits_commit = num_digits_s_commit(decomp, true);
+        let num_digits_commit = policy.root_num_digits_commit(log_basis);
         let num_digits_open_val = num_digits_open(decomp);
 
         let inner_width = decomposed_s_block_ring_count(block_len, num_digits_commit)

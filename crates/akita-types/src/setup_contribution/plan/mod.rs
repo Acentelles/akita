@@ -38,8 +38,9 @@ use super::{checked_slice, push_role_boundaries, SetupContributionPlanInputs};
 use crate::dispatch_for_field;
 use crate::layout::RingMatrixView;
 use crate::proof::AkitaExpandedSetup;
+use akita_field::AkitaError;
 use akita_field::parallel::*;
-use akita_field::{AkitaError, CanonicalField, ExtField, FieldCore, MulBase, MulBaseUnreduced};
+use akita_field::{CanonicalField, ExtField, FieldCore, MulBase, MulBaseUnreduced};
 
 #[cfg(test)]
 use kernels::evaluate_weighted_setup_row;

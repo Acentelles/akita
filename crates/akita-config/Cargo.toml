@@ -98,6 +98,7 @@ schedules-fp64-d256-onehot = [
 ]
 
 [dependencies]
+akita-serialization = { version = "0.1.0", path = "../akita-serialization" }
 akita-challenges = { version = "0.1.0", path = "../akita-challenges" }
 akita-field = { version = "0.1.0", path = "../akita-field" }
 akita-planner = { version = "0.1.0", path = "../akita-planner" }

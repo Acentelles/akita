@@ -1,4 +1,3 @@
-use akita_field::{CanonicalField, FieldCore};
 use akita_prover::PreparedCrtNttProfile;
 use akita_serialization::{AkitaSerialize, Compress};
 use akita_types::{
@@ -9,6 +8,7 @@ use akita_types::{
     AkitaBatchedRootProof, AkitaLevelProof, CleartextWitnessProof, CleartextWitnessShape,
     LevelParams, Schedule, SetupSumcheckProof, Step, TerminalLevelProof, ZFoldEncodingStats,
 };
+use akita_field::{CanonicalField, FieldCore};
 
 const TAIL_Z_LENGTH_PREFIX_BYTES: usize = 8;
 

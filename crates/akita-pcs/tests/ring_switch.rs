@@ -1,10 +1,10 @@
 //! Ring-switch integration regressions.
 
 use akita_algebra::CyclotomicRing;
-#[cfg(all(test, feature = "parallel"))]
-use akita_field::parallel::*;
 use akita_field::AkitaError;
 use akita_pcs::{CanonicalField, FieldCore};
+#[cfg(all(test, feature = "parallel"))]
+use akita_field::parallel::*;
 use std::array::from_fn;
 
 fn compute_r_via_poly_division<F: FieldCore + CanonicalField, const D: usize>(

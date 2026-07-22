@@ -4,8 +4,7 @@
 use crate::protocol::ring_switch::RelationMatrixEvaluator;
 use akita_algebra::eq_poly::EqPolynomial;
 use akita_algebra::ring::{eval_ring_at_pows_fast, scalar_powers};
-use akita_field::parallel::*;
-use akita_field::{AkitaError, CanonicalField, ExtField, FieldCore, FromPrimitiveInt};
+use akita_field::AkitaError;
 use akita_serialization::AkitaSerialize;
 use akita_transcript::labels::{
     ABSORB_SETUP_PREFIX_SLOT, ABSORB_SUMCHECK_CLAIM, CHALLENGE_SUMCHECK_ROUND,
@@ -17,6 +16,8 @@ use akita_types::{
     BatchedStage3Geometry, LevelParams, SetupContributionPlan, SetupIndexWeightEvaluator,
     SetupSumcheckProof, SETUP_OFFLOAD_D_SETUP, SETUP_SUMCHECK_DEGREE,
 };
+use akita_field::parallel::*;
+use akita_field::{CanonicalField, ExtField, FieldCore, FromPrimitiveInt};
 
 /// Verifier counterpart to `AkitaStage3Prover`: replays the setup product
 /// sumcheck for the setup contribution at `x_challenges`.

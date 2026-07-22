@@ -9,9 +9,11 @@ use akita_algebra::{
     ring::{eval_flat_ring_at_pows_fast, eval_ring_at_pows_fast},
     CyclotomicRing,
 };
-use akita_field::{AkitaError, CanonicalField, ExtField, FieldCore, MulBaseUnreduced};
+use akita_field::AkitaError;
+use akita_serialization::AkitaSerialize;
 use akita_transcript::labels::{ABSORB_COMMITMENT, ABSORB_EVAL_OPENINGS_FIELD};
 use akita_transcript::{append_ext_field, Transcript};
+use akita_field::{CanonicalField, ExtField, FieldCore, MulBaseUnreduced};
 
 /// Recursive opening point prepared for ring-level replay.
 ///
@@ -487,7 +489,7 @@ where
 /// Absorb public claim-field evaluations into the base-field transcript.
 pub fn append_claim_values_to_transcript<F, E, T>(values: &[E], transcript: &mut T)
 where
-    F: FieldCore + CanonicalField,
+    F: FieldCore + CanonicalField + AkitaSerialize,
     E: ExtField<F>,
     T: Transcript<F>,
 {
@@ -521,7 +523,7 @@ pub fn append_batched_commitments_to_transcript<F, T>(
     transcript: &mut T,
 ) -> Result<(), AkitaError>
 where
-    F: FieldCore + CanonicalField,
+    F: FieldCore + CanonicalField + AkitaSerialize,
     T: Transcript<F>,
 {
     commitment.append_to_transcript(ABSORB_COMMITMENT, ring_dim, transcript)

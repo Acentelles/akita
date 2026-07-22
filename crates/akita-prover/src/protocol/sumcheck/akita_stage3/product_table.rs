@@ -5,7 +5,8 @@ use super::utils::{
     fold_right_round, product_claim, product_claim_from_m_compact,
 };
 use akita_algebra::uni_poly::UniPoly;
-use akita_field::{AkitaError, FieldCore, FromPrimitiveInt};
+use akita_field::AkitaError;
+use akita_field::{FieldCore, FromPrimitiveInt};
 use std::sync::Arc;
 
 /// One factored product term `sum_{l,r} table[l,r] * left[l] * right[r]`.

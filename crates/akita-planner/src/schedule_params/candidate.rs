@@ -568,6 +568,9 @@ pub(crate) fn compute_root_direct_level_params(
     fold_challenge_shape: TensorChallengeShape,
     num_claims: usize,
 ) -> Result<Option<LevelParams>, AkitaError> {
+    if !policy.root_log_basis_supported(log_basis) {
+        return Ok(None);
+    }
     let d = policy.ring_dimension;
     let sis_family = policy.sis_family;
     let decomp = policy.decomposition;
@@ -579,7 +582,7 @@ pub(crate) fn compute_root_direct_level_params(
     };
     // Root-direct commits against `log_commit_bound` (the root form of
     // `num_digits_s_commit`) and opens at `log_open_bound`.
-    let depth_commit = num_digits_s_commit(level_decomp, true);
+    let depth_commit = policy.root_num_digits_commit(log_basis);
     let depth_open = num_digits_open(level_decomp);
 
     // Outer/inner variable split: brute-force the optimum for a normal root,
@@ -729,6 +732,9 @@ pub(crate) fn scalar_root_fold_level_params_candidate(
     r_vars: usize,
     fold_challenge_shape: TensorChallengeShape,
 ) -> Result<Option<LevelParams>, AkitaError> {
+    if !policy.root_log_basis_supported(log_basis) {
+        return Ok(None);
+    }
     let alpha = (policy.ring_dimension as u32).trailing_zeros() as usize;
     let reduced_vars = num_vars.saturating_sub(alpha);
     if reduced_vars == 0 || r_vars >= reduced_vars {
@@ -749,7 +755,7 @@ pub(crate) fn scalar_root_fold_level_params_candidate(
         log_basis,
         ..policy.decomposition
     };
-    let num_digits_commit = num_digits_s_commit(level_decomp, true);
+    let num_digits_commit = policy.root_num_digits_commit(log_basis);
     let num_digits_open = num_digits_open(level_decomp);
     let Some(width_s) = decomposed_s_block_ring_count(block_len, num_digits_commit) else {
         return Ok(None);

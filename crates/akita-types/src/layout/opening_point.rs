@@ -2,9 +2,9 @@
 
 use akita_algebra::CyclotomicRing;
 use akita_field::AkitaError;
+use akita_serialization::DEFAULT_MAX_SEQUENCE_LEN;
 use akita_field::FieldCore;
 use akita_field::FromPrimitiveInt;
-use akita_serialization::DEFAULT_MAX_SEQUENCE_LEN;
 
 use crate::field_reduction::{embed_ring_subfield_scalar, FpExtEncoding};
 

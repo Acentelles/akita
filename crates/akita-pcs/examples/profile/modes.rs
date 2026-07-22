@@ -7,16 +7,16 @@ use akita_config::proof_optimized::{fp128, fp32, fp64};
 use akita_config::tensor_verifier;
 use akita_config::test_support::akita_batched_root_layout;
 use akita_config::CommitmentConfig;
+use akita_serialization::{AkitaSerialize, Valid};
+use akita_types::{
+    AkitaScheduleLookupKey, FpExtEncoding, LevelParams, MultiChunkProfileId, PolynomialGroupLayout,
+};
 use akita_field::unreduced::HasWide;
 use akita_field::unreduced::{HasOptimizedFold, HasUnreducedOps};
 use akita_field::TranscriptChallenge;
 use akita_field::{
     CanonicalBytes, CanonicalField, FrobeniusExtField, FromPrimitiveInt, HalvingField,
     PseudoMersenneField, RandomSampling,
-};
-use akita_serialization::{AkitaSerialize, Valid};
-use akita_types::{
-    AkitaScheduleLookupKey, FpExtEncoding, LevelParams, MultiChunkProfileId, PolynomialGroupLayout,
 };
 
 type F = fp128::Field;
@@ -251,6 +251,10 @@ const PROFILE_ALL_MODES: &[ProfileMode] = &[
         run: run_profile_dense_fp32_d128,
     },
     ProfileMode {
+        name: "dense_fp32_d128_fast_prover",
+        run: run_profile_dense_fp32_d128_fast_prover,
+    },
+    ProfileMode {
         name: "onehot_fp32_d64",
         run: run_profile_onehot_fp32_d64,
     },
@@ -296,6 +300,7 @@ const EXCLUDED_FROM_ALL_SWEEP: &[&str] = &[
     "dense_fp128_d128",
     "onehot_fp128_d128",
     "dense_fp32_d128",
+    "dense_fp32_d128_fast_prover",
     "onehot_fp32_d128",
     "onehot_fp64_d128",
 ];
@@ -491,6 +496,14 @@ fn run_profile_dense_fp32_d128(nv: usize, num_polys: usize) {
     assert_singleton_mode("dense_fp32_d128", num_polys);
     let title = small_field_dense_title("fp32", Cfg::D);
     run_dense_mode_for::<fp32::Field, { Cfg::D }, Cfg>("dense_fp32_d128", &title, nv);
+}
+
+#[cfg(not(feature = "profile-ci"))]
+fn run_profile_dense_fp32_d128_fast_prover(nv: usize, num_polys: usize) {
+    type Cfg = fp32::D128FullFastProver;
+    assert_singleton_mode("dense_fp32_d128_fast_prover", num_polys);
+    let title = small_field_dense_title("fp32", Cfg::D);
+    run_dense_mode_for::<fp32::Field, { Cfg::D }, Cfg>("dense_fp32_d128_fast_prover", &title, nv);
 }
 
 fn run_profile_onehot_fp32_d128(nv: usize, num_polys: usize) {

@@ -7,10 +7,11 @@
 use akita_algebra::ring::cyclotomic::WideCyclotomicRing;
 use akita_algebra::CyclotomicRing;
 use akita_challenges::{SparseChallenge, TensorChallenges as TensorChallengeSet};
+use akita_field::AkitaError;
+use akita_types::embed_ring_subfield_vector;
 use akita_field::parallel::*;
 use akita_field::unreduced::{HasWide, ReduceTo};
-use akita_field::{AdditiveGroup, AkitaError, CanonicalField, FieldCore, FromPrimitiveInt};
-use akita_types::embed_ring_subfield_vector;
+use akita_field::{AdditiveGroup, CanonicalField, FieldCore, FromPrimitiveInt};
 use std::collections::HashMap;
 use std::sync::{Arc, Mutex};
 
@@ -41,9 +42,9 @@ pub(crate) struct SparseRingCoeff {
 
 impl SparseRingCoeff {
     pub(crate) fn new(flat_idx: usize, value: i8) -> Result<Self, AkitaError> {
-        if !matches!(value, -1 | 1) {
+        if value == 0 {
             return Err(AkitaError::InvalidInput(
-                "sparse ring coefficients must be signed units".to_string(),
+                "sparse ring coefficients must be nonzero".to_string(),
             ));
         }
         Ok(Self {
@@ -335,7 +336,7 @@ impl<F: FieldCore> SparseRingPoly<F> {
         }
         let mut previous_key = None;
         for entry in &packed {
-            if entry.ring_idx(ring_d) >= total_ring_elems || !matches!(entry.value, -1 | 1) {
+            if entry.ring_idx(ring_d) >= total_ring_elems || entry.value == 0 {
                 return Err(AkitaError::InvalidInput(
                     "invalid sparse ring coefficient".to_string(),
                 ));
@@ -351,10 +352,31 @@ impl<F: FieldCore> SparseRingPoly<F> {
         if !already_sorted {
             packed.sort_unstable_by_key(|entry| entry.sort_key());
         }
+        // Tensor projection is linear but not support-preserving: distinct
+        // extension coordinates can land on the same ring coefficient.  Keep
+        // one canonical coefficient per flat position so commitment digit
+        // decomposition and the later fold operate on the same integer.
+        let mut canonical = Vec::with_capacity(packed.len());
+        let mut cursor = 0;
+        while cursor < packed.len() {
+            let flat_idx = packed[cursor].flat_idx;
+            let mut value = 0i16;
+            while cursor < packed.len() && packed[cursor].flat_idx == flat_idx {
+                value += i16::from(packed[cursor].value);
+                cursor += 1;
+            }
+            if value == 0 {
+                continue;
+            }
+            let value = i8::try_from(value).map_err(|_| {
+                AkitaError::InvalidInput("combined sparse ring coefficient exceeds i8".to_string())
+            })?;
+            canonical.push(SparseRingCoeff { flat_idx, value });
+        }
         Ok(Self {
             num_vars,
             total_ring_elems,
-            coeffs: packed,
+            coeffs: canonical,
             block_cache: Arc::new(Mutex::new(HashMap::new())),
             _marker: core::marker::PhantomData,
         })
@@ -499,15 +521,21 @@ where
         challenges: &[SparseChallenge],
         block_len: usize,
         num_digits: usize,
-        _log_basis: u32,
+        log_basis: u32,
     ) -> DecomposeFoldWitness<F> {
         let blocks = self
             .blocks_for(D, block_len)
             .expect("SparseRingPoly::decompose_fold: invalid block_len");
         let num_blocks = challenges.len().min(blocks.num_blocks());
         let inner_width = block_len * num_digits;
-        let coeff_accum =
-            sparse_accumulate::<D>(&blocks, challenges, num_blocks, inner_width, num_digits);
+        let coeff_accum = sparse_accumulate::<D>(
+            &blocks,
+            challenges,
+            num_blocks,
+            inner_width,
+            num_digits,
+            log_basis,
+        );
         let modulus = (-F::one()).to_canonical_u128() + 1;
         build_decompose_fold_witness::<F, D>(coeff_accum, modulus)
     }
@@ -518,12 +546,14 @@ where
         tensor: &TensorChallengeSet,
         block_len: usize,
         num_digits: usize,
-        _log_basis: u32,
+        log_basis: u32,
     ) -> Result<Option<DecomposeFoldWitness<F>>, AkitaError> {
         Ok(Some(tensor_fold::decompose_fold_batched_tensor_sparse::<
             F,
             D,
-        >(polys, tensor, block_len, num_digits)?))
+        >(
+            polys, tensor, block_len, num_digits, log_basis
+        )?))
     }
 
     #[tracing::instrument(skip_all, name = "SparseRingPoly::commit_inner")]
@@ -542,6 +572,7 @@ where
             plan.n_a,
             plan.block_len,
             plan.num_digits_commit,
+            plan.log_basis,
         )?;
         let decomposed_inner_rows =
             decompose_commit_blocks_into::<F, D>(&t, plan.num_digits_open, plan.log_basis)?;
@@ -629,6 +660,7 @@ where
         n_a: usize,
         block_len: usize,
         num_digits_commit: usize,
+        log_basis: u32,
     ) -> Result<Vec<Vec<CyclotomicRing<F, D>>>, AkitaError>
     where
         B: CommitmentComputeBackend<F>,
@@ -640,6 +672,7 @@ where
                 n_a,
                 block_len,
                 num_digits_commit,
+                log_basis,
                 blocks: blocks.table(),
             },
         )
@@ -696,6 +729,7 @@ fn sparse_accumulate<const D: usize>(
     num_blocks: usize,
     inner_width: usize,
     num_digits: usize,
+    log_basis: u32,
 ) -> Vec<[i32; D]> {
     #[cfg(feature = "parallel")]
     let num_threads = rayon::current_num_threads();
@@ -716,19 +750,27 @@ fn sparse_accumulate<const D: usize>(
 
             for (block_idx, challenge) in challenges.iter().enumerate().take(num_blocks) {
                 let entries = blocks.block(block_idx);
-                let lo = entries.partition_point(|e| e.pos_in_block() * num_digits < pos_start);
+                let lo = entries
+                    .partition_point(|e| e.pos_in_block() * num_digits + num_digits <= pos_start);
                 let hi = entries.partition_point(|e| e.pos_in_block() * num_digits < pos_end);
                 if lo >= hi {
                     continue;
                 }
                 fill_rotated_challenge::<D>(&mut rotated, challenge);
                 for entry in &entries[lo..hi] {
-                    let local_pos = entry.pos_in_block() * num_digits - pos_start;
                     let rot = &rotated[entry.coeff_idx()];
-                    let dst = &mut acc[local_pos];
-                    let weight = entry.value as i32;
-                    for k in 0..D {
-                        dst[k] += weight * i32::from(rot[k]);
+                    let digits = balanced_digits_i8(entry.value, num_digits, log_basis)
+                        .expect("validated sparse coefficient digit capacity");
+                    for (digit_idx, digit) in digits.into_iter().enumerate() {
+                        let global_pos = entry.pos_in_block() * num_digits + digit_idx;
+                        if digit == 0 || global_pos < pos_start || global_pos >= pos_end {
+                            continue;
+                        }
+                        let dst = &mut acc[global_pos - pos_start];
+                        let weight = i32::from(digit);
+                        for k in 0..D {
+                            dst[k] += weight * i32::from(rot[k]);
+                        }
                     }
                 }
             }
@@ -741,9 +783,13 @@ fn sparse_accumulate<const D: usize>(
 type WeightedColEntry = (usize, u32, u16, i8);
 type WeightedPosEntry = (u32, u16, i8);
 const L2_TILE_BUDGET: usize = 1 << 21;
+// Small-field canonical representatives can nearly fill a 32-bit limb.  Flush
+// well below the narrowest audited raw-i8 accumulation width (16,382) so
+// repeated projected coefficients cannot overflow a wide accumulator.
+const SPARSE_WIDE_ACCUMULATION_TILE: usize = 1 << 13;
 
 #[inline]
-fn shift_signed_unit_into<W, const D: usize>(
+fn shift_sparse_digit_into<W, const D: usize>(
     src: &WideCyclotomicRing<W, D>,
     dst: &mut WideCyclotomicRing<W, D>,
     coeff_idx: u16,
@@ -751,11 +797,75 @@ fn shift_signed_unit_into<W, const D: usize>(
 ) where
     W: AdditiveGroup,
 {
-    match value {
-        1 => src.shift_accumulate_into(dst, coeff_idx as usize),
-        -1 => src.shift_sub_into(dst, coeff_idx as usize),
-        _ => unreachable!("sparse Frobenius coefficients are signed units"),
+    if value > 0 {
+        for _ in 0..value {
+            src.shift_accumulate_into(dst, coeff_idx as usize);
+        }
+    } else {
+        for _ in value..0 {
+            src.shift_sub_into(dst, coeff_idx as usize);
+        }
     }
+}
+
+fn sparse_commit_block_safe<F, const D: usize>(
+    a_rows: &[&[CyclotomicRing<F, D>]],
+    entries: &[(u32, u16, i8)],
+    n_a: usize,
+) -> Vec<CyclotomicRing<F, D>>
+where
+    F: FieldCore + CanonicalField + HasWide,
+    F::Wide: AdditiveGroup + From<F> + ReduceTo<F>,
+{
+    let mut wide = vec![WideCyclotomicRing::<F::Wide, D>::zero(); n_a];
+    let mut reduced = vec![CyclotomicRing::<F, D>::zero(); n_a];
+    let mut accumulated = 0usize;
+    for &(col, coeff_idx, value) in entries {
+        let subtract = value < 0;
+        for _ in 0..value.unsigned_abs() {
+            if accumulated == SPARSE_WIDE_ACCUMULATION_TILE {
+                for (dst, src) in reduced.iter_mut().zip(wide.iter_mut()) {
+                    *dst += std::mem::replace(src, WideCyclotomicRing::zero()).reduce();
+                }
+                accumulated = 0;
+            }
+            for (a_row, dst) in a_rows.iter().take(n_a).zip(wide.iter_mut()) {
+                let source = WideCyclotomicRing::from_ring(&a_row[col as usize]);
+                if subtract {
+                    source.shift_sub_into(dst, coeff_idx as usize);
+                } else {
+                    source.shift_accumulate_into(dst, coeff_idx as usize);
+                }
+            }
+            accumulated += 1;
+        }
+    }
+    for (dst, src) in reduced.iter_mut().zip(wide) {
+        *dst += src.reduce();
+    }
+    reduced
+}
+
+fn balanced_digits_i8(value: i8, num_digits: usize, log_basis: u32) -> Option<Vec<i8>> {
+    if log_basis == 0 || log_basis > 7 {
+        return None;
+    }
+    let base = 1i16 << log_basis;
+    let half = base / 2;
+    let mask = base - 1;
+    let mut carry = i16::from(value);
+    let mut digits = Vec::with_capacity(num_digits);
+    for _ in 0..num_digits {
+        let residue = carry & mask;
+        let digit = if residue >= half {
+            residue - base
+        } else {
+            residue
+        };
+        digits.push(digit as i8);
+        carry = (carry - digit) >> log_basis;
+    }
+    (carry == 0).then_some(digits)
 }
 
 pub(crate) fn column_sweep_sparse<F, const D: usize>(
@@ -764,12 +874,52 @@ pub(crate) fn column_sweep_sparse<F, const D: usize>(
     n_a: usize,
     block_len: usize,
     num_digits_commit: usize,
-) -> Vec<Vec<CyclotomicRing<F, D>>>
+    log_basis: u32,
+) -> Result<Vec<Vec<CyclotomicRing<F, D>>>, AkitaError>
 where
     F: FieldCore + CanonicalField + HasWide,
     F::Wide: AdditiveGroup + From<F> + ReduceTo<F>,
 {
     let num_blocks = blocks.len();
+    let active_a_cols = block_len
+        .checked_mul(num_digits_commit)
+        .ok_or_else(|| AkitaError::InvalidSetup("sparse commit width overflow".to_string()))?;
+    let mut digit_blocks = Vec::with_capacity(num_blocks);
+    for block in blocks {
+        let mut digits = Vec::new();
+        for entry in *block {
+            let decomposition = balanced_digits_i8(entry.value, num_digits_commit, log_basis)
+                .ok_or_else(|| {
+                    AkitaError::InvalidSetup(
+                        "sparse coefficient does not fit the configured digit decomposition"
+                            .to_string(),
+                    )
+                })?;
+            for (digit_idx, value) in decomposition.into_iter().enumerate() {
+                if value != 0 {
+                    digits.push((
+                        (entry.pos_in_block() * num_digits_commit + digit_idx) as u32,
+                        entry.coeff_idx,
+                        value,
+                    ));
+                }
+            }
+        }
+        digit_blocks.push(digits);
+    }
+    if digit_blocks.iter().any(|entries| {
+        entries
+            .iter()
+            .map(|&(_, _, value)| usize::from(value.unsigned_abs()))
+            .sum::<usize>()
+            > SPARSE_WIDE_ACCUMULATION_TILE
+    }) {
+        return Ok(cfg_into_iter!(0..num_blocks)
+            .map(|block_idx| {
+                sparse_commit_block_safe::<F, D>(a_rows, &digit_blocks[block_idx], n_a)
+            })
+            .collect());
+    }
     let accum_bytes = n_a * D * std::mem::size_of::<F::Wide>();
     let block_tile = L2_TILE_BUDGET
         .checked_div(accum_bytes)
@@ -803,49 +953,49 @@ where
                     .map(|_| vec![WideCyclotomicRing::zero(); n_a])
                     .collect();
 
-                let tile_blocks = &blocks[(block_start + tile_start)..(block_start + tile_end)];
+                let tile_blocks =
+                    &digit_blocks[(block_start + tile_start)..(block_start + tile_end)];
                 let entry_count = tile_blocks
                     .iter()
                     .map(|entries| entries.len())
                     .sum::<usize>();
                 // Dense tiles are cheaper to bucket by block position than to
                 // comparison-sort by A-column.
-                if entry_count >= block_len {
+                if entry_count >= active_a_cols {
                     pos_offsets.clear();
-                    pos_offsets.resize(block_len + 1, 0);
+                    pos_offsets.resize(active_a_cols + 1, 0);
                     for block_entries in tile_blocks {
-                        for entry in *block_entries {
-                            pos_offsets[entry.pos_in_block() + 1] += 1;
+                        for &(col, _, _) in block_entries {
+                            pos_offsets[col as usize + 1] += 1;
                         }
                     }
-                    for pos in 1..=block_len {
+                    for pos in 1..=active_a_cols {
                         pos_offsets[pos] += pos_offsets[pos - 1];
                     }
 
                     pos_entries.clear();
                     pos_entries.resize(entry_count, (0, 0, 0));
                     pos_cursor.clear();
-                    pos_cursor.extend_from_slice(&pos_offsets[..block_len]);
+                    pos_cursor.extend_from_slice(&pos_offsets[..active_a_cols]);
                     for (local_b, block_entries) in tile_blocks.iter().enumerate() {
-                        for entry in *block_entries {
-                            let pos = entry.pos_in_block();
+                        for &(col, coeff_idx, value) in block_entries {
+                            let pos = col as usize;
                             let dst = pos_cursor[pos];
                             pos_cursor[pos] += 1;
-                            pos_entries[dst] = (local_b as u32, entry.coeff_idx, entry.value);
+                            pos_entries[dst] = (local_b as u32, coeff_idx, value);
                         }
                     }
 
                     for (a_idx, a_row) in a_rows.iter().take(n_a).enumerate() {
-                        for pos in 0..block_len {
+                        for pos in 0..active_a_cols {
                             let start = pos_offsets[pos];
                             let end = pos_offsets[pos + 1];
                             if start == end {
                                 continue;
                             }
-                            let a_wide =
-                                WideCyclotomicRing::from_ring(&a_row[pos * num_digits_commit]);
+                            let a_wide = WideCyclotomicRing::from_ring(&a_row[pos]);
                             for &(local_b, coeff_idx, value) in &pos_entries[start..end] {
-                                shift_signed_unit_into(
+                                shift_sparse_digit_into(
                                     &a_wide,
                                     &mut accums[local_b as usize][a_idx],
                                     coeff_idx,
@@ -857,13 +1007,10 @@ where
                 } else {
                     col_entries.clear();
                     for local_b in 0..tile_len {
-                        for entry in blocks[block_start + tile_start + local_b] {
-                            col_entries.push((
-                                entry.pos_in_block() * num_digits_commit,
-                                local_b as u32,
-                                entry.coeff_idx,
-                                entry.value,
-                            ));
+                        for &(col, coeff_idx, value) in
+                            &digit_blocks[block_start + tile_start + local_b]
+                        {
+                            col_entries.push((col as usize, local_b as u32, coeff_idx, value));
                         }
                     }
                     col_entries.sort_unstable_by_key(|&(col, _, _, _)| col);
@@ -875,7 +1022,7 @@ where
                             let a_wide = WideCyclotomicRing::from_ring(&a_row[col]);
                             while idx < col_entries.len() && col_entries[idx].0 == col {
                                 let (_, local_b, coeff_idx, value) = col_entries[idx];
-                                shift_signed_unit_into(
+                                shift_sparse_digit_into(
                                     &a_wide,
                                     &mut accums[local_b as usize][a_idx],
                                     coeff_idx,
@@ -899,7 +1046,7 @@ where
     for thread_blocks in thread_results {
         out.extend(thread_blocks);
     }
-    out
+    Ok(out)
 }
 
 #[cfg(test)]
@@ -940,6 +1087,111 @@ mod tests {
     }
 
     #[test]
+    fn collided_sparse_coefficients_match_dense_digit_fold() {
+        const D: usize = 16;
+        let sparse = SparseRingPoly::<F>::from_signed_coeffs(
+            6,
+            D,
+            4,
+            vec![(0, 3, 1), (0, 3, 1), (2, 5, -1)],
+        )
+        .unwrap();
+        let mut dense_coeffs = vec![CyclotomicRing::<F, D>::zero(); 4];
+        dense_coeffs[0].coeffs[3] = F::from_u64(2);
+        dense_coeffs[2].coeffs[5] = -F::one();
+        let dense = DensePoly::from_ring_coeffs(dense_coeffs);
+        let challenges = vec![
+            SparseChallenge {
+                positions: vec![0, 2],
+                coeffs: vec![1, -1],
+            },
+            SparseChallenge {
+                positions: vec![1],
+                coeffs: vec![1],
+            },
+        ];
+
+        assert_eq!(
+            sparse.decompose_fold::<D>(&challenges, 2, 2, 2),
+            dense.decompose_fold::<D>(&challenges, 2, 2, 2),
+        );
+    }
+
+    #[test]
+    fn collided_sparse_coefficients_commit_canonical_digits() {
+        const D: usize = 16;
+        let sparse = SparseRingPoly::<F>::from_signed_coeffs(
+            6,
+            D,
+            4,
+            vec![(0, 3, 1), (0, 3, 1), (2, 5, -1)],
+        )
+        .unwrap();
+        let blocks = sparse.blocks_for(D, 2).unwrap();
+        let a_row = (0..4)
+            .map(|idx| {
+                CyclotomicRing::from_coefficients(std::array::from_fn(|coeff| {
+                    F::from_u64(1 + idx as u64 * 20 + coeff as u64)
+                }))
+            })
+            .collect::<Vec<_>>();
+        let got = column_sweep_sparse(
+            &[a_row.as_slice()],
+            &blocks.table().block_slices().unwrap(),
+            1,
+            2,
+            2,
+            2,
+        )
+        .unwrap();
+
+        let mut first = CyclotomicRing::<F, D>::zero();
+        a_row[0].shift_scale_accumulate_into(&mut first, 3, -F::from_u64(2));
+        a_row[1].shift_accumulate_into(&mut first, 3);
+        let mut second = CyclotomicRing::<F, D>::zero();
+        a_row[0].shift_sub_into(&mut second, 5);
+        assert_eq!(got, vec![vec![first], vec![second]]);
+    }
+
+    #[test]
+    fn sparse_commit_flushes_wide_accumulator_before_overflow() {
+        type SmallF = akita_field::Prime32Offset99;
+        const D: usize = 16;
+        const TOTAL_RINGS: usize = 8192;
+        let mut entries = Vec::with_capacity(10_000);
+        for ring_idx in 0..5_000 {
+            entries.push((ring_idx, ring_idx % D, 1));
+            entries.push((ring_idx, ring_idx % D, 1));
+        }
+        let sparse =
+            SparseRingPoly::<SmallF>::from_signed_coeffs(17, D, TOTAL_RINGS, entries).unwrap();
+        let blocks = sparse.blocks_for(D, TOTAL_RINGS).unwrap();
+        let coefficient = SmallF::from_canonical_u128_reduced((1u128 << 32) - 100);
+        let a_row = (0..TOTAL_RINGS)
+            .map(|index| {
+                CyclotomicRing::from_coefficients(std::array::from_fn(|coeff_idx| {
+                    coefficient + SmallF::from_u64((index + coeff_idx) as u64)
+                }))
+            })
+            .collect::<Vec<_>>();
+        let got = column_sweep_sparse(
+            &[a_row.as_slice()],
+            &blocks.table().block_slices().unwrap(),
+            1,
+            TOTAL_RINGS,
+            1,
+            3,
+        )
+        .unwrap();
+
+        let mut expected = CyclotomicRing::<SmallF, D>::zero();
+        for (ring_idx, ring) in a_row.iter().enumerate().take(5_000) {
+            ring.shift_scale_accumulate_into(&mut expected, ring_idx % D, SmallF::from_u64(2));
+        }
+        assert_eq!(got, vec![vec![expected]]);
+    }
+
+    #[test]
     fn sparse_ring_tensor_decompose_fold_matches_negacyclic_product_reference() {
         const D: usize = 8;
         let block_len = 2;
@@ -968,13 +1220,13 @@ mod tests {
                 .iter()
                 .zip(product_challenges.chunks(4))
                 .map(|(poly, challenges)| {
-                    poly.decompose_fold::<D>(challenges, block_len, num_digits, 0)
+                    poly.decompose_fold::<D>(challenges, block_len, num_digits, 3)
                 })
                 .collect::<Vec<_>>(),
         );
         let poly_refs = polys.iter().collect::<Vec<_>>();
         let got = SparseRingPoly::<F>::decompose_fold_tensor_batched::<D>(
-            &poly_refs, &tensor, block_len, num_digits, 0,
+            &poly_refs, &tensor, block_len, num_digits, 3,
         )
         .unwrap()
         .unwrap();
@@ -1018,14 +1270,15 @@ mod tests {
     }
 
     #[test]
-    fn sparse_ring_constructor_rejects_non_signed_unit_coefficients() {
+    fn sparse_ring_constructor_accepts_small_nonzero_coefficients() {
         const D: usize = 8;
-        for value in [-2, 0, 2] {
-            assert!(matches!(
-                SparseRingPoly::<F>::from_signed_coeffs(5, D, 4, vec![(0, 1, value)]),
-                Err(AkitaError::InvalidInput(_))
-            ));
+        for value in [-2, 2] {
+            SparseRingPoly::<F>::from_signed_coeffs(5, D, 4, vec![(0, 1, value)]).unwrap();
         }
+        assert!(matches!(
+            SparseRingPoly::<F>::from_signed_coeffs(5, D, 4, vec![(0, 1, 0)]),
+            Err(AkitaError::InvalidInput(_))
+        ));
     }
 
     #[test]

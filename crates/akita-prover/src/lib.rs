@@ -13,8 +13,9 @@ pub mod types;
 mod validation;
 
 use akita_algebra::CyclotomicRing;
-use akita_field::{AkitaError, FieldCore};
+use akita_field::AkitaError;
 use akita_types::{DigitBlocks, RingVec};
+use akita_field::FieldCore;
 
 pub use api::{
     batched_commit, batched_commit_with_params, commit, commit_final_group, commit_group,

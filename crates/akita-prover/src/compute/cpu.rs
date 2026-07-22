@@ -17,9 +17,10 @@ use crate::kernels::linear::{
     selected_crt_i8_capacity_profile, CrtI8CapacityProfile,
 };
 use akita_algebra::CyclotomicRing;
-use akita_field::unreduced::{HasWide, ReduceTo};
-use akita_field::{AdditiveGroup, AkitaError, CanonicalField, FieldCore, HalvingField};
+use akita_field::AkitaError;
 use akita_types::{dispatch_for_field, AkitaExpandedSetup, NttCacheKey};
+use akita_field::unreduced::{HasWide, ReduceTo};
+use akita_field::{AdditiveGroup, CanonicalField, FieldCore, HalvingField};
 use std::array::from_fn;
 use std::collections::{HashMap, HashSet};
 use std::sync::{Arc, Mutex};
@@ -442,13 +443,14 @@ where
         let a_rows = (0..plan.n_a)
             .map(|idx| a_view.row(idx))
             .collect::<Result<Vec<_>, _>>()?;
-        Ok(column_sweep_sparse(
+        column_sweep_sparse(
             &a_rows,
             &plan.blocks.block_slices()?,
             plan.n_a,
             plan.block_len,
             plan.num_digits_commit,
-        ))
+            plan.log_basis,
+        )
     }
 
     fn recursive_witness_commit_rows<const D: usize>(
@@ -616,8 +618,8 @@ mod tests {
     };
     use crate::validation::MAX_I8_LOG_BASIS;
     use crate::AkitaProverSetup;
-    use akita_field::Prime64Offset59;
     use akita_types::SetupMatrixEnvelope;
+    use akita_field::Prime64Offset59;
     use std::sync::Arc;
 
     type F = Prime64Offset59;

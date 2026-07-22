@@ -4,7 +4,8 @@
 //! Stage-3 challenge into witness/setup points and for routing those projected
 //! points into the next recursive suffix opening batch.
 
-use akita_field::{AkitaError, FieldCore, FromPrimitiveInt};
+use akita_field::AkitaError;
+use akita_field::{FieldCore, FromPrimitiveInt};
 
 use crate::{PointVariableSelection, SetupPrefixSlotId};
 

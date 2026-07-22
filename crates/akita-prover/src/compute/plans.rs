@@ -1,7 +1,8 @@
 use crate::backend::onehot::{MultiChunkEntry, SingleChunkEntry};
 use crate::backend::sparse_ring::SparseRingBlockEntry;
 use akita_algebra::CyclotomicRing;
-use akita_field::{AkitaError, FieldCore};
+use akita_field::AkitaError;
+use akita_field::FieldCore;
 
 /// Flat block table handed to a compute backend.
 ///
@@ -131,6 +132,8 @@ pub struct SparseRingCommitRowsPlan<'a> {
     pub block_len: usize,
     /// Number of balanced digits used for the A-side commit.
     pub num_digits_commit: usize,
+    /// Logarithm of the gadget basis used to decompose non-unit coefficients.
+    pub log_basis: u32,
     /// Per-block sparse signed coefficients.
     pub(crate) blocks: FlatBlockTable<'a, SparseRingBlockEntry>,
 }

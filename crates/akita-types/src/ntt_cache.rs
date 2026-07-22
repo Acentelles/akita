@@ -1,6 +1,7 @@
 //! Key type for runtime ring-dimension NTT prepared-setup caches.
 
-use akita_field::{AkitaError, FieldCore};
+use akita_field::AkitaError;
+use akita_field::FieldCore;
 
 use crate::proof::AkitaExpandedSetup;
 

@@ -2,8 +2,8 @@
 
 use crate::Label;
 use crate::Transcript;
-use akita_field::{CanonicalBytes, CanonicalField, FieldCore, TranscriptChallenge};
 use akita_serialization::AkitaSerialize;
+use akita_field::{CanonicalBytes, CanonicalField, FieldCore, TranscriptChallenge};
 use spongefish::{
     DomainSeparator, DuplexSpongeInterface, Encoding, ProverState, VerifierState, WithoutInstance,
 };

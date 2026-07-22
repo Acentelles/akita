@@ -6,14 +6,16 @@ use crate::backend::tensor_fold::{
 };
 use crate::DecomposeFoldWitness;
 use akita_challenges::TensorChallenges as TensorChallengeSet;
+use akita_field::AkitaError;
 use akita_field::parallel::*;
-use akita_field::{AkitaError, CanonicalField, FieldCore, FromPrimitiveInt};
+use akita_field::{CanonicalField, FieldCore, FromPrimitiveInt};
 
 pub(super) fn decompose_fold_batched_tensor_sparse<F, const D: usize>(
     polys: &[&SparseRingPoly<F>],
     tensor: &TensorChallengeSet,
     block_len: usize,
     num_digits: usize,
+    log_basis: u32,
 ) -> Result<DecomposeFoldWitness<F>, AkitaError>
 where
     F: FieldCore + CanonicalField + FromPrimitiveInt,
@@ -37,7 +39,8 @@ where
     let inner_width = block_len.checked_mul(num_digits).ok_or_else(|| {
         AkitaError::InvalidSetup("sparse tensor fold inner width overflow".to_string())
     })?;
-    let accum_i64 = sparse_accumulate_tensor::<D>(&flat_blocks, tensor, inner_width, num_digits)?;
+    let accum_i64 =
+        sparse_accumulate_tensor::<D>(&flat_blocks, tensor, inner_width, num_digits, log_basis)?;
     let coeff_accum = narrow_tensor_accum_to_i32::<D>(accum_i64)?;
     let modulus = (-F::one()).to_canonical_u128() + 1;
     Ok(build_decompose_fold_witness::<F, D>(coeff_accum, modulus))
@@ -48,6 +51,7 @@ fn sparse_accumulate_tensor<const D: usize>(
     tensor: &TensorChallengeSet,
     inner_width: usize,
     num_digits: usize,
+    log_basis: u32,
 ) -> Result<Vec<[i64; D]>, AkitaError> {
     #[cfg(feature = "parallel")]
     let num_threads = rayon::current_num_threads();
@@ -60,7 +64,7 @@ fn sparse_accumulate_tensor<const D: usize>(
         .map(|tid| {
             let pos_start = tid * pos_chunk;
             if pos_start >= inner_width {
-                return Vec::new();
+                return Ok(Vec::new());
             }
             let pos_end = (pos_start + pos_chunk).min(inner_width);
             let mut acc = vec![[0i64; D]; pos_end - pos_start];
@@ -75,8 +79,9 @@ fn sparse_accumulate_tensor<const D: usize>(
                             + left_idx * tensor.right_len
                             + right_idx;
                         let entries = blocks[block_idx];
-                        let lo =
-                            entries.partition_point(|e| e.pos_in_block() * num_digits < pos_start);
+                        let lo = entries.partition_point(|e| {
+                            e.pos_in_block() * num_digits + num_digits <= pos_start
+                        });
                         let hi =
                             entries.partition_point(|e| e.pos_in_block() * num_digits < pos_end);
                         if lo >= hi {
@@ -85,12 +90,25 @@ fn sparse_accumulate_tensor<const D: usize>(
                         let right = &tensor.right[claim_idx * tensor.right_len + right_idx];
                         fill_rotated_sparse_challenge_i64::<D>(&mut rotated, right);
                         for entry in &entries[lo..hi] {
-                            let local_pos = entry.pos_in_block() * num_digits - pos_start;
                             let rot = &rotated[entry.coeff_idx()];
-                            let dst = &mut tmp[local_pos];
-                            let weight = i64::from(entry.value);
-                            for k in 0..D {
-                                dst[k] += weight * rot[k];
+                            let digits =
+                                super::balanced_digits_i8(entry.value, num_digits, log_basis)
+                                    .ok_or_else(|| {
+                                        AkitaError::InvalidSetup(
+                                            "sparse coefficient does not fit tensor-fold digits"
+                                                .to_string(),
+                                        )
+                                    })?;
+                            for (digit_idx, digit) in digits.into_iter().enumerate() {
+                                let global_pos = entry.pos_in_block() * num_digits + digit_idx;
+                                if digit == 0 || global_pos < pos_start || global_pos >= pos_end {
+                                    continue;
+                                }
+                                let dst = &mut tmp[global_pos - pos_start];
+                                let weight = i64::from(digit);
+                                for k in 0..D {
+                                    dst[k] += weight * rot[k];
+                                }
                             }
                         }
                     }
@@ -100,8 +118,8 @@ fn sparse_accumulate_tensor<const D: usize>(
                     }
                 }
             }
-            acc
+            Ok(acc)
         })
-        .collect();
+        .collect::<Result<Vec<_>, AkitaError>>()?;
     Ok(chunks.into_iter().flatten().collect())
 }

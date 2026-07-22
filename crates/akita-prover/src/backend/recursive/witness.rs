@@ -10,8 +10,9 @@
 
 use akita_algebra::CyclotomicRing;
 use akita_challenges::{SparseChallenge, TensorChallenges};
+use akita_field::AkitaError;
 use akita_field::parallel::*;
-use akita_field::{AkitaError, CanonicalField, ExtField, FieldCore, FromPrimitiveInt};
+use akita_field::{CanonicalField, ExtField, FieldCore, FromPrimitiveInt};
 
 use crate::backend::poly_helpers::{
     balanced_digit_decompose_fold_partitioned, build_decompose_fold_witness,
@@ -737,9 +738,7 @@ mod tests {
     fn logical_rows_use_strided_column_major_indices() {
         let digits: Vec<i8> = (0..20).collect();
         let w = RecursiveWitnessFlat::from_i8_digits(digits);
-        let view = w
-            .view::<akita_field::Prime128OffsetA7F7, 2>()
-            .expect("view");
+        let view = w.view::<akita_field::Prime128OffsetA7F7, 2>().expect("view");
         let num_blocks = 4;
         let block_len = (w.len() / 2).div_ceil(num_blocks);
 

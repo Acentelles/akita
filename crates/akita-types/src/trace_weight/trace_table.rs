@@ -1,6 +1,7 @@
 //! Prover-side trace table: sparse columns for `K = 1`, dense flat slice for `K > 1`.
 
-use akita_field::{AkitaError, FieldCore};
+use akita_field::AkitaError;
+use akita_field::FieldCore;
 
 #[inline]
 fn fold_pair<E: FieldCore>(a: E, b: E, r: E) -> E {
@@ -256,13 +257,13 @@ impl<E: FieldCore> TraceTable<E> {
         match self {
             Self::RingDense(dense) => {
                 let next_y_len = y_len >> 2;
-                let mut out = vec![E::zero(); live_x_cols * next_y_len];
+                debug_assert_eq!(dense.len(), live_x_cols * y_len);
                 for x in 0..live_x_cols {
                     let src_start = x * y_len;
                     let dst_start = x * next_y_len;
                     for quad_y in 0..next_y_len {
                         let base = src_start + 4 * quad_y;
-                        out[dst_start + quad_y] = fold_quad(
+                        let folded = fold_quad(
                             dense[base],
                             dense[base + 1],
                             dense[base + 2],
@@ -270,9 +271,10 @@ impl<E: FieldCore> TraceTable<E> {
                             r0,
                             r1,
                         );
+                        dense[dst_start + quad_y] = folded;
                     }
                 }
-                *dense = out;
+                dense.truncate(live_x_cols * next_y_len);
             }
             Self::FieldSparse(table) => {
                 debug_assert_eq!(table.live_x_cols, live_x_cols);
@@ -286,7 +288,7 @@ impl<E: FieldCore> TraceTable<E> {
         match self {
             Self::RingDense(dense) => {
                 let next_live_x_cols = live_x_cols.div_ceil(2);
-                let mut out = vec![E::zero(); y_len * next_live_x_cols];
+                debug_assert_eq!(dense.len(), live_x_cols * y_len);
                 for pair_x in 0..next_live_x_cols {
                     let left = 2 * pair_x;
                     let dst_start = pair_x * y_len;
@@ -299,10 +301,10 @@ impl<E: FieldCore> TraceTable<E> {
                         } else {
                             E::zero()
                         };
-                        out[dst_start + y] = fold_pair(a, b, r);
+                        dense[dst_start + y] = fold_pair(a, b, r);
                     }
                 }
-                *dense = out;
+                dense.truncate(y_len * next_live_x_cols);
             }
             Self::FieldSparse(table) => {
                 debug_assert_eq!(table.live_x_cols, live_x_cols);

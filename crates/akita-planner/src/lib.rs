@@ -6,7 +6,7 @@
 //! carried by the plain-value [`PlannerPolicy`] plus a `ring_challenge_config` /
 //! `fold_challenge_shape_at_level` closure pair, so the planner names no `CommitmentConfig`
 //! types and depends only on `akita-types` / `akita-challenges` /
-//! `akita-field`.
+//! `jolt-field`.
 //!
 //! The preset family list, the `gen_schedule_tables` binary, and the
 //! `policy_of::<Cfg>()` bridge that derives a [`PlannerPolicy`] from a preset
@@ -85,6 +85,35 @@ pub struct PlannerPolicy {
 }
 
 impl PlannerPolicy {
+    /// Whether a gadget basis can encode a tensor-projected one-hot root in a
+    /// single digit.  Small-field `psi` projection can produce `+2`, which is
+    /// outside the balanced base-4 digit alphabet `[-2, 1]`.
+    #[must_use]
+    pub fn root_log_basis_supported(&self, log_basis: u32) -> bool {
+        self.decomposition.log_commit_bound != 1 || self.claim_ext_degree == 1 || log_basis >= 3
+    }
+
+    /// Commitment digits required by a root and by its tensor-projected root.
+    ///
+    /// A nontrivial extension uses the `psi` embedding during opening
+    /// reduction.  Even when the source is binary one-hot, two source lanes
+    /// can add at one projected ring coefficient, so the root commitment must
+    /// represent `+2` as well as signed units.  A three-bit signed envelope
+    /// `[-4, 3]` is the smallest symmetric bound that contains it.
+    #[must_use]
+    pub fn root_num_digits_commit(&self, log_basis: u32) -> usize {
+        let log_bound = if self.decomposition.log_commit_bound == 1 && self.claim_ext_degree > 1 {
+            3
+        } else {
+            self.decomposition.log_commit_bound
+        };
+        akita_types::sis::num_digits_for_bound(
+            log_bound,
+            self.decomposition.field_bits(),
+            log_basis,
+        )
+    }
+
     /// Chunk count of fold level `fold_level`'s own fold: the number of
     /// per-chunk folded responses `zᵢ` this level produces, hence the chunk
     /// count of the witness it emits. `build_w_coeffs` lays that witness out as
