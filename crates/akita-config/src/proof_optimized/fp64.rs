@@ -19,6 +19,24 @@ pub struct D64OneHot;
 #[derive(Clone, Copy, Debug, Default)]
 pub struct D128Full;
 
+/// Full-field `D=128` preset for explicitly range-proven 18-bit root data.
+///
+/// The application must supply a separate proof of this source bound; the PCS
+/// configuration does not enforce it by itself.
+#[derive(Clone, Copy, Debug, Default)]
+pub struct D128FullBound18;
+
+/// Full-field `D=128` preset for explicitly range-proven signed 6-bit data,
+/// intended for balanced radix-8 digit planes whose values lie in `[-4,3]`.
+///
+/// Like [`D128FullBound18`], the application must supply a separate proof of
+/// the source bound; the PCS configuration does not enforce it by itself.
+/// The bound is deliberately two digits wide rather than one: single-digit
+/// bound-3 schedules failed Akita's stage-2 consistency in earlier
+/// experiments and remain unsupported.
+#[derive(Clone, Copy, Debug, Default)]
+pub struct D128FullBound6;
+
 /// Onehot `D=128` preset for planner-backed fp64 experiments.
 #[derive(Clone, Copy, Debug, Default)]
 pub struct D128OneHot;
@@ -58,6 +76,26 @@ impl_proof_optimized_preset!(
     64,
     64,
     schedules = ("schedules-fp64-d128", "fp64_d128", fp64_d128_table)
+);
+impl_proof_optimized_preset!(
+    D128FullBound18,
+    Field,
+    ExtensionField,
+    akita_types::SisModulusFamily::Q64,
+    128,
+    64,
+    18,
+    basis_range = (3, 3)
+);
+impl_proof_optimized_preset!(
+    D128FullBound6,
+    Field,
+    ExtensionField,
+    akita_types::SisModulusFamily::Q64,
+    128,
+    64,
+    6,
+    basis_range = (3, 3)
 );
 impl_proof_optimized_preset!(
     D128OneHot,

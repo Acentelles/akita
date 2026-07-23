@@ -39,10 +39,26 @@ pub fn build_w_evals_compact(
         ));
     }
     let half = d / (2 * extension_degree);
-    let mut compact = Vec::with_capacity(live_x_cols * packed_len);
-    for ring in w.chunks_exact(d) {
-        compact.extend_from_slice(&ring[..half]);
-        compact.extend((half..packed_len).map(|low| ring[d / 2 + low - half]));
+    let rings = w.len() / d;
+    let mut compact = vec![0_i8; rings * packed_len];
+    let repack = |(out, ring): (&mut [i8], &[i8])| {
+        out[..half].copy_from_slice(&ring[..half]);
+        for low in half..packed_len {
+            out[low] = ring[d / 2 + low - half];
+        }
+    };
+    #[cfg(feature = "parallel")]
+    {
+        use rayon::prelude::*;
+        compact
+            .par_chunks_exact_mut(packed_len)
+            .zip(w.par_chunks_exact(d))
+            .for_each(repack);
     }
+    #[cfg(not(feature = "parallel"))]
+    compact
+        .chunks_exact_mut(packed_len)
+        .zip(w.chunks_exact(d))
+        .for_each(repack);
     Ok((compact, col_bits, packed_len.trailing_zeros() as usize))
 }

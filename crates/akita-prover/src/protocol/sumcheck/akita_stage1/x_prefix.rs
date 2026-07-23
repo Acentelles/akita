@@ -253,7 +253,7 @@ impl<E: FieldCore + FromPrimitiveInt + HasUnreducedOps> AkitaStage1Prover<E> {
     #[inline]
     #[tracing::instrument(skip_all, name = "AkitaStage1Prover::compute_round_compact_prefix_x")]
     pub(super) fn compute_round_compact_prefix_x(&self, s_compact: &[i16]) -> EqFactoredUniPoly<E> {
-        debug_assert!(self.rounds_completed < self.col_bits);
+        debug_assert!(self.current_x_width() > 0);
         debug_assert_eq!(
             s_compact.len(),
             self.live_x_cols * (1usize << (self.num_vars - self.col_bits))
@@ -447,7 +447,7 @@ impl<E: FieldCore + FromPrimitiveInt + HasUnreducedOps> AkitaStage1Prover<E> {
 
     #[tracing::instrument(skip_all, name = "AkitaStage1Prover::compute_round_full_prefix_x")]
     pub(super) fn compute_round_full_prefix_x(&self, s_full: &[E]) -> EqFactoredUniPoly<E> {
-        debug_assert!(self.rounds_completed < self.col_bits);
+        debug_assert!(self.current_x_width() > 0);
         let y_len = s_full.len() / self.live_x_cols;
         let (e_first, e_second) = self.split_eq.remaining_eq_tables();
         let num_first = e_first.len();
