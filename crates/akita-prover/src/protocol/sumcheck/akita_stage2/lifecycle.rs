@@ -1,6 +1,51 @@
 use super::*;
 
 impl<E: FieldCore + FromPrimitiveInt + HasUnreducedOps> AkitaStage2Prover<E> {
+    /// Create a stage-2 instance containing only the virtual range-link term.
+    ///
+    /// This is the standalone companion to [`AkitaStage1Prover`]: stage 1
+    /// proves that the compact balanced-digit table is pointwise in range,
+    /// while this sumcheck links its carried `S(r)` claim to an opening of the
+    /// same digit table through `S = w(w + 1)`.  No ring-switch relation or
+    /// evaluation-trace term is included.
+    pub fn new_virtual_only(
+        w_evals_compact: Vec<i8>,
+        stage1_point: &[E],
+        s_claim: E,
+        b: usize,
+        live_x_cols: usize,
+        col_bits: usize,
+        ring_bits: usize,
+    ) -> Result<Self, AkitaError> {
+        let x_len = 1usize
+            .checked_shl(u32::try_from(col_bits).map_err(|_| {
+                AkitaError::InvalidInput("stage-2 column width overflow".to_string())
+            })?)
+            .ok_or_else(|| AkitaError::InvalidInput("stage-2 column width overflow".to_string()))?;
+        let y_len = 1usize
+            .checked_shl(
+                u32::try_from(ring_bits).map_err(|_| {
+                    AkitaError::InvalidInput("stage-2 ring width overflow".to_string())
+                })?,
+            )
+            .ok_or_else(|| AkitaError::InvalidInput("stage-2 ring width overflow".to_string()))?;
+        Self::new(
+            E::one(),
+            w_evals_compact,
+            stage1_point,
+            s_claim,
+            b,
+            vec![E::zero(); y_len],
+            vec![E::zero(); x_len],
+            live_x_cols,
+            col_bits,
+            ring_bits,
+            E::zero(),
+            None,
+            E::zero(),
+        )
+    }
+
     /// Create a fused stage-2 virtual-claim + relation sumcheck prover.
     #[allow(clippy::too_many_arguments)]
     #[tracing::instrument(skip_all, name = "AkitaStage2Prover::new")]
