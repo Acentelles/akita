@@ -781,6 +781,8 @@ fn sparse_accumulate<const D: usize>(
 }
 
 type WeightedColEntry = (usize, u32, u16, i8);
+/// One decomposed commit digit: `(a-column or local-block, coefficient-index,
+/// digit value)`; also the element type of the per-block digit lists.
 type WeightedPosEntry = (u32, u16, i8);
 const L2_TILE_BUDGET: usize = 1 << 21;
 // Small-field canonical representatives can nearly fill a 32-bit limb.  Flush
@@ -808,6 +810,53 @@ fn shift_sparse_digit_into<W, const D: usize>(
     }
 }
 
+/// Test-only oracle mirroring the pre-segmentation kernel: decompose every
+/// coefficient into commit digits, then run the entry-ordered flushing
+/// reference per block. This is exactly the fallback `column_sweep_sparse`
+/// used to take when any block's digit weight exceeded one wide-accumulator
+/// budget.
+#[cfg(test)]
+pub(crate) fn reference_sparse_commit_rows<F, const D: usize>(
+    a_rows: &[&[CyclotomicRing<F, D>]],
+    blocks: &[&[SparseRingBlockEntry]],
+    n_a: usize,
+    num_digits_commit: usize,
+    log_basis: u32,
+) -> Vec<Vec<CyclotomicRing<F, D>>>
+where
+    F: FieldCore + CanonicalField + HasWide,
+    F::Wide: AdditiveGroup + From<F> + ReduceTo<F>,
+{
+    let digit_blocks: Vec<Vec<(u32, u16, i8)>> = blocks
+        .iter()
+        .map(|block| {
+            let mut digits = Vec::new();
+            for entry in *block {
+                let decomposition = balanced_digits_i8(entry.value, num_digits_commit, log_basis)
+                    .expect("reference digit decomposition");
+                for (digit_idx, value) in decomposition.into_iter().enumerate() {
+                    if value != 0 {
+                        digits.push((
+                            (entry.pos_in_block() * num_digits_commit + digit_idx) as u32,
+                            entry.coeff_idx,
+                            value,
+                        ));
+                    }
+                }
+            }
+            digits
+        })
+        .collect();
+    cfg_into_iter!(0..blocks.len())
+        .map(|block_idx| sparse_commit_block_safe::<F, D>(a_rows, &digit_blocks[block_idx], n_a))
+        .collect()
+}
+
+/// Reference per-block commit: entry-ordered shift-adds with periodic
+/// accumulator flushes. Kept as the differential/bench oracle for
+/// [`column_sweep_sparse`]; production traffic goes through the tiled sweep,
+/// which segments over-weight blocks instead of falling back here.
+#[cfg(test)]
 fn sparse_commit_block_safe<F, const D: usize>(
     a_rows: &[&[CyclotomicRing<F, D>]],
     entries: &[(u32, u16, i8)],
@@ -907,38 +956,56 @@ where
         }
         digit_blocks.push(digits);
     }
-    if digit_blocks.iter().any(|entries| {
-        entries
-            .iter()
-            .map(|&(_, _, value)| usize::from(value.unsigned_abs()))
-            .sum::<usize>()
-            > SPARSE_WIDE_ACCUMULATION_TILE
-    }) {
-        return Ok(cfg_into_iter!(0..num_blocks)
-            .map(|block_idx| {
-                sparse_commit_block_safe::<F, D>(a_rows, &digit_blocks[block_idx], n_a)
-            })
-            .collect());
+
+    // Split each block's digit entries into segments whose total signed
+    // weight (sum of |digit|, i.e. the shift-add count per accumulator ring)
+    // stays within one wide-accumulator budget. Every segment is swept as a
+    // virtual block by the tiled kernel below, and the reduced per-segment
+    // rows are summed per block afterwards. Reduction yields canonical field
+    // elements and field addition is exact, so the split point cannot change
+    // the committed bytes; it only bounds unreduced accumulation. A single
+    // entry always fits: |digit| <= 2^(log_basis - 1) <= 64.
+    let mut segment_owner: Vec<usize> = Vec::with_capacity(num_blocks);
+    let mut segment_entries: Vec<&[WeightedPosEntry]> = Vec::with_capacity(num_blocks);
+    for (block_idx, digits) in digit_blocks.iter().enumerate() {
+        let mut start = 0usize;
+        let mut weight = 0usize;
+        for (idx, &(_, _, value)) in digits.iter().enumerate() {
+            let entry_weight = usize::from(value.unsigned_abs());
+            if weight + entry_weight > SPARSE_WIDE_ACCUMULATION_TILE && idx > start {
+                segment_owner.push(block_idx);
+                segment_entries.push(&digits[start..idx]);
+                start = idx;
+                weight = 0;
+            }
+            weight += entry_weight;
+        }
+        // Empty blocks still emit one (empty) segment so every block owns at
+        // least one swept accumulator row set.
+        segment_owner.push(block_idx);
+        segment_entries.push(&digits[start..]);
     }
+    let num_segments = segment_entries.len();
+
     let accum_bytes = n_a * D * std::mem::size_of::<F::Wide>();
     let block_tile = L2_TILE_BUDGET
         .checked_div(accum_bytes)
-        .map_or(num_blocks, |tile| tile.max(1));
+        .map_or(num_segments, |tile| tile.max(1));
 
     #[cfg(feature = "parallel")]
-    let num_threads = rayon::current_num_threads().min(num_blocks).max(1);
+    let num_threads = rayon::current_num_threads().min(num_segments).max(1);
     #[cfg(not(feature = "parallel"))]
     let num_threads = 1;
-    let blocks_per_thread = num_blocks.div_ceil(num_threads);
+    let segments_per_thread = num_segments.div_ceil(num_threads);
 
     let thread_results: Vec<Vec<Vec<CyclotomicRing<F, D>>>> = cfg_into_iter!(0..num_threads)
         .map(|tid| {
-            let block_start = tid * blocks_per_thread;
-            let block_end = (block_start + blocks_per_thread).min(num_blocks);
-            if block_start >= block_end {
+            let segment_start = tid * segments_per_thread;
+            let segment_end = (segment_start + segments_per_thread).min(num_segments);
+            if segment_start >= segment_end {
                 return Vec::new();
             }
-            let my_count = block_end - block_start;
+            let my_count = segment_end - segment_start;
             let mut result = Vec::with_capacity(my_count);
             result.resize_with(my_count, Vec::new);
             let mut col_entries: Vec<WeightedColEntry> = Vec::new();
@@ -954,7 +1021,7 @@ where
                     .collect();
 
                 let tile_blocks =
-                    &digit_blocks[(block_start + tile_start)..(block_start + tile_end)];
+                    &segment_entries[(segment_start + tile_start)..(segment_start + tile_end)];
                 let entry_count = tile_blocks
                     .iter()
                     .map(|entries| entries.len())
@@ -965,7 +1032,7 @@ where
                     pos_offsets.clear();
                     pos_offsets.resize(active_a_cols + 1, 0);
                     for block_entries in tile_blocks {
-                        for &(col, _, _) in block_entries {
+                        for &(col, _, _) in *block_entries {
                             pos_offsets[col as usize + 1] += 1;
                         }
                     }
@@ -978,7 +1045,7 @@ where
                     pos_cursor.clear();
                     pos_cursor.extend_from_slice(&pos_offsets[..active_a_cols]);
                     for (local_b, block_entries) in tile_blocks.iter().enumerate() {
-                        for &(col, coeff_idx, value) in block_entries {
+                        for &(col, coeff_idx, value) in *block_entries {
                             let pos = col as usize;
                             let dst = pos_cursor[pos];
                             pos_cursor[pos] += 1;
@@ -1006,10 +1073,8 @@ where
                     }
                 } else {
                     col_entries.clear();
-                    for local_b in 0..tile_len {
-                        for &(col, coeff_idx, value) in
-                            &digit_blocks[block_start + tile_start + local_b]
-                        {
+                    for (local_b, block_entries) in tile_blocks.iter().enumerate() {
+                        for &(col, coeff_idx, value) in *block_entries {
                             col_entries.push((col as usize, local_b as u32, coeff_idx, value));
                         }
                     }
@@ -1042,9 +1107,19 @@ where
         })
         .collect();
 
-    let mut out = Vec::with_capacity(num_blocks);
-    for thread_blocks in thread_results {
-        out.extend(thread_blocks);
+    // Merge per-segment reduced rows back into per-block rows: the first
+    // segment of a block moves in, later segments add (exact field adds).
+    let mut out: Vec<Vec<CyclotomicRing<F, D>>> = Vec::with_capacity(num_blocks);
+    out.resize_with(num_blocks, Vec::new);
+    for (segment_result, owner) in thread_results.into_iter().flatten().zip(segment_owner) {
+        let slot = &mut out[owner];
+        if slot.is_empty() {
+            *slot = segment_result;
+        } else {
+            for (dst, src) in slot.iter_mut().zip(segment_result) {
+                *dst += src;
+            }
+        }
     }
     Ok(out)
 }
@@ -1057,6 +1132,246 @@ mod tests {
     };
     use crate::DensePoly;
     use akita_field::Prime128OffsetA7F7 as F;
+    use rand::rngs::StdRng;
+    use rand::{Rng, SeedableRng};
+
+    fn random_a_rows<SF, const D: usize>(
+        n_a: usize,
+        active_cols: usize,
+        seed: u64,
+    ) -> Vec<Vec<CyclotomicRing<SF, D>>>
+    where
+        SF: FieldCore + akita_field::FromPrimitiveInt,
+    {
+        let mut rng = StdRng::seed_from_u64(seed);
+        (0..n_a)
+            .map(|_| {
+                (0..active_cols)
+                    .map(|_| {
+                        CyclotomicRing::from_coefficients(std::array::from_fn(|_| {
+                            SF::from_u64(rng.r#gen::<u64>())
+                        }))
+                    })
+                    .collect()
+            })
+            .collect()
+    }
+
+    /// Random signed one-hot-shaped block entries: sorted positions, values
+    /// in {-2, -1, 1, 2} (the psi-projection image incl. the collision case).
+    ///
+    /// `mean_entries_per_pos` is the expected entry count per ring position;
+    /// values above 1 model several packed one-hot chunks landing in the
+    /// same ring element (onehot_k < D).
+    fn random_signed_blocks<const D: usize>(
+        num_blocks: usize,
+        block_len: usize,
+        mean_entries_per_pos: f64,
+        seed: u64,
+    ) -> Vec<Vec<SparseRingBlockEntry>> {
+        const VALUES: [i8; 6] = [1, -1, 1, -1, 2, -2];
+        let whole = mean_entries_per_pos.floor() as usize;
+        let frac = mean_entries_per_pos - mean_entries_per_pos.floor();
+        let mut rng = StdRng::seed_from_u64(seed);
+        (0..num_blocks)
+            .map(|_| {
+                let mut entries = Vec::new();
+                for pos in 0..block_len {
+                    let count = whole + usize::from(rng.gen_bool(frac));
+                    let mut coeffs: Vec<u16> =
+                        (0..count).map(|_| rng.gen_range(0..D) as u16).collect();
+                    coeffs.sort_unstable();
+                    coeffs.dedup();
+                    for coeff_idx in coeffs {
+                        entries.push(SparseRingBlockEntry {
+                            pos_in_block: pos as u32,
+                            coeff_idx,
+                            value: VALUES[rng.gen_range(0..VALUES.len())],
+                        });
+                    }
+                }
+                entries
+            })
+            .collect()
+    }
+
+    fn assert_sweep_matches_reference<const D: usize>(
+        num_blocks: usize,
+        block_len: usize,
+        n_a: usize,
+        num_digits_commit: usize,
+        log_basis: u32,
+        density: f64,
+        seed: u64,
+    ) {
+        type SF = akita_field::Prime32Offset99;
+        let active_cols = block_len * num_digits_commit;
+        let a_rows_owned = random_a_rows::<SF, D>(n_a, active_cols, seed ^ 0xa);
+        let a_rows: Vec<&[CyclotomicRing<SF, D>]> =
+            a_rows_owned.iter().map(Vec::as_slice).collect();
+        let blocks_owned = random_signed_blocks::<D>(num_blocks, block_len, density, seed);
+        let blocks: Vec<&[SparseRingBlockEntry]> =
+            blocks_owned.iter().map(Vec::as_slice).collect();
+
+        let got = column_sweep_sparse::<SF, D>(
+            &a_rows,
+            &blocks,
+            n_a,
+            block_len,
+            num_digits_commit,
+            log_basis,
+        )
+        .expect("segmented sweep");
+        let expected =
+            reference_sparse_commit_rows::<SF, D>(&a_rows, &blocks, n_a, num_digits_commit, log_basis);
+        assert_eq!(got, expected, "sweep diverged from reference kernel");
+    }
+
+    #[test]
+    fn segmented_sweep_matches_reference_across_sizes() {
+        // Small and edge shapes: single block, single ring per block, empty
+        // blocks (density 0), full density, multi-digit decomposition.
+        assert_sweep_matches_reference::<16>(1, 1, 1, 1, 3, 1.0, 1);
+        assert_sweep_matches_reference::<16>(1, 8, 2, 1, 3, 0.5, 2);
+        assert_sweep_matches_reference::<16>(4, 16, 3, 1, 3, 0.0, 3);
+        assert_sweep_matches_reference::<16>(8, 64, 4, 2, 2, 0.7, 4);
+        assert_sweep_matches_reference::<32>(3, 128, 2, 3, 2, 0.9, 5);
+        assert_sweep_matches_reference::<128>(2, 256, 8, 1, 3, 1.0, 6);
+    }
+
+    /// End-to-end value-domain differential: random one-hot polynomials are
+    /// psi-projected exactly as the commit path does (values +-1, with +-2 on
+    /// coefficient collisions), then committed by the segmented sweep and by
+    /// the pre-change reference kernel. Covers K > D, K == D, K < D, sparse
+    /// occupancy, and the empty polynomial.
+    #[test]
+    fn psi_projected_onehot_commit_matches_reference_kernel() {
+        use crate::backend::RootTensorProjectionPoly;
+        use crate::OneHotPoly;
+        type SF = akita_field::Prime32Offset99;
+        type E = akita_field::FpExt4<SF>;
+        const D: usize = 128;
+        let mut rng = StdRng::seed_from_u64(0x9e0_0e9);
+        // (onehot_k, num_chunks, block_len, n_a, occupancy)
+        let shapes = [
+            (32usize, 64usize, 4usize, 3usize, 0.9f64),
+            (32, 64, 16, 2, 1.0),
+            (128, 128, 64, 2, 0.75),
+            (256, 32, 8, 4, 1.0),
+            (256, 64, 128, 1, 0.5),
+            (32, 64, 4, 2, 0.0),
+        ];
+        for (k, chunks, block_len, n_a, occupancy) in shapes {
+            let indices: Vec<Option<usize>> = (0..chunks)
+                .map(|_| rng.gen_bool(occupancy).then(|| rng.gen_range(0..k)))
+                .collect();
+            let onehot = OneHotPoly::<SF, usize>::new(k, D, indices).expect("onehot poly");
+            let projected = onehot
+                .tensor_packed_extension_root_poly::<E, D>()
+                .expect("psi projection");
+            let RootTensorProjectionPoly::Sparse(sparse) = projected else {
+                panic!("psi projection of a one-hot polynomial must be sparse");
+            };
+            assert!(
+                sparse
+                    .coeffs
+                    .iter()
+                    .all(|coeff| matches!(coeff.value, -2 | -1 | 1 | 2)),
+                "psi-projected values must stay in {{+-1, +-2}}"
+            );
+            let blocks = sparse.blocks_for(D, block_len).expect("blocks");
+            let slices = blocks.table().block_slices().expect("slices");
+            let a_rows_owned = random_a_rows::<SF, D>(n_a, block_len, 0xa11 + k as u64);
+            let a_rows: Vec<&[CyclotomicRing<SF, D>]> =
+                a_rows_owned.iter().map(Vec::as_slice).collect();
+            let got = column_sweep_sparse::<SF, D>(&a_rows, &slices, n_a, block_len, 1, 3)
+                .expect("segmented sweep");
+            let expected = reference_sparse_commit_rows::<SF, D>(&a_rows, &slices, n_a, 1, 3);
+            assert_eq!(got, expected, "psi-projected commit diverged (K={k})");
+        }
+    }
+
+    #[test]
+    fn segmented_sweep_matches_reference_beyond_accumulator_budget() {
+        // Per-block digit weight far above SPARSE_WIDE_ACCUMULATION_TILE:
+        // the old kernel bailed to the reference path here; the segmented
+        // sweep must return byte-identical rows. With density 1.0 and values
+        // up to |2| the per-block weight is ~1.5 * block_len > 3 * 8192.
+        const D: usize = 16;
+        let block_len = 3 * SPARSE_WIDE_ACCUMULATION_TILE;
+        assert_sweep_matches_reference::<D>(2, block_len, 2, 1, 3, 1.0, 7);
+        // Weight exactly at / just past one budget: block_len equal to the
+        // tile with unit values only would sit exactly at the boundary; the
+        // mixed value table straddles it.
+        assert_sweep_matches_reference::<D>(1, SPARSE_WIDE_ACCUMULATION_TILE, 1, 1, 3, 1.0, 8);
+        assert_sweep_matches_reference::<D>(1, SPARSE_WIDE_ACCUMULATION_TILE + 1, 1, 1, 3, 1.0, 9);
+    }
+
+    /// Same-environment ratio of the pre-change kernel (entry-ordered
+    /// flushing fallback, the path production 2^30+ chunk commitments took)
+    /// against the segmented column sweep, at production chunk shape.
+    ///
+    /// Run with:
+    /// `cargo test -p akita-prover --release sign_only -- --ignored --nocapture`
+    #[test]
+    #[ignore = "release micro-benchmark; run manually with --nocapture"]
+    fn bench_sign_only_sparse_commit_production_scale() {
+        type SF = akita_field::Prime32Offset99;
+        const D: usize = 128;
+        // (label, num_blocks, block_len, n_a): the conservative fp32 one-hot
+        // layouts the planner selects at 2^28 and 2^31 domains.
+        let shapes = [
+            ("2^28 domain", 256usize, 8192usize, 10usize),
+            ("2^31 domain", 1024, 16384, 11),
+        ];
+        for (label, num_blocks, block_len, n_a) in shapes {
+            let num_digits_commit = 1usize;
+            let log_basis = 3u32;
+            // 58% chunk occupancy at onehot_k=32 mirrors the measured
+            // ~157M hot cells across four 2^31 chunk commitments; each ring
+            // element packs D/onehot_k = 4 chunks and the psi projection
+            // emits one or two signed coefficients per hot cell.
+            let mean_entries_per_pos = 4.0 * 0.58 * 1.75;
+            let a_rows_owned =
+                random_a_rows::<SF, D>(n_a, block_len * num_digits_commit, 0xbe0);
+            let a_rows: Vec<&[CyclotomicRing<SF, D>]> =
+                a_rows_owned.iter().map(Vec::as_slice).collect();
+            let blocks_owned =
+                random_signed_blocks::<D>(num_blocks, block_len, mean_entries_per_pos, 0xbe1);
+            let blocks: Vec<&[SparseRingBlockEntry]> =
+                blocks_owned.iter().map(Vec::as_slice).collect();
+            let entries: usize = blocks.iter().map(|block| block.len()).sum();
+
+            let start = std::time::Instant::now();
+            let old = reference_sparse_commit_rows::<SF, D>(
+                &a_rows,
+                &blocks,
+                n_a,
+                num_digits_commit,
+                log_basis,
+            );
+            let old_elapsed = start.elapsed();
+
+            let start = std::time::Instant::now();
+            let new = column_sweep_sparse::<SF, D>(
+                &a_rows,
+                &blocks,
+                n_a,
+                block_len,
+                num_digits_commit,
+                log_basis,
+            )
+            .expect("segmented sweep");
+            let new_elapsed = start.elapsed();
+
+            assert_eq!(old, new, "bench kernels disagree");
+            eprintln!(
+                "[bench {label}] entries={entries} old(entry-ordered fallback)={old_elapsed:?} \
+                 new(segmented sweep)={new_elapsed:?} ratio={:.2}x",
+                old_elapsed.as_secs_f64() / new_elapsed.as_secs_f64()
+            );
+        }
+    }
 
     #[test]
     fn sparse_ring_fold_matches_dense_reference() {
