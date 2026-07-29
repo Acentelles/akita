@@ -7,18 +7,17 @@ use crate::compute::{
 };
 use crate::validation::validate_i8_setup_log_basis;
 use crate::{CommitInnerWitness, RootTensorProjectionPoly};
-use akita_config::{ensure_schedule_fits_setup, CommitmentConfig, ConservativeCommitmentConfig};
+use akita_config::{ensure_schedule_fits_setup, CommitmentConfig};
+use akita_field::parallel::*;
+use akita_field::unreduced::{HasWide, ReduceTo};
 use akita_field::AkitaError;
+use akita_field::{CanonicalField, FieldCore, FromPrimitiveInt, RandomSampling};
 use akita_types::{
     dispatch_for_field, root_tensor_projection_enabled, schedule_root_fold_step,
     validate_role_dims, validate_role_dims_for_field, AkitaCommitmentHint, AkitaExpandedSetup,
     AkitaScheduleLookupKey, Commitment, DigitBlocks, FpExtEncoding, LevelParams,
     OpeningClaimsLayout, PolynomialGroupLayout, PrecommittedGroupParams,
-    MULTI_GROUP_ROOT_DENSE_UNSUPPORTED,
 };
-use akita_field::parallel::*;
-use akita_field::unreduced::{HasWide, ReduceTo};
-use akita_field::{CanonicalField, FieldCore, FromPrimitiveInt, RandomSampling};
 
 /// Commitment output plus prover-side hint for one committed polynomial bundle.
 ///
@@ -501,6 +500,22 @@ where
     if Cfg::EXT_DEGREE == 1 {
         return Ok(None);
     }
+    if !Cfg::supports_multi_group_final_commit() {
+        // Precommit adapter (conservative-rank commits): proving is forbidden
+        // under this config, so there is no prove schedule to consult. The
+        // committed rows are consumed inside a future grouped extension root,
+        // which is always folded and always tensor-projects every group
+        // (`effective_batched_schedule` rejects anything else), so the
+        // transform decision follows the frozen commit layout's ring
+        // dimension directly.
+        let params = Cfg::get_params_for_batched_commitment(opening_batch)?;
+        let ring_d = params.role_dims().d_a();
+        return Ok(root_tensor_projection_enabled::<Cfg::Field, Cfg::ExtField>(
+            ring_d,
+            opening_batch.max_num_vars(),
+        )
+        .then_some(ring_d));
+    }
     let schedule = Cfg::get_params_for_prove(opening_batch)?;
     let Some(root_fold) = schedule_root_fold_step(&schedule) else {
         return Ok(None);
@@ -633,18 +648,13 @@ where
     P: RootPolyMeta<F>,
 {
     let opening_batch = prepare_commit_inputs::<F, P>(polys, setup)?;
-    if polys.iter().any(|poly| poly.onehot_chunk_size().is_none()) {
-        return Err(AkitaError::InvalidInput(
-            MULTI_GROUP_ROOT_DENSE_UNSUPPORTED.to_string(),
-        ));
-    }
     Ok(PolynomialGroupLayout::new(
         opening_batch.max_num_vars(),
         opening_batch.num_total_polynomials(),
     ))
 }
 
-/// Commit one standalone one-hot commitment group with conservative B rank.
+/// Commit one standalone commitment group (one-hot or dense) with conservative B rank.
 ///
 /// Grouped proving is still guarded until the opening phase lands; this API only
 /// produces the precommit metadata and commitment object required by that later
@@ -652,7 +662,7 @@ where
 ///
 /// # Errors
 ///
-/// Returns an error if the group is empty, dense, unsupported by the setup, or
+/// Returns an error if the group is empty, unsupported by the setup, or
 /// cannot be planned under the conservative-rank policy.
 pub fn commit_group<Cfg, P, B>(
     polys: &[P],
@@ -693,7 +703,11 @@ where
             commit_with_validated_params::<Cfg::Field, P, B>(polys, commit_ctx, &params)?
         };
     Ok((
-        PrecommittedGroupParams::from_params(key, &params),
+        PrecommittedGroupParams::from_params(
+            key,
+            &params,
+            akita_config::group_bound_policy_of::<Cfg>(),
+        ),
         commitment,
         hint,
     ))
@@ -712,13 +726,14 @@ where
     }
     precommitteds
         .into_iter()
-        .map(|key| {
+        .enumerate()
+        .map(|(group_index, key)| {
             key.validate()?;
-            let singleton = OpeningClaimsLayout::new(key.num_vars(), key.num_polynomials())?;
-            let params = <ConservativeCommitmentConfig<Cfg> as CommitmentConfig>::get_params_for_batched_commitment(
-                &singleton,
-            )?;
-            Ok(PrecommittedGroupParams::from_params(key, &params))
+            // Route through the config's static per-group-index hook so the
+            // prover-side schedule key is byte-identical to the verifier-side
+            // reconstruction (`proof_optimized_schedule_key`), including each
+            // group's frozen bound policy.
+            Cfg::precommitted_group_params(group_index, key)
         })
         .collect()
 }
@@ -898,9 +913,9 @@ mod tests {
     use crate::{AkitaProverSetup, MultilinearPolynomial, OneHotPoly};
     use akita_algebra::CyclotomicRing;
     use akita_challenges::SparseChallengeConfig;
+    use akita_field::Fp64;
     use akita_types::DigitBlocks;
     use akita_types::{SetupMatrixEnvelope, SisModulusFamily};
-    use akita_field::Fp64;
 
     type F = Fp64<4294967197>;
     const D: usize = 64;

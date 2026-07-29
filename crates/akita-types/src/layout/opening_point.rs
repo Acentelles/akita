@@ -2,7 +2,6 @@
 
 use akita_algebra::CyclotomicRing;
 use akita_field::AkitaError;
-use akita_serialization::DEFAULT_MAX_SEQUENCE_LEN;
 use akita_field::FieldCore;
 use akita_field::FromPrimitiveInt;
 
@@ -102,6 +101,19 @@ pub fn basis_weights<F: FieldCore>(point: &[F], basis: BasisMode) -> Result<Vec<
     }
 }
 
+/// Maximum number of entries for one materialized basis-weight table.
+///
+/// Load-bearing sizing, deliberately decoupled from serialization's
+/// `DEFAULT_MAX_SEQUENCE_LEN` (`2^25`): basis weights are *computed* from a
+/// statement-bound point, never deserialized from the wire, so the wire DoS
+/// bound is the wrong ceiling. The fn-dsa production composition builds
+/// per-selector-chunk Lagrange weights over `2^26` chunk indices (a `2^31`
+/// selector chunk at one-hot width 32) for every full chunk from batch 4096
+/// up through the 16,384 target, which the old `2^25` bound rejected. `2^28`
+/// gives 4x headroom while still bounding a single allocation (4 GiB of a
+/// 16-byte extension element) on verifier-reachable paths.
+const MAX_BASIS_WEIGHT_ENTRIES: usize = 1 << 28;
+
 fn basis_weight_len(num_vars: usize) -> Result<usize, AkitaError> {
     let shift = u32::try_from(num_vars).map_err(|_| AkitaError::InvalidSize {
         expected: usize::BITS as usize,
@@ -110,9 +122,9 @@ fn basis_weight_len(num_vars: usize) -> Result<usize, AkitaError> {
     let len = 1usize
         .checked_shl(shift)
         .ok_or_else(|| AkitaError::InvalidInput("basis weight dimension overflow".to_string()))?;
-    if len > DEFAULT_MAX_SEQUENCE_LEN {
+    if len > MAX_BASIS_WEIGHT_ENTRIES {
         return Err(AkitaError::InvalidSize {
-            expected: DEFAULT_MAX_SEQUENCE_LEN,
+            expected: MAX_BASIS_WEIGHT_ENTRIES,
             actual: len,
         });
     }

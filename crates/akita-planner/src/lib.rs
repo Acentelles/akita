@@ -16,6 +16,8 @@ pub use akita_types::{
     ChunkedWitnessCfg, DecompositionParams, SisModulusFamily, DEFAULT_SIS_SECURITY_BITS,
 };
 
+use akita_field::AkitaError;
+
 pub mod catalog_identity;
 pub mod emit;
 pub mod generated;
@@ -93,6 +95,34 @@ impl PlannerPolicy {
         self.decomposition.log_commit_bound != 1 || self.claim_ext_degree == 1 || log_basis >= 3
     }
 
+    /// Smallest configured log-basis a root commitment can actually use.
+    ///
+    /// One-hot roots with a nontrivial claim extension require `log_basis >= 3`
+    /// ([`Self::root_log_basis_supported`]): the psi projection can produce
+    /// `+2`, outside the balanced base-4 digit alphabet. The frozen
+    /// conservative precommit basis and its planner-side validation must agree
+    /// on this raised minimum. Returns `basis_range.0` unchanged whenever the
+    /// configured minimum is already supported (ext-1 and dense configs), so
+    /// those schedules stay byte-identical.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error when no basis in the configured range supports the
+    /// root commitment envelope.
+    pub fn frozen_root_log_basis(&self) -> Result<u32, AkitaError> {
+        let (min_basis, max_basis) = self.basis_range;
+        let mut frozen = min_basis;
+        while frozen <= max_basis && !self.root_log_basis_supported(frozen) {
+            frozen += 1;
+        }
+        if frozen > max_basis {
+            return Err(AkitaError::InvalidSetup(
+                "no configured log-basis supports the root commitment envelope".to_string(),
+            ));
+        }
+        Ok(frozen)
+    }
+
     /// Commitment digits required by a root and by its tensor-projected root.
     ///
     /// A nontrivial extension uses the `psi` embedding during opening
@@ -112,6 +142,51 @@ impl PlannerPolicy {
             self.decomposition.field_bits(),
             log_basis,
         )
+    }
+
+    /// This policy's commitment-bound projection, used to freeze standalone
+    /// precommit groups planned under this policy.
+    #[must_use]
+    pub fn group_bound_policy(&self) -> akita_types::GroupBoundPolicy {
+        akita_types::GroupBoundPolicy {
+            log_commit_bound: self.decomposition.log_commit_bound,
+            onehot_chunk_size: self.onehot_chunk_size,
+            basis_range: self.basis_range,
+        }
+    }
+
+    /// Per-group policy view: this policy re-evaluated under a frozen group's
+    /// commitment-bound policy.
+    ///
+    /// Multi-group roots may mix groups whose `log_commit_bound`,
+    /// `onehot_chunk_size`, and `basis_range` differ from the proving
+    /// preset's. Every group-level derivation (digit depths, A/B norms,
+    /// frozen-basis validation, conservative B-norm basis) must evaluate
+    /// under the group's own frozen policy, so the group planner substitutes
+    /// this view for the proving policy when expanding one precommitted
+    /// group. Shared inputs (ring dimension, SIS family/security floor,
+    /// extension degrees, psi norm bound, effective field width) stay the
+    /// proving policy's: mixed groups are only supported within one field /
+    /// ring family.
+    ///
+    /// `log_open_bound` is re-derived so the effective field width
+    /// (`decomposition.field_bits()`) is preserved exactly the way presets
+    /// declare it (`Some(field_bits)` iff the bound is narrower than the
+    /// field); a group frozen under the proving preset therefore yields a
+    /// view byte-identical to the proving policy.
+    #[must_use]
+    pub fn for_group_bound(&self, bound: akita_types::GroupBoundPolicy) -> PlannerPolicy {
+        let field_bits = self.decomposition.field_bits();
+        let mut view = *self;
+        view.decomposition.log_commit_bound = bound.log_commit_bound;
+        view.decomposition.log_open_bound = if bound.log_commit_bound < field_bits {
+            Some(field_bits)
+        } else {
+            None
+        };
+        view.onehot_chunk_size = bound.onehot_chunk_size;
+        view.basis_range = bound.basis_range;
+        view
     }
 
     /// Chunk count of fold level `fold_level`'s own fold: the number of

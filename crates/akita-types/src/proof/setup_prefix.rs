@@ -11,10 +11,10 @@ use crate::{
     PrecommittedGroupParams, PrecommittedLevelParams, SisModulusFamily,
 };
 use akita_field::AkitaError;
+use akita_field::FieldCore;
 use akita_serialization::{
     AkitaDeserialize, AkitaSerialize, Compress, SerializationError, Valid, Validate,
 };
-use akita_field::FieldCore;
 use std::cmp::Ordering;
 use std::collections::BTreeMap;
 use std::hash::{Hash, Hasher};
@@ -235,6 +235,24 @@ fn serialize_precommitted_level_params<W: Write>(
         .layout
         .conservative_n_b
         .serialize_with_mode(&mut writer, compress)?;
+    params
+        .layout
+        .log_commit_bound
+        .serialize_with_mode(&mut writer, compress)?;
+    params
+        .layout
+        .onehot_chunk_size
+        .serialize_with_mode(&mut writer, compress)?;
+    params
+        .layout
+        .basis_range
+        .0
+        .serialize_with_mode(&mut writer, compress)?;
+    params
+        .layout
+        .basis_range
+        .1
+        .serialize_with_mode(&mut writer, compress)?;
     serialize_ajtai_key(&params.a_key, &mut writer, compress)?;
     serialize_ajtai_key(&params.b_key, &mut writer, compress)?;
     params
@@ -267,6 +285,10 @@ fn deserialize_precommitted_level_params<R: Read>(
     let log_basis = u32::deserialize_with_mode(&mut reader, compress, validate, &())?;
     let n_a = usize::deserialize_with_mode(&mut reader, compress, validate, &())?;
     let conservative_n_b = usize::deserialize_with_mode(&mut reader, compress, validate, &())?;
+    let log_commit_bound = u32::deserialize_with_mode(&mut reader, compress, validate, &())?;
+    let onehot_chunk_size = usize::deserialize_with_mode(&mut reader, compress, validate, &())?;
+    let basis_range_min = u32::deserialize_with_mode(&mut reader, compress, validate, &())?;
+    let basis_range_max = u32::deserialize_with_mode(&mut reader, compress, validate, &())?;
     let a_key = deserialize_ajtai_key(&mut reader, compress, validate)?;
     let b_key = deserialize_ajtai_key(&mut reader, compress, validate)?;
     let num_blocks = usize::deserialize_with_mode(&mut reader, compress, validate, &())?;
@@ -282,6 +304,9 @@ fn deserialize_precommitted_level_params<R: Read>(
             log_basis,
             n_a,
             conservative_n_b,
+            log_commit_bound,
+            onehot_chunk_size,
+            basis_range: (basis_range_min, basis_range_max),
         },
         a_key,
         b_key,
@@ -308,6 +333,10 @@ fn precommitted_level_params_serialized_size(
         + params.layout.log_basis.serialized_size(compress)
         + params.layout.n_a.serialized_size(compress)
         + params.layout.conservative_n_b.serialized_size(compress)
+        + params.layout.log_commit_bound.serialized_size(compress)
+        + params.layout.onehot_chunk_size.serialized_size(compress)
+        + params.layout.basis_range.0.serialized_size(compress)
+        + params.layout.basis_range.1.serialized_size(compress)
         + params.a_key.row_len().serialized_size(compress)
         + params.a_key.col_len().serialized_size(compress)
         + params.a_key.min_security_bits().serialized_size(compress)
@@ -1047,9 +1076,15 @@ pub fn padded_setup_prefix_len(natural_field_len: usize) -> usize {
 
 /// Repack `level_params` into the precommitted-group metadata stored on the
 /// consuming fold.
+///
+/// `bound_policy` is the active policy's commitment-bound projection
+/// (`log_commit_bound`, `onehot_chunk_size`, `basis_range`); it must match
+/// the values the schedule planner stamps on its setup-prefix groups, since
+/// slot identity (descriptor bytes) includes them.
 pub fn setup_prefix_precommitted_params(
     prefix_params: &LevelParams,
     n_prefix: usize,
+    bound_policy: crate::GroupBoundPolicy,
 ) -> Result<PrecommittedLevelParams, AkitaError> {
     if n_prefix == 0 || !n_prefix.is_power_of_two() {
         return Err(AkitaError::InvalidSetup(
@@ -1064,6 +1099,9 @@ pub fn setup_prefix_precommitted_params(
             log_basis: prefix_params.log_basis,
             n_a: prefix_params.a_key.row_len(),
             conservative_n_b: prefix_params.b_key.row_len(),
+            log_commit_bound: bound_policy.log_commit_bound,
+            onehot_chunk_size: bound_policy.onehot_chunk_size,
+            basis_range: bound_policy.basis_range,
         },
         a_key: prefix_params.a_key.clone(),
         b_key: prefix_params.b_key.clone(),
@@ -1237,6 +1275,9 @@ mod tests {
                 log_basis: 3,
                 n_a: 1,
                 conservative_n_b: 1,
+                log_commit_bound: 1,
+                onehot_chunk_size: 1,
+                basis_range: (1, 8),
             },
             a_key: level_params.a_key.clone(),
             b_key: level_params.b_key.clone(),
@@ -1304,7 +1345,16 @@ mod tests {
         level_params.setup_prefix = Some(setup_prefix_slot_id(
             d_setup,
             natural_len,
-            setup_prefix_precommitted_params(&level_params, n_prefix).expect("prefix params"),
+            setup_prefix_precommitted_params(
+                &level_params,
+                n_prefix,
+                crate::GroupBoundPolicy {
+                    log_commit_bound: 1,
+                    onehot_chunk_size: 1,
+                    basis_range: (1, 8),
+                },
+            )
+            .expect("prefix params"),
         ));
 
         let err = select_setup_prefix_slot::<SetupPrefixVerifierSlot<F>, _>(
@@ -1327,8 +1377,16 @@ mod tests {
         use crate::proof::DigitBlocks;
         use akita_field::Prime32Offset99 as F;
 
-        let commitment_params =
-            setup_prefix_precommitted_params(&sample_level_params(), 32).expect("prefix params");
+        let commitment_params = setup_prefix_precommitted_params(
+            &sample_level_params(),
+            32,
+            crate::GroupBoundPolicy {
+                log_commit_bound: 1,
+                onehot_chunk_size: 1,
+                basis_range: (1, 8),
+            },
+        )
+        .expect("prefix params");
         let id = setup_prefix_slot_id(32, 1, commitment_params);
         let slot = || {
             // D-free hint: one empty digit block at stride 32 (the former D).
@@ -1359,8 +1417,16 @@ mod tests {
     fn verifier_registry_duplicate_insert_does_not_replace_existing_slot() {
         use akita_field::Prime32Offset99 as F;
 
-        let commitment_params =
-            setup_prefix_precommitted_params(&sample_level_params(), 32).expect("prefix params");
+        let commitment_params = setup_prefix_precommitted_params(
+            &sample_level_params(),
+            32,
+            crate::GroupBoundPolicy {
+                log_commit_bound: 1,
+                onehot_chunk_size: 1,
+                basis_range: (1, 8),
+            },
+        )
+        .expect("prefix params");
         let id = setup_prefix_slot_id(32, 1, commitment_params);
         let slot = || SetupPrefixVerifierSlot {
             id: id.clone(),

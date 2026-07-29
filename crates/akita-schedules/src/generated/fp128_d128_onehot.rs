@@ -110,12 +110,12 @@ pub(crate) static FP128_D128_ONEHOT_SCHEDULES: &[GeneratedScheduleTableEntry] = 
         GeneratedStep::Fold(GeneratedFoldStep { ring_d: 128, log_basis: 6, m_vars: 6, r_vars: 3, n_a: 2, n_b: 1, n_d: 1 }),
         GeneratedStep::Direct(GeneratedDirectStep { commit: None }),
     ] },
-    GeneratedScheduleTableEntry { final_group: PolynomialGroupLayout::new(16, 1), precommitteds: &[PrecommittedGroupParams { group: PolynomialGroupLayout::new(8, 1), m_vars: 1, r_vars: 0, log_basis: 2, n_a: 1, conservative_n_b: 1 }], steps: &[
+    GeneratedScheduleTableEntry { final_group: PolynomialGroupLayout::new(16, 1), precommitteds: &[PrecommittedGroupParams { group: PolynomialGroupLayout::new(8, 1), m_vars: 1, r_vars: 0, log_basis: 2, n_a: 1, conservative_n_b: 1, log_commit_bound: 1, onehot_chunk_size: 1, basis_range: (2, 6) }], steps: &[
         GeneratedStep::Fold(GeneratedFoldStep { ring_d: 128, log_basis: 5, m_vars: 8, r_vars: 1, n_a: 2, n_b: 1, n_d: 1 }),
         GeneratedStep::Fold(GeneratedFoldStep { ring_d: 128, log_basis: 5, m_vars: 8, r_vars: 2, n_a: 2, n_b: 1, n_d: 1 }),
         GeneratedStep::Direct(GeneratedDirectStep { commit: None }),
     ] },
-    GeneratedScheduleTableEntry { final_group: PolynomialGroupLayout::new(16, 1), precommitteds: &[PrecommittedGroupParams { group: PolynomialGroupLayout::new(8, 1), m_vars: 1, r_vars: 0, log_basis: 2, n_a: 1, conservative_n_b: 1 }, PrecommittedGroupParams { group: PolynomialGroupLayout::new(8, 1), m_vars: 1, r_vars: 0, log_basis: 2, n_a: 1, conservative_n_b: 1 }], steps: &[
+    GeneratedScheduleTableEntry { final_group: PolynomialGroupLayout::new(16, 1), precommitteds: &[PrecommittedGroupParams { group: PolynomialGroupLayout::new(8, 1), m_vars: 1, r_vars: 0, log_basis: 2, n_a: 1, conservative_n_b: 1, log_commit_bound: 1, onehot_chunk_size: 1, basis_range: (2, 6) }, PrecommittedGroupParams { group: PolynomialGroupLayout::new(8, 1), m_vars: 1, r_vars: 0, log_basis: 2, n_a: 1, conservative_n_b: 1, log_commit_bound: 1, onehot_chunk_size: 1, basis_range: (2, 6) }], steps: &[
         GeneratedStep::Fold(GeneratedFoldStep { ring_d: 128, log_basis: 6, m_vars: 8, r_vars: 1, n_a: 2, n_b: 1, n_d: 1 }),
         GeneratedStep::Fold(GeneratedFoldStep { ring_d: 128, log_basis: 6, m_vars: 8, r_vars: 2, n_a: 2, n_b: 1, n_d: 1 }),
         GeneratedStep::Direct(GeneratedDirectStep { commit: None }),
@@ -124,13 +124,13 @@ pub(crate) static FP128_D128_ONEHOT_SCHEDULES: &[GeneratedScheduleTableEntry] = 
         GeneratedStep::Fold(GeneratedFoldStep { ring_d: 128, log_basis: 3, m_vars: 8, r_vars: 1, n_a: 2, n_b: 1, n_d: 1 }),
         GeneratedStep::Direct(GeneratedDirectStep { commit: None }),
     ] },
-    GeneratedScheduleTableEntry { final_group: PolynomialGroupLayout::new(16, 4), precommitteds: &[PrecommittedGroupParams { group: PolynomialGroupLayout::new(8, 1), m_vars: 1, r_vars: 0, log_basis: 2, n_a: 1, conservative_n_b: 1 }], steps: &[
+    GeneratedScheduleTableEntry { final_group: PolynomialGroupLayout::new(16, 4), precommitteds: &[PrecommittedGroupParams { group: PolynomialGroupLayout::new(8, 1), m_vars: 1, r_vars: 0, log_basis: 2, n_a: 1, conservative_n_b: 1, log_commit_bound: 1, onehot_chunk_size: 1, basis_range: (2, 6) }], steps: &[
         GeneratedStep::Fold(GeneratedFoldStep { ring_d: 128, log_basis: 5, m_vars: 8, r_vars: 1, n_a: 2, n_b: 1, n_d: 1 }),
         GeneratedStep::Fold(GeneratedFoldStep { ring_d: 128, log_basis: 5, m_vars: 9, r_vars: 2, n_a: 2, n_b: 1, n_d: 1 }),
         GeneratedStep::Fold(GeneratedFoldStep { ring_d: 128, log_basis: 5, m_vars: 9, r_vars: 2, n_a: 2, n_b: 1, n_d: 1 }),
         GeneratedStep::Direct(GeneratedDirectStep { commit: None }),
     ] },
-    GeneratedScheduleTableEntry { final_group: PolynomialGroupLayout::new(16, 4), precommitteds: &[PrecommittedGroupParams { group: PolynomialGroupLayout::new(8, 1), m_vars: 1, r_vars: 0, log_basis: 2, n_a: 1, conservative_n_b: 1 }, PrecommittedGroupParams { group: PolynomialGroupLayout::new(8, 1), m_vars: 1, r_vars: 0, log_basis: 2, n_a: 1, conservative_n_b: 1 }], steps: &[
+    GeneratedScheduleTableEntry { final_group: PolynomialGroupLayout::new(16, 4), precommitteds: &[PrecommittedGroupParams { group: PolynomialGroupLayout::new(8, 1), m_vars: 1, r_vars: 0, log_basis: 2, n_a: 1, conservative_n_b: 1, log_commit_bound: 1, onehot_chunk_size: 1, basis_range: (2, 6) }, PrecommittedGroupParams { group: PolynomialGroupLayout::new(8, 1), m_vars: 1, r_vars: 0, log_basis: 2, n_a: 1, conservative_n_b: 1, log_commit_bound: 1, onehot_chunk_size: 1, basis_range: (2, 6) }], steps: &[
         GeneratedStep::Fold(GeneratedFoldStep { ring_d: 128, log_basis: 6, m_vars: 8, r_vars: 1, n_a: 2, n_b: 1, n_d: 1 }),
         GeneratedStep::Fold(GeneratedFoldStep { ring_d: 128, log_basis: 6, m_vars: 8, r_vars: 3, n_a: 2, n_b: 1, n_d: 1 }),
         GeneratedStep::Fold(GeneratedFoldStep { ring_d: 128, log_basis: 6, m_vars: 8, r_vars: 2, n_a: 2, n_b: 1, n_d: 1 }),
@@ -140,12 +140,12 @@ pub(crate) static FP128_D128_ONEHOT_SCHEDULES: &[GeneratedScheduleTableEntry] = 
         GeneratedStep::Fold(GeneratedFoldStep { ring_d: 128, log_basis: 5, m_vars: 8, r_vars: 2, n_a: 2, n_b: 1, n_d: 1 }),
         GeneratedStep::Direct(GeneratedDirectStep { commit: None }),
     ] },
-    GeneratedScheduleTableEntry { final_group: PolynomialGroupLayout::new(17, 1), precommitteds: &[PrecommittedGroupParams { group: PolynomialGroupLayout::new(8, 1), m_vars: 1, r_vars: 0, log_basis: 2, n_a: 1, conservative_n_b: 1 }], steps: &[
+    GeneratedScheduleTableEntry { final_group: PolynomialGroupLayout::new(17, 1), precommitteds: &[PrecommittedGroupParams { group: PolynomialGroupLayout::new(8, 1), m_vars: 1, r_vars: 0, log_basis: 2, n_a: 1, conservative_n_b: 1, log_commit_bound: 1, onehot_chunk_size: 1, basis_range: (2, 6) }], steps: &[
         GeneratedStep::Fold(GeneratedFoldStep { ring_d: 128, log_basis: 6, m_vars: 8, r_vars: 2, n_a: 2, n_b: 1, n_d: 1 }),
         GeneratedStep::Fold(GeneratedFoldStep { ring_d: 128, log_basis: 6, m_vars: 8, r_vars: 2, n_a: 2, n_b: 1, n_d: 1 }),
         GeneratedStep::Direct(GeneratedDirectStep { commit: None }),
     ] },
-    GeneratedScheduleTableEntry { final_group: PolynomialGroupLayout::new(17, 1), precommitteds: &[PrecommittedGroupParams { group: PolynomialGroupLayout::new(8, 1), m_vars: 1, r_vars: 0, log_basis: 2, n_a: 1, conservative_n_b: 1 }, PrecommittedGroupParams { group: PolynomialGroupLayout::new(8, 1), m_vars: 1, r_vars: 0, log_basis: 2, n_a: 1, conservative_n_b: 1 }], steps: &[
+    GeneratedScheduleTableEntry { final_group: PolynomialGroupLayout::new(17, 1), precommitteds: &[PrecommittedGroupParams { group: PolynomialGroupLayout::new(8, 1), m_vars: 1, r_vars: 0, log_basis: 2, n_a: 1, conservative_n_b: 1, log_commit_bound: 1, onehot_chunk_size: 1, basis_range: (2, 6) }, PrecommittedGroupParams { group: PolynomialGroupLayout::new(8, 1), m_vars: 1, r_vars: 0, log_basis: 2, n_a: 1, conservative_n_b: 1, log_commit_bound: 1, onehot_chunk_size: 1, basis_range: (2, 6) }], steps: &[
         GeneratedStep::Fold(GeneratedFoldStep { ring_d: 128, log_basis: 6, m_vars: 8, r_vars: 2, n_a: 2, n_b: 1, n_d: 1 }),
         GeneratedStep::Fold(GeneratedFoldStep { ring_d: 128, log_basis: 6, m_vars: 8, r_vars: 2, n_a: 2, n_b: 1, n_d: 1 }),
         GeneratedStep::Direct(GeneratedDirectStep { commit: None }),
@@ -156,13 +156,13 @@ pub(crate) static FP128_D128_ONEHOT_SCHEDULES: &[GeneratedScheduleTableEntry] = 
         GeneratedStep::Fold(GeneratedFoldStep { ring_d: 128, log_basis: 6, m_vars: 8, r_vars: 3, n_a: 2, n_b: 1, n_d: 1 }),
         GeneratedStep::Direct(GeneratedDirectStep { commit: None }),
     ] },
-    GeneratedScheduleTableEntry { final_group: PolynomialGroupLayout::new(17, 4), precommitteds: &[PrecommittedGroupParams { group: PolynomialGroupLayout::new(8, 1), m_vars: 1, r_vars: 0, log_basis: 2, n_a: 1, conservative_n_b: 1 }], steps: &[
+    GeneratedScheduleTableEntry { final_group: PolynomialGroupLayout::new(17, 4), precommitteds: &[PrecommittedGroupParams { group: PolynomialGroupLayout::new(8, 1), m_vars: 1, r_vars: 0, log_basis: 2, n_a: 1, conservative_n_b: 1, log_commit_bound: 1, onehot_chunk_size: 1, basis_range: (2, 6) }], steps: &[
         GeneratedStep::Fold(GeneratedFoldStep { ring_d: 128, log_basis: 6, m_vars: 8, r_vars: 2, n_a: 2, n_b: 1, n_d: 1 }),
         GeneratedStep::Fold(GeneratedFoldStep { ring_d: 128, log_basis: 6, m_vars: 8, r_vars: 3, n_a: 2, n_b: 1, n_d: 1 }),
         GeneratedStep::Fold(GeneratedFoldStep { ring_d: 128, log_basis: 6, m_vars: 8, r_vars: 3, n_a: 2, n_b: 1, n_d: 1 }),
         GeneratedStep::Direct(GeneratedDirectStep { commit: None }),
     ] },
-    GeneratedScheduleTableEntry { final_group: PolynomialGroupLayout::new(17, 4), precommitteds: &[PrecommittedGroupParams { group: PolynomialGroupLayout::new(8, 1), m_vars: 1, r_vars: 0, log_basis: 2, n_a: 1, conservative_n_b: 1 }, PrecommittedGroupParams { group: PolynomialGroupLayout::new(8, 1), m_vars: 1, r_vars: 0, log_basis: 2, n_a: 1, conservative_n_b: 1 }], steps: &[
+    GeneratedScheduleTableEntry { final_group: PolynomialGroupLayout::new(17, 4), precommitteds: &[PrecommittedGroupParams { group: PolynomialGroupLayout::new(8, 1), m_vars: 1, r_vars: 0, log_basis: 2, n_a: 1, conservative_n_b: 1, log_commit_bound: 1, onehot_chunk_size: 1, basis_range: (2, 6) }, PrecommittedGroupParams { group: PolynomialGroupLayout::new(8, 1), m_vars: 1, r_vars: 0, log_basis: 2, n_a: 1, conservative_n_b: 1, log_commit_bound: 1, onehot_chunk_size: 1, basis_range: (2, 6) }], steps: &[
         GeneratedStep::Fold(GeneratedFoldStep { ring_d: 128, log_basis: 6, m_vars: 9, r_vars: 1, n_a: 2, n_b: 1, n_d: 1 }),
         GeneratedStep::Fold(GeneratedFoldStep { ring_d: 128, log_basis: 6, m_vars: 8, r_vars: 3, n_a: 2, n_b: 1, n_d: 1 }),
         GeneratedStep::Fold(GeneratedFoldStep { ring_d: 128, log_basis: 6, m_vars: 8, r_vars: 3, n_a: 2, n_b: 1, n_d: 1 }),
@@ -172,13 +172,13 @@ pub(crate) static FP128_D128_ONEHOT_SCHEDULES: &[GeneratedScheduleTableEntry] = 
         GeneratedStep::Fold(GeneratedFoldStep { ring_d: 128, log_basis: 6, m_vars: 9, r_vars: 2, n_a: 2, n_b: 1, n_d: 1 }),
         GeneratedStep::Direct(GeneratedDirectStep { commit: None }),
     ] },
-    GeneratedScheduleTableEntry { final_group: PolynomialGroupLayout::new(18, 1), precommitteds: &[PrecommittedGroupParams { group: PolynomialGroupLayout::new(9, 1), m_vars: 1, r_vars: 1, log_basis: 2, n_a: 1, conservative_n_b: 1 }], steps: &[
+    GeneratedScheduleTableEntry { final_group: PolynomialGroupLayout::new(18, 1), precommitteds: &[PrecommittedGroupParams { group: PolynomialGroupLayout::new(9, 1), m_vars: 1, r_vars: 1, log_basis: 2, n_a: 1, conservative_n_b: 1, log_commit_bound: 1, onehot_chunk_size: 1, basis_range: (2, 6) }], steps: &[
         GeneratedStep::Fold(GeneratedFoldStep { ring_d: 128, log_basis: 6, m_vars: 9, r_vars: 2, n_a: 2, n_b: 1, n_d: 1 }),
         GeneratedStep::Fold(GeneratedFoldStep { ring_d: 128, log_basis: 6, m_vars: 8, r_vars: 3, n_a: 2, n_b: 1, n_d: 1 }),
         GeneratedStep::Fold(GeneratedFoldStep { ring_d: 128, log_basis: 6, m_vars: 8, r_vars: 2, n_a: 2, n_b: 1, n_d: 1 }),
         GeneratedStep::Direct(GeneratedDirectStep { commit: None }),
     ] },
-    GeneratedScheduleTableEntry { final_group: PolynomialGroupLayout::new(18, 1), precommitteds: &[PrecommittedGroupParams { group: PolynomialGroupLayout::new(9, 1), m_vars: 1, r_vars: 1, log_basis: 2, n_a: 1, conservative_n_b: 1 }, PrecommittedGroupParams { group: PolynomialGroupLayout::new(9, 1), m_vars: 1, r_vars: 1, log_basis: 2, n_a: 1, conservative_n_b: 1 }], steps: &[
+    GeneratedScheduleTableEntry { final_group: PolynomialGroupLayout::new(18, 1), precommitteds: &[PrecommittedGroupParams { group: PolynomialGroupLayout::new(9, 1), m_vars: 1, r_vars: 1, log_basis: 2, n_a: 1, conservative_n_b: 1, log_commit_bound: 1, onehot_chunk_size: 1, basis_range: (2, 6) }, PrecommittedGroupParams { group: PolynomialGroupLayout::new(9, 1), m_vars: 1, r_vars: 1, log_basis: 2, n_a: 1, conservative_n_b: 1, log_commit_bound: 1, onehot_chunk_size: 1, basis_range: (2, 6) }], steps: &[
         GeneratedStep::Fold(GeneratedFoldStep { ring_d: 128, log_basis: 6, m_vars: 9, r_vars: 2, n_a: 2, n_b: 1, n_d: 1 }),
         GeneratedStep::Fold(GeneratedFoldStep { ring_d: 128, log_basis: 6, m_vars: 8, r_vars: 3, n_a: 2, n_b: 1, n_d: 1 }),
         GeneratedStep::Fold(GeneratedFoldStep { ring_d: 128, log_basis: 6, m_vars: 8, r_vars: 2, n_a: 2, n_b: 1, n_d: 1 }),
@@ -191,14 +191,14 @@ pub(crate) static FP128_D128_ONEHOT_SCHEDULES: &[GeneratedScheduleTableEntry] = 
         GeneratedStep::Fold(GeneratedFoldStep { ring_d: 128, log_basis: 6, m_vars: 8, r_vars: 2, n_a: 2, n_b: 1, n_d: 1 }),
         GeneratedStep::Direct(GeneratedDirectStep { commit: None }),
     ] },
-    GeneratedScheduleTableEntry { final_group: PolynomialGroupLayout::new(18, 4), precommitteds: &[PrecommittedGroupParams { group: PolynomialGroupLayout::new(9, 1), m_vars: 1, r_vars: 1, log_basis: 2, n_a: 1, conservative_n_b: 1 }], steps: &[
+    GeneratedScheduleTableEntry { final_group: PolynomialGroupLayout::new(18, 4), precommitteds: &[PrecommittedGroupParams { group: PolynomialGroupLayout::new(9, 1), m_vars: 1, r_vars: 1, log_basis: 2, n_a: 1, conservative_n_b: 1, log_commit_bound: 1, onehot_chunk_size: 1, basis_range: (2, 6) }], steps: &[
         GeneratedStep::Fold(GeneratedFoldStep { ring_d: 128, log_basis: 5, m_vars: 9, r_vars: 2, n_a: 2, n_b: 1, n_d: 1 }),
         GeneratedStep::Fold(GeneratedFoldStep { ring_d: 128, log_basis: 6, m_vars: 9, r_vars: 3, n_a: 2, n_b: 1, n_d: 1 }),
         GeneratedStep::Fold(GeneratedFoldStep { ring_d: 128, log_basis: 6, m_vars: 8, r_vars: 3, n_a: 2, n_b: 1, n_d: 1 }),
         GeneratedStep::Fold(GeneratedFoldStep { ring_d: 128, log_basis: 6, m_vars: 8, r_vars: 2, n_a: 2, n_b: 1, n_d: 1 }),
         GeneratedStep::Direct(GeneratedDirectStep { commit: None }),
     ] },
-    GeneratedScheduleTableEntry { final_group: PolynomialGroupLayout::new(18, 4), precommitteds: &[PrecommittedGroupParams { group: PolynomialGroupLayout::new(9, 1), m_vars: 1, r_vars: 1, log_basis: 2, n_a: 1, conservative_n_b: 1 }, PrecommittedGroupParams { group: PolynomialGroupLayout::new(9, 1), m_vars: 1, r_vars: 1, log_basis: 2, n_a: 1, conservative_n_b: 1 }], steps: &[
+    GeneratedScheduleTableEntry { final_group: PolynomialGroupLayout::new(18, 4), precommitteds: &[PrecommittedGroupParams { group: PolynomialGroupLayout::new(9, 1), m_vars: 1, r_vars: 1, log_basis: 2, n_a: 1, conservative_n_b: 1, log_commit_bound: 1, onehot_chunk_size: 1, basis_range: (2, 6) }, PrecommittedGroupParams { group: PolynomialGroupLayout::new(9, 1), m_vars: 1, r_vars: 1, log_basis: 2, n_a: 1, conservative_n_b: 1, log_commit_bound: 1, onehot_chunk_size: 1, basis_range: (2, 6) }], steps: &[
         GeneratedStep::Fold(GeneratedFoldStep { ring_d: 128, log_basis: 5, m_vars: 9, r_vars: 2, n_a: 2, n_b: 1, n_d: 1 }),
         GeneratedStep::Fold(GeneratedFoldStep { ring_d: 128, log_basis: 6, m_vars: 9, r_vars: 3, n_a: 2, n_b: 1, n_d: 1 }),
         GeneratedStep::Fold(GeneratedFoldStep { ring_d: 128, log_basis: 6, m_vars: 8, r_vars: 3, n_a: 2, n_b: 1, n_d: 1 }),
@@ -211,13 +211,13 @@ pub(crate) static FP128_D128_ONEHOT_SCHEDULES: &[GeneratedScheduleTableEntry] = 
         GeneratedStep::Fold(GeneratedFoldStep { ring_d: 128, log_basis: 6, m_vars: 8, r_vars: 2, n_a: 2, n_b: 1, n_d: 1 }),
         GeneratedStep::Direct(GeneratedDirectStep { commit: None }),
     ] },
-    GeneratedScheduleTableEntry { final_group: PolynomialGroupLayout::new(19, 1), precommitteds: &[PrecommittedGroupParams { group: PolynomialGroupLayout::new(9, 1), m_vars: 1, r_vars: 1, log_basis: 2, n_a: 1, conservative_n_b: 1 }], steps: &[
+    GeneratedScheduleTableEntry { final_group: PolynomialGroupLayout::new(19, 1), precommitteds: &[PrecommittedGroupParams { group: PolynomialGroupLayout::new(9, 1), m_vars: 1, r_vars: 1, log_basis: 2, n_a: 1, conservative_n_b: 1, log_commit_bound: 1, onehot_chunk_size: 1, basis_range: (2, 6) }], steps: &[
         GeneratedStep::Fold(GeneratedFoldStep { ring_d: 128, log_basis: 6, m_vars: 10, r_vars: 2, n_a: 2, n_b: 1, n_d: 1 }),
         GeneratedStep::Fold(GeneratedFoldStep { ring_d: 128, log_basis: 6, m_vars: 8, r_vars: 3, n_a: 2, n_b: 1, n_d: 1 }),
         GeneratedStep::Fold(GeneratedFoldStep { ring_d: 128, log_basis: 6, m_vars: 8, r_vars: 3, n_a: 2, n_b: 1, n_d: 1 }),
         GeneratedStep::Direct(GeneratedDirectStep { commit: None }),
     ] },
-    GeneratedScheduleTableEntry { final_group: PolynomialGroupLayout::new(19, 1), precommitteds: &[PrecommittedGroupParams { group: PolynomialGroupLayout::new(9, 1), m_vars: 1, r_vars: 1, log_basis: 2, n_a: 1, conservative_n_b: 1 }, PrecommittedGroupParams { group: PolynomialGroupLayout::new(9, 1), m_vars: 1, r_vars: 1, log_basis: 2, n_a: 1, conservative_n_b: 1 }], steps: &[
+    GeneratedScheduleTableEntry { final_group: PolynomialGroupLayout::new(19, 1), precommitteds: &[PrecommittedGroupParams { group: PolynomialGroupLayout::new(9, 1), m_vars: 1, r_vars: 1, log_basis: 2, n_a: 1, conservative_n_b: 1, log_commit_bound: 1, onehot_chunk_size: 1, basis_range: (2, 6) }, PrecommittedGroupParams { group: PolynomialGroupLayout::new(9, 1), m_vars: 1, r_vars: 1, log_basis: 2, n_a: 1, conservative_n_b: 1, log_commit_bound: 1, onehot_chunk_size: 1, basis_range: (2, 6) }], steps: &[
         GeneratedStep::Fold(GeneratedFoldStep { ring_d: 128, log_basis: 6, m_vars: 10, r_vars: 2, n_a: 2, n_b: 1, n_d: 1 }),
         GeneratedStep::Fold(GeneratedFoldStep { ring_d: 128, log_basis: 6, m_vars: 8, r_vars: 3, n_a: 2, n_b: 1, n_d: 1 }),
         GeneratedStep::Fold(GeneratedFoldStep { ring_d: 128, log_basis: 6, m_vars: 8, r_vars: 3, n_a: 2, n_b: 1, n_d: 1 }),
@@ -230,14 +230,14 @@ pub(crate) static FP128_D128_ONEHOT_SCHEDULES: &[GeneratedScheduleTableEntry] = 
         GeneratedStep::Fold(GeneratedFoldStep { ring_d: 128, log_basis: 6, m_vars: 8, r_vars: 2, n_a: 2, n_b: 1, n_d: 1 }),
         GeneratedStep::Direct(GeneratedDirectStep { commit: None }),
     ] },
-    GeneratedScheduleTableEntry { final_group: PolynomialGroupLayout::new(19, 4), precommitteds: &[PrecommittedGroupParams { group: PolynomialGroupLayout::new(9, 1), m_vars: 1, r_vars: 1, log_basis: 2, n_a: 1, conservative_n_b: 1 }], steps: &[
+    GeneratedScheduleTableEntry { final_group: PolynomialGroupLayout::new(19, 4), precommitteds: &[PrecommittedGroupParams { group: PolynomialGroupLayout::new(9, 1), m_vars: 1, r_vars: 1, log_basis: 2, n_a: 1, conservative_n_b: 1, log_commit_bound: 1, onehot_chunk_size: 1, basis_range: (2, 6) }], steps: &[
         GeneratedStep::Fold(GeneratedFoldStep { ring_d: 128, log_basis: 6, m_vars: 9, r_vars: 3, n_a: 2, n_b: 1, n_d: 1 }),
         GeneratedStep::Fold(GeneratedFoldStep { ring_d: 128, log_basis: 6, m_vars: 9, r_vars: 3, n_a: 2, n_b: 1, n_d: 1 }),
         GeneratedStep::Fold(GeneratedFoldStep { ring_d: 128, log_basis: 6, m_vars: 8, r_vars: 3, n_a: 2, n_b: 1, n_d: 1 }),
         GeneratedStep::Fold(GeneratedFoldStep { ring_d: 128, log_basis: 6, m_vars: 8, r_vars: 2, n_a: 2, n_b: 1, n_d: 1 }),
         GeneratedStep::Direct(GeneratedDirectStep { commit: None }),
     ] },
-    GeneratedScheduleTableEntry { final_group: PolynomialGroupLayout::new(19, 4), precommitteds: &[PrecommittedGroupParams { group: PolynomialGroupLayout::new(9, 1), m_vars: 1, r_vars: 1, log_basis: 2, n_a: 1, conservative_n_b: 1 }, PrecommittedGroupParams { group: PolynomialGroupLayout::new(9, 1), m_vars: 1, r_vars: 1, log_basis: 2, n_a: 1, conservative_n_b: 1 }], steps: &[
+    GeneratedScheduleTableEntry { final_group: PolynomialGroupLayout::new(19, 4), precommitteds: &[PrecommittedGroupParams { group: PolynomialGroupLayout::new(9, 1), m_vars: 1, r_vars: 1, log_basis: 2, n_a: 1, conservative_n_b: 1, log_commit_bound: 1, onehot_chunk_size: 1, basis_range: (2, 6) }, PrecommittedGroupParams { group: PolynomialGroupLayout::new(9, 1), m_vars: 1, r_vars: 1, log_basis: 2, n_a: 1, conservative_n_b: 1, log_commit_bound: 1, onehot_chunk_size: 1, basis_range: (2, 6) }], steps: &[
         GeneratedStep::Fold(GeneratedFoldStep { ring_d: 128, log_basis: 4, m_vars: 10, r_vars: 2, n_a: 2, n_b: 1, n_d: 1 }),
         GeneratedStep::Fold(GeneratedFoldStep { ring_d: 128, log_basis: 6, m_vars: 9, r_vars: 4, n_a: 2, n_b: 1, n_d: 1 }),
         GeneratedStep::Fold(GeneratedFoldStep { ring_d: 128, log_basis: 6, m_vars: 8, r_vars: 3, n_a: 2, n_b: 1, n_d: 1 }),
@@ -251,14 +251,14 @@ pub(crate) static FP128_D128_ONEHOT_SCHEDULES: &[GeneratedScheduleTableEntry] = 
         GeneratedStep::Fold(GeneratedFoldStep { ring_d: 128, log_basis: 6, m_vars: 8, r_vars: 2, n_a: 2, n_b: 1, n_d: 1 }),
         GeneratedStep::Direct(GeneratedDirectStep { commit: None }),
     ] },
-    GeneratedScheduleTableEntry { final_group: PolynomialGroupLayout::new(20, 1), precommitteds: &[PrecommittedGroupParams { group: PolynomialGroupLayout::new(10, 1), m_vars: 2, r_vars: 1, log_basis: 2, n_a: 1, conservative_n_b: 1 }], steps: &[
+    GeneratedScheduleTableEntry { final_group: PolynomialGroupLayout::new(20, 1), precommitteds: &[PrecommittedGroupParams { group: PolynomialGroupLayout::new(10, 1), m_vars: 2, r_vars: 1, log_basis: 2, n_a: 1, conservative_n_b: 1, log_commit_bound: 1, onehot_chunk_size: 1, basis_range: (2, 6) }], steps: &[
         GeneratedStep::Fold(GeneratedFoldStep { ring_d: 128, log_basis: 5, m_vars: 9, r_vars: 4, n_a: 2, n_b: 1, n_d: 1 }),
         GeneratedStep::Fold(GeneratedFoldStep { ring_d: 128, log_basis: 6, m_vars: 9, r_vars: 3, n_a: 2, n_b: 1, n_d: 1 }),
         GeneratedStep::Fold(GeneratedFoldStep { ring_d: 128, log_basis: 6, m_vars: 8, r_vars: 3, n_a: 2, n_b: 1, n_d: 1 }),
         GeneratedStep::Fold(GeneratedFoldStep { ring_d: 128, log_basis: 6, m_vars: 8, r_vars: 2, n_a: 2, n_b: 1, n_d: 1 }),
         GeneratedStep::Direct(GeneratedDirectStep { commit: None }),
     ] },
-    GeneratedScheduleTableEntry { final_group: PolynomialGroupLayout::new(20, 1), precommitteds: &[PrecommittedGroupParams { group: PolynomialGroupLayout::new(10, 1), m_vars: 2, r_vars: 1, log_basis: 2, n_a: 1, conservative_n_b: 1 }, PrecommittedGroupParams { group: PolynomialGroupLayout::new(10, 1), m_vars: 2, r_vars: 1, log_basis: 2, n_a: 1, conservative_n_b: 1 }], steps: &[
+    GeneratedScheduleTableEntry { final_group: PolynomialGroupLayout::new(20, 1), precommitteds: &[PrecommittedGroupParams { group: PolynomialGroupLayout::new(10, 1), m_vars: 2, r_vars: 1, log_basis: 2, n_a: 1, conservative_n_b: 1, log_commit_bound: 1, onehot_chunk_size: 1, basis_range: (2, 6) }, PrecommittedGroupParams { group: PolynomialGroupLayout::new(10, 1), m_vars: 2, r_vars: 1, log_basis: 2, n_a: 1, conservative_n_b: 1, log_commit_bound: 1, onehot_chunk_size: 1, basis_range: (2, 6) }], steps: &[
         GeneratedStep::Fold(GeneratedFoldStep { ring_d: 128, log_basis: 5, m_vars: 9, r_vars: 4, n_a: 2, n_b: 1, n_d: 1 }),
         GeneratedStep::Fold(GeneratedFoldStep { ring_d: 128, log_basis: 6, m_vars: 9, r_vars: 3, n_a: 2, n_b: 1, n_d: 1 }),
         GeneratedStep::Fold(GeneratedFoldStep { ring_d: 128, log_basis: 6, m_vars: 8, r_vars: 3, n_a: 2, n_b: 1, n_d: 1 }),
@@ -272,14 +272,14 @@ pub(crate) static FP128_D128_ONEHOT_SCHEDULES: &[GeneratedScheduleTableEntry] = 
         GeneratedStep::Fold(GeneratedFoldStep { ring_d: 128, log_basis: 6, m_vars: 8, r_vars: 3, n_a: 2, n_b: 1, n_d: 1 }),
         GeneratedStep::Direct(GeneratedDirectStep { commit: None }),
     ] },
-    GeneratedScheduleTableEntry { final_group: PolynomialGroupLayout::new(20, 4), precommitteds: &[PrecommittedGroupParams { group: PolynomialGroupLayout::new(10, 1), m_vars: 2, r_vars: 1, log_basis: 2, n_a: 1, conservative_n_b: 1 }], steps: &[
+    GeneratedScheduleTableEntry { final_group: PolynomialGroupLayout::new(20, 4), precommitteds: &[PrecommittedGroupParams { group: PolynomialGroupLayout::new(10, 1), m_vars: 2, r_vars: 1, log_basis: 2, n_a: 1, conservative_n_b: 1, log_commit_bound: 1, onehot_chunk_size: 1, basis_range: (2, 6) }], steps: &[
         GeneratedStep::Fold(GeneratedFoldStep { ring_d: 128, log_basis: 4, m_vars: 10, r_vars: 3, n_a: 2, n_b: 1, n_d: 1 }),
         GeneratedStep::Fold(GeneratedFoldStep { ring_d: 128, log_basis: 6, m_vars: 9, r_vars: 4, n_a: 2, n_b: 1, n_d: 1 }),
         GeneratedStep::Fold(GeneratedFoldStep { ring_d: 128, log_basis: 6, m_vars: 8, r_vars: 3, n_a: 2, n_b: 1, n_d: 1 }),
         GeneratedStep::Fold(GeneratedFoldStep { ring_d: 128, log_basis: 6, m_vars: 8, r_vars: 3, n_a: 2, n_b: 1, n_d: 1 }),
         GeneratedStep::Direct(GeneratedDirectStep { commit: None }),
     ] },
-    GeneratedScheduleTableEntry { final_group: PolynomialGroupLayout::new(20, 4), precommitteds: &[PrecommittedGroupParams { group: PolynomialGroupLayout::new(10, 1), m_vars: 2, r_vars: 1, log_basis: 2, n_a: 1, conservative_n_b: 1 }, PrecommittedGroupParams { group: PolynomialGroupLayout::new(10, 1), m_vars: 2, r_vars: 1, log_basis: 2, n_a: 1, conservative_n_b: 1 }], steps: &[
+    GeneratedScheduleTableEntry { final_group: PolynomialGroupLayout::new(20, 4), precommitteds: &[PrecommittedGroupParams { group: PolynomialGroupLayout::new(10, 1), m_vars: 2, r_vars: 1, log_basis: 2, n_a: 1, conservative_n_b: 1, log_commit_bound: 1, onehot_chunk_size: 1, basis_range: (2, 6) }, PrecommittedGroupParams { group: PolynomialGroupLayout::new(10, 1), m_vars: 2, r_vars: 1, log_basis: 2, n_a: 1, conservative_n_b: 1, log_commit_bound: 1, onehot_chunk_size: 1, basis_range: (2, 6) }], steps: &[
         GeneratedStep::Fold(GeneratedFoldStep { ring_d: 128, log_basis: 4, m_vars: 10, r_vars: 3, n_a: 2, n_b: 1, n_d: 1 }),
         GeneratedStep::Fold(GeneratedFoldStep { ring_d: 128, log_basis: 6, m_vars: 9, r_vars: 4, n_a: 2, n_b: 1, n_d: 1 }),
         GeneratedStep::Fold(GeneratedFoldStep { ring_d: 128, log_basis: 6, m_vars: 8, r_vars: 3, n_a: 2, n_b: 1, n_d: 1 }),
@@ -293,14 +293,14 @@ pub(crate) static FP128_D128_ONEHOT_SCHEDULES: &[GeneratedScheduleTableEntry] = 
         GeneratedStep::Fold(GeneratedFoldStep { ring_d: 128, log_basis: 6, m_vars: 8, r_vars: 2, n_a: 2, n_b: 1, n_d: 1 }),
         GeneratedStep::Direct(GeneratedDirectStep { commit: None }),
     ] },
-    GeneratedScheduleTableEntry { final_group: PolynomialGroupLayout::new(21, 1), precommitteds: &[PrecommittedGroupParams { group: PolynomialGroupLayout::new(10, 1), m_vars: 2, r_vars: 1, log_basis: 2, n_a: 1, conservative_n_b: 1 }], steps: &[
+    GeneratedScheduleTableEntry { final_group: PolynomialGroupLayout::new(21, 1), precommitteds: &[PrecommittedGroupParams { group: PolynomialGroupLayout::new(10, 1), m_vars: 2, r_vars: 1, log_basis: 2, n_a: 1, conservative_n_b: 1, log_commit_bound: 1, onehot_chunk_size: 1, basis_range: (2, 6) }], steps: &[
         GeneratedStep::Fold(GeneratedFoldStep { ring_d: 128, log_basis: 4, m_vars: 10, r_vars: 4, n_a: 2, n_b: 1, n_d: 1 }),
         GeneratedStep::Fold(GeneratedFoldStep { ring_d: 128, log_basis: 6, m_vars: 9, r_vars: 3, n_a: 2, n_b: 1, n_d: 1 }),
         GeneratedStep::Fold(GeneratedFoldStep { ring_d: 128, log_basis: 6, m_vars: 8, r_vars: 3, n_a: 2, n_b: 1, n_d: 1 }),
         GeneratedStep::Fold(GeneratedFoldStep { ring_d: 128, log_basis: 6, m_vars: 8, r_vars: 3, n_a: 2, n_b: 1, n_d: 1 }),
         GeneratedStep::Direct(GeneratedDirectStep { commit: None }),
     ] },
-    GeneratedScheduleTableEntry { final_group: PolynomialGroupLayout::new(21, 1), precommitteds: &[PrecommittedGroupParams { group: PolynomialGroupLayout::new(10, 1), m_vars: 2, r_vars: 1, log_basis: 2, n_a: 1, conservative_n_b: 1 }, PrecommittedGroupParams { group: PolynomialGroupLayout::new(10, 1), m_vars: 2, r_vars: 1, log_basis: 2, n_a: 1, conservative_n_b: 1 }], steps: &[
+    GeneratedScheduleTableEntry { final_group: PolynomialGroupLayout::new(21, 1), precommitteds: &[PrecommittedGroupParams { group: PolynomialGroupLayout::new(10, 1), m_vars: 2, r_vars: 1, log_basis: 2, n_a: 1, conservative_n_b: 1, log_commit_bound: 1, onehot_chunk_size: 1, basis_range: (2, 6) }, PrecommittedGroupParams { group: PolynomialGroupLayout::new(10, 1), m_vars: 2, r_vars: 1, log_basis: 2, n_a: 1, conservative_n_b: 1, log_commit_bound: 1, onehot_chunk_size: 1, basis_range: (2, 6) }], steps: &[
         GeneratedStep::Fold(GeneratedFoldStep { ring_d: 128, log_basis: 4, m_vars: 10, r_vars: 4, n_a: 2, n_b: 1, n_d: 1 }),
         GeneratedStep::Fold(GeneratedFoldStep { ring_d: 128, log_basis: 6, m_vars: 9, r_vars: 4, n_a: 2, n_b: 1, n_d: 1 }),
         GeneratedStep::Fold(GeneratedFoldStep { ring_d: 128, log_basis: 6, m_vars: 8, r_vars: 3, n_a: 2, n_b: 1, n_d: 1 }),
@@ -315,7 +315,7 @@ pub(crate) static FP128_D128_ONEHOT_SCHEDULES: &[GeneratedScheduleTableEntry] = 
         GeneratedStep::Fold(GeneratedFoldStep { ring_d: 128, log_basis: 6, m_vars: 8, r_vars: 2, n_a: 2, n_b: 1, n_d: 1 }),
         GeneratedStep::Direct(GeneratedDirectStep { commit: None }),
     ] },
-    GeneratedScheduleTableEntry { final_group: PolynomialGroupLayout::new(21, 4), precommitteds: &[PrecommittedGroupParams { group: PolynomialGroupLayout::new(10, 1), m_vars: 2, r_vars: 1, log_basis: 2, n_a: 1, conservative_n_b: 1 }], steps: &[
+    GeneratedScheduleTableEntry { final_group: PolynomialGroupLayout::new(21, 4), precommitteds: &[PrecommittedGroupParams { group: PolynomialGroupLayout::new(10, 1), m_vars: 2, r_vars: 1, log_basis: 2, n_a: 1, conservative_n_b: 1, log_commit_bound: 1, onehot_chunk_size: 1, basis_range: (2, 6) }], steps: &[
         GeneratedStep::Fold(GeneratedFoldStep { ring_d: 128, log_basis: 4, m_vars: 11, r_vars: 3, n_a: 2, n_b: 1, n_d: 1 }),
         GeneratedStep::Fold(GeneratedFoldStep { ring_d: 128, log_basis: 6, m_vars: 9, r_vars: 4, n_a: 2, n_b: 1, n_d: 1 }),
         GeneratedStep::Fold(GeneratedFoldStep { ring_d: 128, log_basis: 6, m_vars: 9, r_vars: 3, n_a: 2, n_b: 1, n_d: 1 }),
@@ -323,7 +323,7 @@ pub(crate) static FP128_D128_ONEHOT_SCHEDULES: &[GeneratedScheduleTableEntry] = 
         GeneratedStep::Fold(GeneratedFoldStep { ring_d: 128, log_basis: 6, m_vars: 8, r_vars: 2, n_a: 2, n_b: 1, n_d: 1 }),
         GeneratedStep::Direct(GeneratedDirectStep { commit: None }),
     ] },
-    GeneratedScheduleTableEntry { final_group: PolynomialGroupLayout::new(21, 4), precommitteds: &[PrecommittedGroupParams { group: PolynomialGroupLayout::new(10, 1), m_vars: 2, r_vars: 1, log_basis: 2, n_a: 1, conservative_n_b: 1 }, PrecommittedGroupParams { group: PolynomialGroupLayout::new(10, 1), m_vars: 2, r_vars: 1, log_basis: 2, n_a: 1, conservative_n_b: 1 }], steps: &[
+    GeneratedScheduleTableEntry { final_group: PolynomialGroupLayout::new(21, 4), precommitteds: &[PrecommittedGroupParams { group: PolynomialGroupLayout::new(10, 1), m_vars: 2, r_vars: 1, log_basis: 2, n_a: 1, conservative_n_b: 1, log_commit_bound: 1, onehot_chunk_size: 1, basis_range: (2, 6) }, PrecommittedGroupParams { group: PolynomialGroupLayout::new(10, 1), m_vars: 2, r_vars: 1, log_basis: 2, n_a: 1, conservative_n_b: 1, log_commit_bound: 1, onehot_chunk_size: 1, basis_range: (2, 6) }], steps: &[
         GeneratedStep::Fold(GeneratedFoldStep { ring_d: 128, log_basis: 4, m_vars: 11, r_vars: 3, n_a: 2, n_b: 1, n_d: 1 }),
         GeneratedStep::Fold(GeneratedFoldStep { ring_d: 128, log_basis: 6, m_vars: 9, r_vars: 4, n_a: 2, n_b: 1, n_d: 1 }),
         GeneratedStep::Fold(GeneratedFoldStep { ring_d: 128, log_basis: 6, m_vars: 9, r_vars: 3, n_a: 2, n_b: 1, n_d: 1 }),
@@ -338,14 +338,14 @@ pub(crate) static FP128_D128_ONEHOT_SCHEDULES: &[GeneratedScheduleTableEntry] = 
         GeneratedStep::Fold(GeneratedFoldStep { ring_d: 128, log_basis: 6, m_vars: 8, r_vars: 3, n_a: 2, n_b: 1, n_d: 1 }),
         GeneratedStep::Direct(GeneratedDirectStep { commit: None }),
     ] },
-    GeneratedScheduleTableEntry { final_group: PolynomialGroupLayout::new(22, 1), precommitteds: &[PrecommittedGroupParams { group: PolynomialGroupLayout::new(11, 1), m_vars: 3, r_vars: 1, log_basis: 2, n_a: 1, conservative_n_b: 1 }], steps: &[
+    GeneratedScheduleTableEntry { final_group: PolynomialGroupLayout::new(22, 1), precommitteds: &[PrecommittedGroupParams { group: PolynomialGroupLayout::new(11, 1), m_vars: 3, r_vars: 1, log_basis: 2, n_a: 1, conservative_n_b: 1, log_commit_bound: 1, onehot_chunk_size: 1, basis_range: (2, 6) }], steps: &[
         GeneratedStep::Fold(GeneratedFoldStep { ring_d: 128, log_basis: 4, m_vars: 10, r_vars: 5, n_a: 2, n_b: 1, n_d: 1 }),
         GeneratedStep::Fold(GeneratedFoldStep { ring_d: 128, log_basis: 6, m_vars: 9, r_vars: 4, n_a: 2, n_b: 1, n_d: 1 }),
         GeneratedStep::Fold(GeneratedFoldStep { ring_d: 128, log_basis: 6, m_vars: 8, r_vars: 3, n_a: 2, n_b: 1, n_d: 1 }),
         GeneratedStep::Fold(GeneratedFoldStep { ring_d: 128, log_basis: 6, m_vars: 8, r_vars: 3, n_a: 2, n_b: 1, n_d: 1 }),
         GeneratedStep::Direct(GeneratedDirectStep { commit: None }),
     ] },
-    GeneratedScheduleTableEntry { final_group: PolynomialGroupLayout::new(22, 1), precommitteds: &[PrecommittedGroupParams { group: PolynomialGroupLayout::new(11, 1), m_vars: 3, r_vars: 1, log_basis: 2, n_a: 1, conservative_n_b: 1 }, PrecommittedGroupParams { group: PolynomialGroupLayout::new(11, 1), m_vars: 3, r_vars: 1, log_basis: 2, n_a: 1, conservative_n_b: 1 }], steps: &[
+    GeneratedScheduleTableEntry { final_group: PolynomialGroupLayout::new(22, 1), precommitteds: &[PrecommittedGroupParams { group: PolynomialGroupLayout::new(11, 1), m_vars: 3, r_vars: 1, log_basis: 2, n_a: 1, conservative_n_b: 1, log_commit_bound: 1, onehot_chunk_size: 1, basis_range: (2, 6) }, PrecommittedGroupParams { group: PolynomialGroupLayout::new(11, 1), m_vars: 3, r_vars: 1, log_basis: 2, n_a: 1, conservative_n_b: 1, log_commit_bound: 1, onehot_chunk_size: 1, basis_range: (2, 6) }], steps: &[
         GeneratedStep::Fold(GeneratedFoldStep { ring_d: 128, log_basis: 4, m_vars: 10, r_vars: 5, n_a: 2, n_b: 1, n_d: 1 }),
         GeneratedStep::Fold(GeneratedFoldStep { ring_d: 128, log_basis: 6, m_vars: 9, r_vars: 4, n_a: 2, n_b: 1, n_d: 1 }),
         GeneratedStep::Fold(GeneratedFoldStep { ring_d: 128, log_basis: 6, m_vars: 8, r_vars: 3, n_a: 2, n_b: 1, n_d: 1 }),
@@ -360,7 +360,7 @@ pub(crate) static FP128_D128_ONEHOT_SCHEDULES: &[GeneratedScheduleTableEntry] = 
         GeneratedStep::Fold(GeneratedFoldStep { ring_d: 128, log_basis: 6, m_vars: 8, r_vars: 2, n_a: 2, n_b: 1, n_d: 1 }),
         GeneratedStep::Direct(GeneratedDirectStep { commit: None }),
     ] },
-    GeneratedScheduleTableEntry { final_group: PolynomialGroupLayout::new(22, 4), precommitteds: &[PrecommittedGroupParams { group: PolynomialGroupLayout::new(11, 1), m_vars: 3, r_vars: 1, log_basis: 2, n_a: 1, conservative_n_b: 1 }], steps: &[
+    GeneratedScheduleTableEntry { final_group: PolynomialGroupLayout::new(22, 4), precommitteds: &[PrecommittedGroupParams { group: PolynomialGroupLayout::new(11, 1), m_vars: 3, r_vars: 1, log_basis: 2, n_a: 1, conservative_n_b: 1, log_commit_bound: 1, onehot_chunk_size: 1, basis_range: (2, 6) }], steps: &[
         GeneratedStep::Fold(GeneratedFoldStep { ring_d: 128, log_basis: 5, m_vars: 11, r_vars: 4, n_a: 2, n_b: 1, n_d: 1 }),
         GeneratedStep::Fold(GeneratedFoldStep { ring_d: 128, log_basis: 6, m_vars: 10, r_vars: 4, n_a: 2, n_b: 1, n_d: 1 }),
         GeneratedStep::Fold(GeneratedFoldStep { ring_d: 128, log_basis: 6, m_vars: 9, r_vars: 3, n_a: 2, n_b: 1, n_d: 1 }),
@@ -368,7 +368,7 @@ pub(crate) static FP128_D128_ONEHOT_SCHEDULES: &[GeneratedScheduleTableEntry] = 
         GeneratedStep::Fold(GeneratedFoldStep { ring_d: 128, log_basis: 6, m_vars: 8, r_vars: 2, n_a: 2, n_b: 1, n_d: 1 }),
         GeneratedStep::Direct(GeneratedDirectStep { commit: None }),
     ] },
-    GeneratedScheduleTableEntry { final_group: PolynomialGroupLayout::new(22, 4), precommitteds: &[PrecommittedGroupParams { group: PolynomialGroupLayout::new(11, 1), m_vars: 3, r_vars: 1, log_basis: 2, n_a: 1, conservative_n_b: 1 }, PrecommittedGroupParams { group: PolynomialGroupLayout::new(11, 1), m_vars: 3, r_vars: 1, log_basis: 2, n_a: 1, conservative_n_b: 1 }], steps: &[
+    GeneratedScheduleTableEntry { final_group: PolynomialGroupLayout::new(22, 4), precommitteds: &[PrecommittedGroupParams { group: PolynomialGroupLayout::new(11, 1), m_vars: 3, r_vars: 1, log_basis: 2, n_a: 1, conservative_n_b: 1, log_commit_bound: 1, onehot_chunk_size: 1, basis_range: (2, 6) }, PrecommittedGroupParams { group: PolynomialGroupLayout::new(11, 1), m_vars: 3, r_vars: 1, log_basis: 2, n_a: 1, conservative_n_b: 1, log_commit_bound: 1, onehot_chunk_size: 1, basis_range: (2, 6) }], steps: &[
         GeneratedStep::Fold(GeneratedFoldStep { ring_d: 128, log_basis: 5, m_vars: 11, r_vars: 4, n_a: 2, n_b: 1, n_d: 1 }),
         GeneratedStep::Fold(GeneratedFoldStep { ring_d: 128, log_basis: 6, m_vars: 10, r_vars: 4, n_a: 2, n_b: 1, n_d: 1 }),
         GeneratedStep::Fold(GeneratedFoldStep { ring_d: 128, log_basis: 6, m_vars: 9, r_vars: 3, n_a: 2, n_b: 1, n_d: 1 }),
@@ -384,7 +384,7 @@ pub(crate) static FP128_D128_ONEHOT_SCHEDULES: &[GeneratedScheduleTableEntry] = 
         GeneratedStep::Fold(GeneratedFoldStep { ring_d: 128, log_basis: 6, m_vars: 8, r_vars: 2, n_a: 2, n_b: 1, n_d: 1 }),
         GeneratedStep::Direct(GeneratedDirectStep { commit: None }),
     ] },
-    GeneratedScheduleTableEntry { final_group: PolynomialGroupLayout::new(23, 1), precommitteds: &[PrecommittedGroupParams { group: PolynomialGroupLayout::new(11, 1), m_vars: 3, r_vars: 1, log_basis: 2, n_a: 1, conservative_n_b: 1 }], steps: &[
+    GeneratedScheduleTableEntry { final_group: PolynomialGroupLayout::new(23, 1), precommitteds: &[PrecommittedGroupParams { group: PolynomialGroupLayout::new(11, 1), m_vars: 3, r_vars: 1, log_basis: 2, n_a: 1, conservative_n_b: 1, log_commit_bound: 1, onehot_chunk_size: 1, basis_range: (2, 6) }], steps: &[
         GeneratedStep::Fold(GeneratedFoldStep { ring_d: 128, log_basis: 4, m_vars: 11, r_vars: 5, n_a: 2, n_b: 1, n_d: 1 }),
         GeneratedStep::Fold(GeneratedFoldStep { ring_d: 128, log_basis: 6, m_vars: 9, r_vars: 4, n_a: 2, n_b: 1, n_d: 1 }),
         GeneratedStep::Fold(GeneratedFoldStep { ring_d: 128, log_basis: 6, m_vars: 9, r_vars: 3, n_a: 2, n_b: 1, n_d: 1 }),
@@ -392,7 +392,7 @@ pub(crate) static FP128_D128_ONEHOT_SCHEDULES: &[GeneratedScheduleTableEntry] = 
         GeneratedStep::Fold(GeneratedFoldStep { ring_d: 128, log_basis: 6, m_vars: 8, r_vars: 2, n_a: 2, n_b: 1, n_d: 1 }),
         GeneratedStep::Direct(GeneratedDirectStep { commit: None }),
     ] },
-    GeneratedScheduleTableEntry { final_group: PolynomialGroupLayout::new(23, 1), precommitteds: &[PrecommittedGroupParams { group: PolynomialGroupLayout::new(11, 1), m_vars: 3, r_vars: 1, log_basis: 2, n_a: 1, conservative_n_b: 1 }, PrecommittedGroupParams { group: PolynomialGroupLayout::new(11, 1), m_vars: 3, r_vars: 1, log_basis: 2, n_a: 1, conservative_n_b: 1 }], steps: &[
+    GeneratedScheduleTableEntry { final_group: PolynomialGroupLayout::new(23, 1), precommitteds: &[PrecommittedGroupParams { group: PolynomialGroupLayout::new(11, 1), m_vars: 3, r_vars: 1, log_basis: 2, n_a: 1, conservative_n_b: 1, log_commit_bound: 1, onehot_chunk_size: 1, basis_range: (2, 6) }, PrecommittedGroupParams { group: PolynomialGroupLayout::new(11, 1), m_vars: 3, r_vars: 1, log_basis: 2, n_a: 1, conservative_n_b: 1, log_commit_bound: 1, onehot_chunk_size: 1, basis_range: (2, 6) }], steps: &[
         GeneratedStep::Fold(GeneratedFoldStep { ring_d: 128, log_basis: 4, m_vars: 11, r_vars: 5, n_a: 2, n_b: 1, n_d: 1 }),
         GeneratedStep::Fold(GeneratedFoldStep { ring_d: 128, log_basis: 6, m_vars: 9, r_vars: 4, n_a: 2, n_b: 1, n_d: 1 }),
         GeneratedStep::Fold(GeneratedFoldStep { ring_d: 128, log_basis: 6, m_vars: 9, r_vars: 3, n_a: 2, n_b: 1, n_d: 1 }),
@@ -408,7 +408,7 @@ pub(crate) static FP128_D128_ONEHOT_SCHEDULES: &[GeneratedScheduleTableEntry] = 
         GeneratedStep::Fold(GeneratedFoldStep { ring_d: 128, log_basis: 6, m_vars: 8, r_vars: 2, n_a: 2, n_b: 1, n_d: 1 }),
         GeneratedStep::Direct(GeneratedDirectStep { commit: None }),
     ] },
-    GeneratedScheduleTableEntry { final_group: PolynomialGroupLayout::new(23, 4), precommitteds: &[PrecommittedGroupParams { group: PolynomialGroupLayout::new(11, 1), m_vars: 3, r_vars: 1, log_basis: 2, n_a: 1, conservative_n_b: 1 }], steps: &[
+    GeneratedScheduleTableEntry { final_group: PolynomialGroupLayout::new(23, 4), precommitteds: &[PrecommittedGroupParams { group: PolynomialGroupLayout::new(11, 1), m_vars: 3, r_vars: 1, log_basis: 2, n_a: 1, conservative_n_b: 1, log_commit_bound: 1, onehot_chunk_size: 1, basis_range: (2, 6) }], steps: &[
         GeneratedStep::Fold(GeneratedFoldStep { ring_d: 128, log_basis: 5, m_vars: 12, r_vars: 4, n_a: 2, n_b: 1, n_d: 1 }),
         GeneratedStep::Fold(GeneratedFoldStep { ring_d: 128, log_basis: 6, m_vars: 10, r_vars: 4, n_a: 2, n_b: 1, n_d: 1 }),
         GeneratedStep::Fold(GeneratedFoldStep { ring_d: 128, log_basis: 6, m_vars: 9, r_vars: 3, n_a: 2, n_b: 1, n_d: 1 }),
@@ -416,7 +416,7 @@ pub(crate) static FP128_D128_ONEHOT_SCHEDULES: &[GeneratedScheduleTableEntry] = 
         GeneratedStep::Fold(GeneratedFoldStep { ring_d: 128, log_basis: 6, m_vars: 8, r_vars: 2, n_a: 2, n_b: 1, n_d: 1 }),
         GeneratedStep::Direct(GeneratedDirectStep { commit: None }),
     ] },
-    GeneratedScheduleTableEntry { final_group: PolynomialGroupLayout::new(23, 4), precommitteds: &[PrecommittedGroupParams { group: PolynomialGroupLayout::new(11, 1), m_vars: 3, r_vars: 1, log_basis: 2, n_a: 1, conservative_n_b: 1 }, PrecommittedGroupParams { group: PolynomialGroupLayout::new(11, 1), m_vars: 3, r_vars: 1, log_basis: 2, n_a: 1, conservative_n_b: 1 }], steps: &[
+    GeneratedScheduleTableEntry { final_group: PolynomialGroupLayout::new(23, 4), precommitteds: &[PrecommittedGroupParams { group: PolynomialGroupLayout::new(11, 1), m_vars: 3, r_vars: 1, log_basis: 2, n_a: 1, conservative_n_b: 1, log_commit_bound: 1, onehot_chunk_size: 1, basis_range: (2, 6) }, PrecommittedGroupParams { group: PolynomialGroupLayout::new(11, 1), m_vars: 3, r_vars: 1, log_basis: 2, n_a: 1, conservative_n_b: 1, log_commit_bound: 1, onehot_chunk_size: 1, basis_range: (2, 6) }], steps: &[
         GeneratedStep::Fold(GeneratedFoldStep { ring_d: 128, log_basis: 5, m_vars: 12, r_vars: 4, n_a: 2, n_b: 1, n_d: 1 }),
         GeneratedStep::Fold(GeneratedFoldStep { ring_d: 128, log_basis: 6, m_vars: 10, r_vars: 4, n_a: 2, n_b: 1, n_d: 1 }),
         GeneratedStep::Fold(GeneratedFoldStep { ring_d: 128, log_basis: 6, m_vars: 9, r_vars: 3, n_a: 2, n_b: 1, n_d: 1 }),
@@ -432,7 +432,7 @@ pub(crate) static FP128_D128_ONEHOT_SCHEDULES: &[GeneratedScheduleTableEntry] = 
         GeneratedStep::Fold(GeneratedFoldStep { ring_d: 128, log_basis: 6, m_vars: 8, r_vars: 2, n_a: 2, n_b: 1, n_d: 1 }),
         GeneratedStep::Direct(GeneratedDirectStep { commit: None }),
     ] },
-    GeneratedScheduleTableEntry { final_group: PolynomialGroupLayout::new(24, 1), precommitteds: &[PrecommittedGroupParams { group: PolynomialGroupLayout::new(12, 1), m_vars: 4, r_vars: 1, log_basis: 2, n_a: 1, conservative_n_b: 1 }], steps: &[
+    GeneratedScheduleTableEntry { final_group: PolynomialGroupLayout::new(24, 1), precommitteds: &[PrecommittedGroupParams { group: PolynomialGroupLayout::new(12, 1), m_vars: 4, r_vars: 1, log_basis: 2, n_a: 1, conservative_n_b: 1, log_commit_bound: 1, onehot_chunk_size: 1, basis_range: (2, 6) }], steps: &[
         GeneratedStep::Fold(GeneratedFoldStep { ring_d: 128, log_basis: 5, m_vars: 11, r_vars: 6, n_a: 2, n_b: 1, n_d: 1 }),
         GeneratedStep::Fold(GeneratedFoldStep { ring_d: 128, log_basis: 6, m_vars: 10, r_vars: 4, n_a: 2, n_b: 1, n_d: 1 }),
         GeneratedStep::Fold(GeneratedFoldStep { ring_d: 128, log_basis: 6, m_vars: 9, r_vars: 3, n_a: 2, n_b: 1, n_d: 1 }),
@@ -440,7 +440,7 @@ pub(crate) static FP128_D128_ONEHOT_SCHEDULES: &[GeneratedScheduleTableEntry] = 
         GeneratedStep::Fold(GeneratedFoldStep { ring_d: 128, log_basis: 6, m_vars: 8, r_vars: 2, n_a: 2, n_b: 1, n_d: 1 }),
         GeneratedStep::Direct(GeneratedDirectStep { commit: None }),
     ] },
-    GeneratedScheduleTableEntry { final_group: PolynomialGroupLayout::new(24, 1), precommitteds: &[PrecommittedGroupParams { group: PolynomialGroupLayout::new(12, 1), m_vars: 4, r_vars: 1, log_basis: 2, n_a: 1, conservative_n_b: 1 }, PrecommittedGroupParams { group: PolynomialGroupLayout::new(12, 1), m_vars: 4, r_vars: 1, log_basis: 2, n_a: 1, conservative_n_b: 1 }], steps: &[
+    GeneratedScheduleTableEntry { final_group: PolynomialGroupLayout::new(24, 1), precommitteds: &[PrecommittedGroupParams { group: PolynomialGroupLayout::new(12, 1), m_vars: 4, r_vars: 1, log_basis: 2, n_a: 1, conservative_n_b: 1, log_commit_bound: 1, onehot_chunk_size: 1, basis_range: (2, 6) }, PrecommittedGroupParams { group: PolynomialGroupLayout::new(12, 1), m_vars: 4, r_vars: 1, log_basis: 2, n_a: 1, conservative_n_b: 1, log_commit_bound: 1, onehot_chunk_size: 1, basis_range: (2, 6) }], steps: &[
         GeneratedStep::Fold(GeneratedFoldStep { ring_d: 128, log_basis: 5, m_vars: 11, r_vars: 6, n_a: 2, n_b: 1, n_d: 1 }),
         GeneratedStep::Fold(GeneratedFoldStep { ring_d: 128, log_basis: 6, m_vars: 10, r_vars: 4, n_a: 2, n_b: 1, n_d: 1 }),
         GeneratedStep::Fold(GeneratedFoldStep { ring_d: 128, log_basis: 6, m_vars: 9, r_vars: 3, n_a: 2, n_b: 1, n_d: 1 }),
@@ -456,7 +456,7 @@ pub(crate) static FP128_D128_ONEHOT_SCHEDULES: &[GeneratedScheduleTableEntry] = 
         GeneratedStep::Fold(GeneratedFoldStep { ring_d: 128, log_basis: 6, m_vars: 8, r_vars: 2, n_a: 2, n_b: 1, n_d: 1 }),
         GeneratedStep::Direct(GeneratedDirectStep { commit: None }),
     ] },
-    GeneratedScheduleTableEntry { final_group: PolynomialGroupLayout::new(24, 4), precommitteds: &[PrecommittedGroupParams { group: PolynomialGroupLayout::new(12, 1), m_vars: 4, r_vars: 1, log_basis: 2, n_a: 1, conservative_n_b: 1 }], steps: &[
+    GeneratedScheduleTableEntry { final_group: PolynomialGroupLayout::new(24, 4), precommitteds: &[PrecommittedGroupParams { group: PolynomialGroupLayout::new(12, 1), m_vars: 4, r_vars: 1, log_basis: 2, n_a: 1, conservative_n_b: 1, log_commit_bound: 1, onehot_chunk_size: 1, basis_range: (2, 6) }], steps: &[
         GeneratedStep::Fold(GeneratedFoldStep { ring_d: 128, log_basis: 5, m_vars: 12, r_vars: 5, n_a: 2, n_b: 1, n_d: 1 }),
         GeneratedStep::Fold(GeneratedFoldStep { ring_d: 128, log_basis: 6, m_vars: 11, r_vars: 4, n_a: 2, n_b: 1, n_d: 1 }),
         GeneratedStep::Fold(GeneratedFoldStep { ring_d: 128, log_basis: 6, m_vars: 9, r_vars: 3, n_a: 2, n_b: 1, n_d: 1 }),
@@ -464,7 +464,7 @@ pub(crate) static FP128_D128_ONEHOT_SCHEDULES: &[GeneratedScheduleTableEntry] = 
         GeneratedStep::Fold(GeneratedFoldStep { ring_d: 128, log_basis: 6, m_vars: 8, r_vars: 2, n_a: 2, n_b: 1, n_d: 1 }),
         GeneratedStep::Direct(GeneratedDirectStep { commit: None }),
     ] },
-    GeneratedScheduleTableEntry { final_group: PolynomialGroupLayout::new(24, 4), precommitteds: &[PrecommittedGroupParams { group: PolynomialGroupLayout::new(12, 1), m_vars: 4, r_vars: 1, log_basis: 2, n_a: 1, conservative_n_b: 1 }, PrecommittedGroupParams { group: PolynomialGroupLayout::new(12, 1), m_vars: 4, r_vars: 1, log_basis: 2, n_a: 1, conservative_n_b: 1 }], steps: &[
+    GeneratedScheduleTableEntry { final_group: PolynomialGroupLayout::new(24, 4), precommitteds: &[PrecommittedGroupParams { group: PolynomialGroupLayout::new(12, 1), m_vars: 4, r_vars: 1, log_basis: 2, n_a: 1, conservative_n_b: 1, log_commit_bound: 1, onehot_chunk_size: 1, basis_range: (2, 6) }, PrecommittedGroupParams { group: PolynomialGroupLayout::new(12, 1), m_vars: 4, r_vars: 1, log_basis: 2, n_a: 1, conservative_n_b: 1, log_commit_bound: 1, onehot_chunk_size: 1, basis_range: (2, 6) }], steps: &[
         GeneratedStep::Fold(GeneratedFoldStep { ring_d: 128, log_basis: 5, m_vars: 12, r_vars: 5, n_a: 2, n_b: 1, n_d: 1 }),
         GeneratedStep::Fold(GeneratedFoldStep { ring_d: 128, log_basis: 6, m_vars: 11, r_vars: 4, n_a: 2, n_b: 1, n_d: 1 }),
         GeneratedStep::Fold(GeneratedFoldStep { ring_d: 128, log_basis: 6, m_vars: 9, r_vars: 3, n_a: 2, n_b: 1, n_d: 1 }),
@@ -480,7 +480,7 @@ pub(crate) static FP128_D128_ONEHOT_SCHEDULES: &[GeneratedScheduleTableEntry] = 
         GeneratedStep::Fold(GeneratedFoldStep { ring_d: 128, log_basis: 6, m_vars: 8, r_vars: 2, n_a: 2, n_b: 1, n_d: 1 }),
         GeneratedStep::Direct(GeneratedDirectStep { commit: None }),
     ] },
-    GeneratedScheduleTableEntry { final_group: PolynomialGroupLayout::new(25, 1), precommitteds: &[PrecommittedGroupParams { group: PolynomialGroupLayout::new(12, 1), m_vars: 4, r_vars: 1, log_basis: 2, n_a: 1, conservative_n_b: 1 }], steps: &[
+    GeneratedScheduleTableEntry { final_group: PolynomialGroupLayout::new(25, 1), precommitteds: &[PrecommittedGroupParams { group: PolynomialGroupLayout::new(12, 1), m_vars: 4, r_vars: 1, log_basis: 2, n_a: 1, conservative_n_b: 1, log_commit_bound: 1, onehot_chunk_size: 1, basis_range: (2, 6) }], steps: &[
         GeneratedStep::Fold(GeneratedFoldStep { ring_d: 128, log_basis: 5, m_vars: 12, r_vars: 6, n_a: 2, n_b: 1, n_d: 1 }),
         GeneratedStep::Fold(GeneratedFoldStep { ring_d: 128, log_basis: 6, m_vars: 10, r_vars: 4, n_a: 2, n_b: 1, n_d: 1 }),
         GeneratedStep::Fold(GeneratedFoldStep { ring_d: 128, log_basis: 6, m_vars: 9, r_vars: 3, n_a: 2, n_b: 1, n_d: 1 }),
@@ -488,7 +488,7 @@ pub(crate) static FP128_D128_ONEHOT_SCHEDULES: &[GeneratedScheduleTableEntry] = 
         GeneratedStep::Fold(GeneratedFoldStep { ring_d: 128, log_basis: 6, m_vars: 8, r_vars: 2, n_a: 2, n_b: 1, n_d: 1 }),
         GeneratedStep::Direct(GeneratedDirectStep { commit: None }),
     ] },
-    GeneratedScheduleTableEntry { final_group: PolynomialGroupLayout::new(25, 1), precommitteds: &[PrecommittedGroupParams { group: PolynomialGroupLayout::new(12, 1), m_vars: 4, r_vars: 1, log_basis: 2, n_a: 1, conservative_n_b: 1 }, PrecommittedGroupParams { group: PolynomialGroupLayout::new(12, 1), m_vars: 4, r_vars: 1, log_basis: 2, n_a: 1, conservative_n_b: 1 }], steps: &[
+    GeneratedScheduleTableEntry { final_group: PolynomialGroupLayout::new(25, 1), precommitteds: &[PrecommittedGroupParams { group: PolynomialGroupLayout::new(12, 1), m_vars: 4, r_vars: 1, log_basis: 2, n_a: 1, conservative_n_b: 1, log_commit_bound: 1, onehot_chunk_size: 1, basis_range: (2, 6) }, PrecommittedGroupParams { group: PolynomialGroupLayout::new(12, 1), m_vars: 4, r_vars: 1, log_basis: 2, n_a: 1, conservative_n_b: 1, log_commit_bound: 1, onehot_chunk_size: 1, basis_range: (2, 6) }], steps: &[
         GeneratedStep::Fold(GeneratedFoldStep { ring_d: 128, log_basis: 5, m_vars: 12, r_vars: 6, n_a: 2, n_b: 1, n_d: 1 }),
         GeneratedStep::Fold(GeneratedFoldStep { ring_d: 128, log_basis: 6, m_vars: 10, r_vars: 4, n_a: 2, n_b: 1, n_d: 1 }),
         GeneratedStep::Fold(GeneratedFoldStep { ring_d: 128, log_basis: 6, m_vars: 9, r_vars: 3, n_a: 2, n_b: 1, n_d: 1 }),
@@ -505,7 +505,7 @@ pub(crate) static FP128_D128_ONEHOT_SCHEDULES: &[GeneratedScheduleTableEntry] = 
         GeneratedStep::Fold(GeneratedFoldStep { ring_d: 128, log_basis: 6, m_vars: 8, r_vars: 2, n_a: 2, n_b: 1, n_d: 1 }),
         GeneratedStep::Direct(GeneratedDirectStep { commit: None }),
     ] },
-    GeneratedScheduleTableEntry { final_group: PolynomialGroupLayout::new(25, 4), precommitteds: &[PrecommittedGroupParams { group: PolynomialGroupLayout::new(12, 1), m_vars: 4, r_vars: 1, log_basis: 2, n_a: 1, conservative_n_b: 1 }], steps: &[
+    GeneratedScheduleTableEntry { final_group: PolynomialGroupLayout::new(25, 4), precommitteds: &[PrecommittedGroupParams { group: PolynomialGroupLayout::new(12, 1), m_vars: 4, r_vars: 1, log_basis: 2, n_a: 1, conservative_n_b: 1, log_commit_bound: 1, onehot_chunk_size: 1, basis_range: (2, 6) }], steps: &[
         GeneratedStep::Fold(GeneratedFoldStep { ring_d: 128, log_basis: 5, m_vars: 13, r_vars: 5, n_a: 2, n_b: 1, n_d: 1 }),
         GeneratedStep::Fold(GeneratedFoldStep { ring_d: 128, log_basis: 6, m_vars: 11, r_vars: 4, n_a: 2, n_b: 1, n_d: 1 }),
         GeneratedStep::Fold(GeneratedFoldStep { ring_d: 128, log_basis: 6, m_vars: 9, r_vars: 4, n_a: 2, n_b: 1, n_d: 1 }),
@@ -513,7 +513,7 @@ pub(crate) static FP128_D128_ONEHOT_SCHEDULES: &[GeneratedScheduleTableEntry] = 
         GeneratedStep::Fold(GeneratedFoldStep { ring_d: 128, log_basis: 6, m_vars: 8, r_vars: 3, n_a: 2, n_b: 1, n_d: 1 }),
         GeneratedStep::Direct(GeneratedDirectStep { commit: None }),
     ] },
-    GeneratedScheduleTableEntry { final_group: PolynomialGroupLayout::new(25, 4), precommitteds: &[PrecommittedGroupParams { group: PolynomialGroupLayout::new(12, 1), m_vars: 4, r_vars: 1, log_basis: 2, n_a: 1, conservative_n_b: 1 }, PrecommittedGroupParams { group: PolynomialGroupLayout::new(12, 1), m_vars: 4, r_vars: 1, log_basis: 2, n_a: 1, conservative_n_b: 1 }], steps: &[
+    GeneratedScheduleTableEntry { final_group: PolynomialGroupLayout::new(25, 4), precommitteds: &[PrecommittedGroupParams { group: PolynomialGroupLayout::new(12, 1), m_vars: 4, r_vars: 1, log_basis: 2, n_a: 1, conservative_n_b: 1, log_commit_bound: 1, onehot_chunk_size: 1, basis_range: (2, 6) }, PrecommittedGroupParams { group: PolynomialGroupLayout::new(12, 1), m_vars: 4, r_vars: 1, log_basis: 2, n_a: 1, conservative_n_b: 1, log_commit_bound: 1, onehot_chunk_size: 1, basis_range: (2, 6) }], steps: &[
         GeneratedStep::Fold(GeneratedFoldStep { ring_d: 128, log_basis: 3, m_vars: 13, r_vars: 5, n_a: 2, n_b: 1, n_d: 1 }),
         GeneratedStep::Fold(GeneratedFoldStep { ring_d: 128, log_basis: 4, m_vars: 11, r_vars: 5, n_a: 3, n_b: 1, n_d: 1 }),
         GeneratedStep::Fold(GeneratedFoldStep { ring_d: 128, log_basis: 6, m_vars: 10, r_vars: 4, n_a: 2, n_b: 1, n_d: 1 }),
@@ -530,7 +530,7 @@ pub(crate) static FP128_D128_ONEHOT_SCHEDULES: &[GeneratedScheduleTableEntry] = 
         GeneratedStep::Fold(GeneratedFoldStep { ring_d: 128, log_basis: 6, m_vars: 8, r_vars: 2, n_a: 2, n_b: 1, n_d: 1 }),
         GeneratedStep::Direct(GeneratedDirectStep { commit: None }),
     ] },
-    GeneratedScheduleTableEntry { final_group: PolynomialGroupLayout::new(26, 1), precommitteds: &[PrecommittedGroupParams { group: PolynomialGroupLayout::new(13, 1), m_vars: 5, r_vars: 1, log_basis: 2, n_a: 2, conservative_n_b: 1 }], steps: &[
+    GeneratedScheduleTableEntry { final_group: PolynomialGroupLayout::new(26, 1), precommitteds: &[PrecommittedGroupParams { group: PolynomialGroupLayout::new(13, 1), m_vars: 5, r_vars: 1, log_basis: 2, n_a: 2, conservative_n_b: 1, log_commit_bound: 1, onehot_chunk_size: 1, basis_range: (2, 6) }], steps: &[
         GeneratedStep::Fold(GeneratedFoldStep { ring_d: 128, log_basis: 5, m_vars: 12, r_vars: 7, n_a: 2, n_b: 1, n_d: 1 }),
         GeneratedStep::Fold(GeneratedFoldStep { ring_d: 128, log_basis: 6, m_vars: 11, r_vars: 4, n_a: 2, n_b: 1, n_d: 1 }),
         GeneratedStep::Fold(GeneratedFoldStep { ring_d: 128, log_basis: 6, m_vars: 9, r_vars: 3, n_a: 2, n_b: 1, n_d: 1 }),
@@ -538,7 +538,7 @@ pub(crate) static FP128_D128_ONEHOT_SCHEDULES: &[GeneratedScheduleTableEntry] = 
         GeneratedStep::Fold(GeneratedFoldStep { ring_d: 128, log_basis: 6, m_vars: 8, r_vars: 2, n_a: 2, n_b: 1, n_d: 1 }),
         GeneratedStep::Direct(GeneratedDirectStep { commit: None }),
     ] },
-    GeneratedScheduleTableEntry { final_group: PolynomialGroupLayout::new(26, 1), precommitteds: &[PrecommittedGroupParams { group: PolynomialGroupLayout::new(13, 1), m_vars: 5, r_vars: 1, log_basis: 2, n_a: 2, conservative_n_b: 1 }, PrecommittedGroupParams { group: PolynomialGroupLayout::new(13, 1), m_vars: 5, r_vars: 1, log_basis: 2, n_a: 2, conservative_n_b: 1 }], steps: &[
+    GeneratedScheduleTableEntry { final_group: PolynomialGroupLayout::new(26, 1), precommitteds: &[PrecommittedGroupParams { group: PolynomialGroupLayout::new(13, 1), m_vars: 5, r_vars: 1, log_basis: 2, n_a: 2, conservative_n_b: 1, log_commit_bound: 1, onehot_chunk_size: 1, basis_range: (2, 6) }, PrecommittedGroupParams { group: PolynomialGroupLayout::new(13, 1), m_vars: 5, r_vars: 1, log_basis: 2, n_a: 2, conservative_n_b: 1, log_commit_bound: 1, onehot_chunk_size: 1, basis_range: (2, 6) }], steps: &[
         GeneratedStep::Fold(GeneratedFoldStep { ring_d: 128, log_basis: 5, m_vars: 12, r_vars: 7, n_a: 2, n_b: 1, n_d: 1 }),
         GeneratedStep::Fold(GeneratedFoldStep { ring_d: 128, log_basis: 6, m_vars: 11, r_vars: 4, n_a: 2, n_b: 1, n_d: 1 }),
         GeneratedStep::Fold(GeneratedFoldStep { ring_d: 128, log_basis: 6, m_vars: 9, r_vars: 3, n_a: 2, n_b: 1, n_d: 1 }),
@@ -555,7 +555,7 @@ pub(crate) static FP128_D128_ONEHOT_SCHEDULES: &[GeneratedScheduleTableEntry] = 
         GeneratedStep::Fold(GeneratedFoldStep { ring_d: 128, log_basis: 6, m_vars: 8, r_vars: 2, n_a: 2, n_b: 1, n_d: 1 }),
         GeneratedStep::Direct(GeneratedDirectStep { commit: None }),
     ] },
-    GeneratedScheduleTableEntry { final_group: PolynomialGroupLayout::new(26, 4), precommitteds: &[PrecommittedGroupParams { group: PolynomialGroupLayout::new(13, 1), m_vars: 5, r_vars: 1, log_basis: 2, n_a: 2, conservative_n_b: 1 }], steps: &[
+    GeneratedScheduleTableEntry { final_group: PolynomialGroupLayout::new(26, 4), precommitteds: &[PrecommittedGroupParams { group: PolynomialGroupLayout::new(13, 1), m_vars: 5, r_vars: 1, log_basis: 2, n_a: 2, conservative_n_b: 1, log_commit_bound: 1, onehot_chunk_size: 1, basis_range: (2, 6) }], steps: &[
         GeneratedStep::Fold(GeneratedFoldStep { ring_d: 128, log_basis: 2, m_vars: 13, r_vars: 6, n_a: 2, n_b: 1, n_d: 1 }),
         GeneratedStep::Fold(GeneratedFoldStep { ring_d: 128, log_basis: 4, m_vars: 11, r_vars: 6, n_a: 3, n_b: 1, n_d: 1 }),
         GeneratedStep::Fold(GeneratedFoldStep { ring_d: 128, log_basis: 6, m_vars: 10, r_vars: 4, n_a: 2, n_b: 1, n_d: 1 }),
@@ -564,7 +564,7 @@ pub(crate) static FP128_D128_ONEHOT_SCHEDULES: &[GeneratedScheduleTableEntry] = 
         GeneratedStep::Fold(GeneratedFoldStep { ring_d: 128, log_basis: 6, m_vars: 8, r_vars: 2, n_a: 2, n_b: 1, n_d: 1 }),
         GeneratedStep::Direct(GeneratedDirectStep { commit: None }),
     ] },
-    GeneratedScheduleTableEntry { final_group: PolynomialGroupLayout::new(26, 4), precommitteds: &[PrecommittedGroupParams { group: PolynomialGroupLayout::new(13, 1), m_vars: 5, r_vars: 1, log_basis: 2, n_a: 2, conservative_n_b: 1 }, PrecommittedGroupParams { group: PolynomialGroupLayout::new(13, 1), m_vars: 5, r_vars: 1, log_basis: 2, n_a: 2, conservative_n_b: 1 }], steps: &[
+    GeneratedScheduleTableEntry { final_group: PolynomialGroupLayout::new(26, 4), precommitteds: &[PrecommittedGroupParams { group: PolynomialGroupLayout::new(13, 1), m_vars: 5, r_vars: 1, log_basis: 2, n_a: 2, conservative_n_b: 1, log_commit_bound: 1, onehot_chunk_size: 1, basis_range: (2, 6) }, PrecommittedGroupParams { group: PolynomialGroupLayout::new(13, 1), m_vars: 5, r_vars: 1, log_basis: 2, n_a: 2, conservative_n_b: 1, log_commit_bound: 1, onehot_chunk_size: 1, basis_range: (2, 6) }], steps: &[
         GeneratedStep::Fold(GeneratedFoldStep { ring_d: 128, log_basis: 2, m_vars: 13, r_vars: 6, n_a: 2, n_b: 1, n_d: 1 }),
         GeneratedStep::Fold(GeneratedFoldStep { ring_d: 128, log_basis: 4, m_vars: 11, r_vars: 6, n_a: 3, n_b: 1, n_d: 1 }),
         GeneratedStep::Fold(GeneratedFoldStep { ring_d: 128, log_basis: 6, m_vars: 10, r_vars: 4, n_a: 2, n_b: 1, n_d: 1 }),
@@ -582,7 +582,7 @@ pub(crate) static FP128_D128_ONEHOT_SCHEDULES: &[GeneratedScheduleTableEntry] = 
         GeneratedStep::Fold(GeneratedFoldStep { ring_d: 128, log_basis: 6, m_vars: 8, r_vars: 2, n_a: 2, n_b: 1, n_d: 1 }),
         GeneratedStep::Direct(GeneratedDirectStep { commit: None }),
     ] },
-    GeneratedScheduleTableEntry { final_group: PolynomialGroupLayout::new(27, 1), precommitteds: &[PrecommittedGroupParams { group: PolynomialGroupLayout::new(13, 1), m_vars: 5, r_vars: 1, log_basis: 2, n_a: 2, conservative_n_b: 1 }], steps: &[
+    GeneratedScheduleTableEntry { final_group: PolynomialGroupLayout::new(27, 1), precommitteds: &[PrecommittedGroupParams { group: PolynomialGroupLayout::new(13, 1), m_vars: 5, r_vars: 1, log_basis: 2, n_a: 2, conservative_n_b: 1, log_commit_bound: 1, onehot_chunk_size: 1, basis_range: (2, 6) }], steps: &[
         GeneratedStep::Fold(GeneratedFoldStep { ring_d: 128, log_basis: 5, m_vars: 13, r_vars: 7, n_a: 2, n_b: 1, n_d: 1 }),
         GeneratedStep::Fold(GeneratedFoldStep { ring_d: 128, log_basis: 6, m_vars: 11, r_vars: 4, n_a: 2, n_b: 1, n_d: 1 }),
         GeneratedStep::Fold(GeneratedFoldStep { ring_d: 128, log_basis: 6, m_vars: 9, r_vars: 4, n_a: 2, n_b: 1, n_d: 1 }),
@@ -590,7 +590,7 @@ pub(crate) static FP128_D128_ONEHOT_SCHEDULES: &[GeneratedScheduleTableEntry] = 
         GeneratedStep::Fold(GeneratedFoldStep { ring_d: 128, log_basis: 6, m_vars: 8, r_vars: 3, n_a: 2, n_b: 1, n_d: 1 }),
         GeneratedStep::Direct(GeneratedDirectStep { commit: None }),
     ] },
-    GeneratedScheduleTableEntry { final_group: PolynomialGroupLayout::new(27, 1), precommitteds: &[PrecommittedGroupParams { group: PolynomialGroupLayout::new(13, 1), m_vars: 5, r_vars: 1, log_basis: 2, n_a: 2, conservative_n_b: 1 }, PrecommittedGroupParams { group: PolynomialGroupLayout::new(13, 1), m_vars: 5, r_vars: 1, log_basis: 2, n_a: 2, conservative_n_b: 1 }], steps: &[
+    GeneratedScheduleTableEntry { final_group: PolynomialGroupLayout::new(27, 1), precommitteds: &[PrecommittedGroupParams { group: PolynomialGroupLayout::new(13, 1), m_vars: 5, r_vars: 1, log_basis: 2, n_a: 2, conservative_n_b: 1, log_commit_bound: 1, onehot_chunk_size: 1, basis_range: (2, 6) }, PrecommittedGroupParams { group: PolynomialGroupLayout::new(13, 1), m_vars: 5, r_vars: 1, log_basis: 2, n_a: 2, conservative_n_b: 1, log_commit_bound: 1, onehot_chunk_size: 1, basis_range: (2, 6) }], steps: &[
         GeneratedStep::Fold(GeneratedFoldStep { ring_d: 128, log_basis: 3, m_vars: 13, r_vars: 7, n_a: 2, n_b: 1, n_d: 1 }),
         GeneratedStep::Fold(GeneratedFoldStep { ring_d: 128, log_basis: 4, m_vars: 11, r_vars: 5, n_a: 3, n_b: 1, n_d: 1 }),
         GeneratedStep::Fold(GeneratedFoldStep { ring_d: 128, log_basis: 6, m_vars: 10, r_vars: 4, n_a: 2, n_b: 1, n_d: 1 }),
@@ -608,7 +608,7 @@ pub(crate) static FP128_D128_ONEHOT_SCHEDULES: &[GeneratedScheduleTableEntry] = 
         GeneratedStep::Fold(GeneratedFoldStep { ring_d: 128, log_basis: 6, m_vars: 8, r_vars: 2, n_a: 2, n_b: 1, n_d: 1 }),
         GeneratedStep::Direct(GeneratedDirectStep { commit: None }),
     ] },
-    GeneratedScheduleTableEntry { final_group: PolynomialGroupLayout::new(27, 4), precommitteds: &[PrecommittedGroupParams { group: PolynomialGroupLayout::new(13, 1), m_vars: 5, r_vars: 1, log_basis: 2, n_a: 2, conservative_n_b: 1 }], steps: &[
+    GeneratedScheduleTableEntry { final_group: PolynomialGroupLayout::new(27, 4), precommitteds: &[PrecommittedGroupParams { group: PolynomialGroupLayout::new(13, 1), m_vars: 5, r_vars: 1, log_basis: 2, n_a: 2, conservative_n_b: 1, log_commit_bound: 1, onehot_chunk_size: 1, basis_range: (2, 6) }], steps: &[
         GeneratedStep::Fold(GeneratedFoldStep { ring_d: 128, log_basis: 2, m_vars: 14, r_vars: 6, n_a: 3, n_b: 1, n_d: 1 }),
         GeneratedStep::Fold(GeneratedFoldStep { ring_d: 128, log_basis: 4, m_vars: 12, r_vars: 6, n_a: 3, n_b: 1, n_d: 1 }),
         GeneratedStep::Fold(GeneratedFoldStep { ring_d: 128, log_basis: 6, m_vars: 10, r_vars: 4, n_a: 2, n_b: 1, n_d: 1 }),
@@ -617,7 +617,7 @@ pub(crate) static FP128_D128_ONEHOT_SCHEDULES: &[GeneratedScheduleTableEntry] = 
         GeneratedStep::Fold(GeneratedFoldStep { ring_d: 128, log_basis: 6, m_vars: 8, r_vars: 2, n_a: 2, n_b: 1, n_d: 1 }),
         GeneratedStep::Direct(GeneratedDirectStep { commit: None }),
     ] },
-    GeneratedScheduleTableEntry { final_group: PolynomialGroupLayout::new(27, 4), precommitteds: &[PrecommittedGroupParams { group: PolynomialGroupLayout::new(13, 1), m_vars: 5, r_vars: 1, log_basis: 2, n_a: 2, conservative_n_b: 1 }, PrecommittedGroupParams { group: PolynomialGroupLayout::new(13, 1), m_vars: 5, r_vars: 1, log_basis: 2, n_a: 2, conservative_n_b: 1 }], steps: &[
+    GeneratedScheduleTableEntry { final_group: PolynomialGroupLayout::new(27, 4), precommitteds: &[PrecommittedGroupParams { group: PolynomialGroupLayout::new(13, 1), m_vars: 5, r_vars: 1, log_basis: 2, n_a: 2, conservative_n_b: 1, log_commit_bound: 1, onehot_chunk_size: 1, basis_range: (2, 6) }, PrecommittedGroupParams { group: PolynomialGroupLayout::new(13, 1), m_vars: 5, r_vars: 1, log_basis: 2, n_a: 2, conservative_n_b: 1, log_commit_bound: 1, onehot_chunk_size: 1, basis_range: (2, 6) }], steps: &[
         GeneratedStep::Fold(GeneratedFoldStep { ring_d: 128, log_basis: 2, m_vars: 14, r_vars: 6, n_a: 3, n_b: 1, n_d: 1 }),
         GeneratedStep::Fold(GeneratedFoldStep { ring_d: 128, log_basis: 4, m_vars: 12, r_vars: 6, n_a: 3, n_b: 1, n_d: 1 }),
         GeneratedStep::Fold(GeneratedFoldStep { ring_d: 128, log_basis: 6, m_vars: 10, r_vars: 4, n_a: 2, n_b: 1, n_d: 1 }),
@@ -635,7 +635,7 @@ pub(crate) static FP128_D128_ONEHOT_SCHEDULES: &[GeneratedScheduleTableEntry] = 
         GeneratedStep::Fold(GeneratedFoldStep { ring_d: 128, log_basis: 6, m_vars: 8, r_vars: 2, n_a: 2, n_b: 1, n_d: 1 }),
         GeneratedStep::Direct(GeneratedDirectStep { commit: None }),
     ] },
-    GeneratedScheduleTableEntry { final_group: PolynomialGroupLayout::new(28, 1), precommitteds: &[PrecommittedGroupParams { group: PolynomialGroupLayout::new(14, 1), m_vars: 2, r_vars: 5, log_basis: 2, n_a: 1, conservative_n_b: 1 }], steps: &[
+    GeneratedScheduleTableEntry { final_group: PolynomialGroupLayout::new(28, 1), precommitteds: &[PrecommittedGroupParams { group: PolynomialGroupLayout::new(14, 1), m_vars: 2, r_vars: 5, log_basis: 2, n_a: 1, conservative_n_b: 1, log_commit_bound: 1, onehot_chunk_size: 1, basis_range: (2, 6) }], steps: &[
         GeneratedStep::Fold(GeneratedFoldStep { ring_d: 128, log_basis: 2, m_vars: 13, r_vars: 8, n_a: 2, n_b: 1, n_d: 1 }),
         GeneratedStep::Fold(GeneratedFoldStep { ring_d: 128, log_basis: 4, m_vars: 11, r_vars: 6, n_a: 3, n_b: 1, n_d: 1 }),
         GeneratedStep::Fold(GeneratedFoldStep { ring_d: 128, log_basis: 6, m_vars: 10, r_vars: 4, n_a: 2, n_b: 1, n_d: 1 }),
@@ -644,7 +644,7 @@ pub(crate) static FP128_D128_ONEHOT_SCHEDULES: &[GeneratedScheduleTableEntry] = 
         GeneratedStep::Fold(GeneratedFoldStep { ring_d: 128, log_basis: 6, m_vars: 8, r_vars: 2, n_a: 2, n_b: 1, n_d: 1 }),
         GeneratedStep::Direct(GeneratedDirectStep { commit: None }),
     ] },
-    GeneratedScheduleTableEntry { final_group: PolynomialGroupLayout::new(28, 1), precommitteds: &[PrecommittedGroupParams { group: PolynomialGroupLayout::new(14, 1), m_vars: 2, r_vars: 5, log_basis: 2, n_a: 1, conservative_n_b: 1 }, PrecommittedGroupParams { group: PolynomialGroupLayout::new(14, 1), m_vars: 2, r_vars: 5, log_basis: 2, n_a: 1, conservative_n_b: 1 }], steps: &[
+    GeneratedScheduleTableEntry { final_group: PolynomialGroupLayout::new(28, 1), precommitteds: &[PrecommittedGroupParams { group: PolynomialGroupLayout::new(14, 1), m_vars: 2, r_vars: 5, log_basis: 2, n_a: 1, conservative_n_b: 1, log_commit_bound: 1, onehot_chunk_size: 1, basis_range: (2, 6) }, PrecommittedGroupParams { group: PolynomialGroupLayout::new(14, 1), m_vars: 2, r_vars: 5, log_basis: 2, n_a: 1, conservative_n_b: 1, log_commit_bound: 1, onehot_chunk_size: 1, basis_range: (2, 6) }], steps: &[
         GeneratedStep::Fold(GeneratedFoldStep { ring_d: 128, log_basis: 2, m_vars: 13, r_vars: 8, n_a: 2, n_b: 1, n_d: 1 }),
         GeneratedStep::Fold(GeneratedFoldStep { ring_d: 128, log_basis: 5, m_vars: 11, r_vars: 6, n_a: 3, n_b: 1, n_d: 1 }),
         GeneratedStep::Fold(GeneratedFoldStep { ring_d: 128, log_basis: 6, m_vars: 10, r_vars: 4, n_a: 2, n_b: 1, n_d: 1 }),
@@ -662,7 +662,7 @@ pub(crate) static FP128_D128_ONEHOT_SCHEDULES: &[GeneratedScheduleTableEntry] = 
         GeneratedStep::Fold(GeneratedFoldStep { ring_d: 128, log_basis: 6, m_vars: 8, r_vars: 2, n_a: 2, n_b: 1, n_d: 1 }),
         GeneratedStep::Direct(GeneratedDirectStep { commit: None }),
     ] },
-    GeneratedScheduleTableEntry { final_group: PolynomialGroupLayout::new(28, 4), precommitteds: &[PrecommittedGroupParams { group: PolynomialGroupLayout::new(14, 1), m_vars: 2, r_vars: 5, log_basis: 2, n_a: 1, conservative_n_b: 1 }], steps: &[
+    GeneratedScheduleTableEntry { final_group: PolynomialGroupLayout::new(28, 4), precommitteds: &[PrecommittedGroupParams { group: PolynomialGroupLayout::new(14, 1), m_vars: 2, r_vars: 5, log_basis: 2, n_a: 1, conservative_n_b: 1, log_commit_bound: 1, onehot_chunk_size: 1, basis_range: (2, 6) }], steps: &[
         GeneratedStep::Fold(GeneratedFoldStep { ring_d: 128, log_basis: 4, m_vars: 14, r_vars: 7, n_a: 3, n_b: 1, n_d: 1 }),
         GeneratedStep::Fold(GeneratedFoldStep { ring_d: 128, log_basis: 4, m_vars: 11, r_vars: 6, n_a: 3, n_b: 1, n_d: 1 }),
         GeneratedStep::Fold(GeneratedFoldStep { ring_d: 128, log_basis: 6, m_vars: 10, r_vars: 4, n_a: 2, n_b: 1, n_d: 1 }),
@@ -671,7 +671,7 @@ pub(crate) static FP128_D128_ONEHOT_SCHEDULES: &[GeneratedScheduleTableEntry] = 
         GeneratedStep::Fold(GeneratedFoldStep { ring_d: 128, log_basis: 6, m_vars: 8, r_vars: 2, n_a: 2, n_b: 1, n_d: 1 }),
         GeneratedStep::Direct(GeneratedDirectStep { commit: None }),
     ] },
-    GeneratedScheduleTableEntry { final_group: PolynomialGroupLayout::new(28, 4), precommitteds: &[PrecommittedGroupParams { group: PolynomialGroupLayout::new(14, 1), m_vars: 2, r_vars: 5, log_basis: 2, n_a: 1, conservative_n_b: 1 }, PrecommittedGroupParams { group: PolynomialGroupLayout::new(14, 1), m_vars: 2, r_vars: 5, log_basis: 2, n_a: 1, conservative_n_b: 1 }], steps: &[
+    GeneratedScheduleTableEntry { final_group: PolynomialGroupLayout::new(28, 4), precommitteds: &[PrecommittedGroupParams { group: PolynomialGroupLayout::new(14, 1), m_vars: 2, r_vars: 5, log_basis: 2, n_a: 1, conservative_n_b: 1, log_commit_bound: 1, onehot_chunk_size: 1, basis_range: (2, 6) }, PrecommittedGroupParams { group: PolynomialGroupLayout::new(14, 1), m_vars: 2, r_vars: 5, log_basis: 2, n_a: 1, conservative_n_b: 1, log_commit_bound: 1, onehot_chunk_size: 1, basis_range: (2, 6) }], steps: &[
         GeneratedStep::Fold(GeneratedFoldStep { ring_d: 128, log_basis: 3, m_vars: 14, r_vars: 7, n_a: 3, n_b: 1, n_d: 1 }),
         GeneratedStep::Fold(GeneratedFoldStep { ring_d: 128, log_basis: 4, m_vars: 12, r_vars: 6, n_a: 3, n_b: 1, n_d: 1 }),
         GeneratedStep::Fold(GeneratedFoldStep { ring_d: 128, log_basis: 6, m_vars: 10, r_vars: 4, n_a: 2, n_b: 1, n_d: 1 }),
@@ -689,7 +689,7 @@ pub(crate) static FP128_D128_ONEHOT_SCHEDULES: &[GeneratedScheduleTableEntry] = 
         GeneratedStep::Fold(GeneratedFoldStep { ring_d: 128, log_basis: 6, m_vars: 8, r_vars: 2, n_a: 2, n_b: 1, n_d: 1 }),
         GeneratedStep::Direct(GeneratedDirectStep { commit: None }),
     ] },
-    GeneratedScheduleTableEntry { final_group: PolynomialGroupLayout::new(29, 1), precommitteds: &[PrecommittedGroupParams { group: PolynomialGroupLayout::new(14, 1), m_vars: 2, r_vars: 5, log_basis: 2, n_a: 1, conservative_n_b: 1 }], steps: &[
+    GeneratedScheduleTableEntry { final_group: PolynomialGroupLayout::new(29, 1), precommitteds: &[PrecommittedGroupParams { group: PolynomialGroupLayout::new(14, 1), m_vars: 2, r_vars: 5, log_basis: 2, n_a: 1, conservative_n_b: 1, log_commit_bound: 1, onehot_chunk_size: 1, basis_range: (2, 6) }], steps: &[
         GeneratedStep::Fold(GeneratedFoldStep { ring_d: 128, log_basis: 2, m_vars: 14, r_vars: 8, n_a: 3, n_b: 1, n_d: 1 }),
         GeneratedStep::Fold(GeneratedFoldStep { ring_d: 128, log_basis: 4, m_vars: 12, r_vars: 6, n_a: 3, n_b: 1, n_d: 1 }),
         GeneratedStep::Fold(GeneratedFoldStep { ring_d: 128, log_basis: 6, m_vars: 10, r_vars: 4, n_a: 2, n_b: 1, n_d: 1 }),
@@ -698,7 +698,7 @@ pub(crate) static FP128_D128_ONEHOT_SCHEDULES: &[GeneratedScheduleTableEntry] = 
         GeneratedStep::Fold(GeneratedFoldStep { ring_d: 128, log_basis: 6, m_vars: 8, r_vars: 2, n_a: 2, n_b: 1, n_d: 1 }),
         GeneratedStep::Direct(GeneratedDirectStep { commit: None }),
     ] },
-    GeneratedScheduleTableEntry { final_group: PolynomialGroupLayout::new(29, 1), precommitteds: &[PrecommittedGroupParams { group: PolynomialGroupLayout::new(14, 1), m_vars: 2, r_vars: 5, log_basis: 2, n_a: 1, conservative_n_b: 1 }, PrecommittedGroupParams { group: PolynomialGroupLayout::new(14, 1), m_vars: 2, r_vars: 5, log_basis: 2, n_a: 1, conservative_n_b: 1 }], steps: &[
+    GeneratedScheduleTableEntry { final_group: PolynomialGroupLayout::new(29, 1), precommitteds: &[PrecommittedGroupParams { group: PolynomialGroupLayout::new(14, 1), m_vars: 2, r_vars: 5, log_basis: 2, n_a: 1, conservative_n_b: 1, log_commit_bound: 1, onehot_chunk_size: 1, basis_range: (2, 6) }, PrecommittedGroupParams { group: PolynomialGroupLayout::new(14, 1), m_vars: 2, r_vars: 5, log_basis: 2, n_a: 1, conservative_n_b: 1, log_commit_bound: 1, onehot_chunk_size: 1, basis_range: (2, 6) }], steps: &[
         GeneratedStep::Fold(GeneratedFoldStep { ring_d: 128, log_basis: 3, m_vars: 14, r_vars: 8, n_a: 3, n_b: 1, n_d: 1 }),
         GeneratedStep::Fold(GeneratedFoldStep { ring_d: 128, log_basis: 4, m_vars: 11, r_vars: 6, n_a: 3, n_b: 1, n_d: 1 }),
         GeneratedStep::Fold(GeneratedFoldStep { ring_d: 128, log_basis: 6, m_vars: 10, r_vars: 4, n_a: 2, n_b: 1, n_d: 1 }),
@@ -716,7 +716,7 @@ pub(crate) static FP128_D128_ONEHOT_SCHEDULES: &[GeneratedScheduleTableEntry] = 
         GeneratedStep::Fold(GeneratedFoldStep { ring_d: 128, log_basis: 6, m_vars: 8, r_vars: 2, n_a: 2, n_b: 1, n_d: 1 }),
         GeneratedStep::Direct(GeneratedDirectStep { commit: None }),
     ] },
-    GeneratedScheduleTableEntry { final_group: PolynomialGroupLayout::new(29, 4), precommitteds: &[PrecommittedGroupParams { group: PolynomialGroupLayout::new(14, 1), m_vars: 2, r_vars: 5, log_basis: 2, n_a: 1, conservative_n_b: 1 }], steps: &[
+    GeneratedScheduleTableEntry { final_group: PolynomialGroupLayout::new(29, 4), precommitteds: &[PrecommittedGroupParams { group: PolynomialGroupLayout::new(14, 1), m_vars: 2, r_vars: 5, log_basis: 2, n_a: 1, conservative_n_b: 1, log_commit_bound: 1, onehot_chunk_size: 1, basis_range: (2, 6) }], steps: &[
         GeneratedStep::Fold(GeneratedFoldStep { ring_d: 128, log_basis: 5, m_vars: 15, r_vars: 7, n_a: 2, n_b: 1, n_d: 1 }),
         GeneratedStep::Fold(GeneratedFoldStep { ring_d: 128, log_basis: 5, m_vars: 11, r_vars: 6, n_a: 3, n_b: 1, n_d: 1 }),
         GeneratedStep::Fold(GeneratedFoldStep { ring_d: 128, log_basis: 6, m_vars: 10, r_vars: 4, n_a: 2, n_b: 1, n_d: 1 }),
@@ -725,7 +725,7 @@ pub(crate) static FP128_D128_ONEHOT_SCHEDULES: &[GeneratedScheduleTableEntry] = 
         GeneratedStep::Fold(GeneratedFoldStep { ring_d: 128, log_basis: 6, m_vars: 8, r_vars: 2, n_a: 2, n_b: 1, n_d: 1 }),
         GeneratedStep::Direct(GeneratedDirectStep { commit: None }),
     ] },
-    GeneratedScheduleTableEntry { final_group: PolynomialGroupLayout::new(29, 4), precommitteds: &[PrecommittedGroupParams { group: PolynomialGroupLayout::new(14, 1), m_vars: 2, r_vars: 5, log_basis: 2, n_a: 1, conservative_n_b: 1 }, PrecommittedGroupParams { group: PolynomialGroupLayout::new(14, 1), m_vars: 2, r_vars: 5, log_basis: 2, n_a: 1, conservative_n_b: 1 }], steps: &[
+    GeneratedScheduleTableEntry { final_group: PolynomialGroupLayout::new(29, 4), precommitteds: &[PrecommittedGroupParams { group: PolynomialGroupLayout::new(14, 1), m_vars: 2, r_vars: 5, log_basis: 2, n_a: 1, conservative_n_b: 1, log_commit_bound: 1, onehot_chunk_size: 1, basis_range: (2, 6) }, PrecommittedGroupParams { group: PolynomialGroupLayout::new(14, 1), m_vars: 2, r_vars: 5, log_basis: 2, n_a: 1, conservative_n_b: 1, log_commit_bound: 1, onehot_chunk_size: 1, basis_range: (2, 6) }], steps: &[
         GeneratedStep::Fold(GeneratedFoldStep { ring_d: 128, log_basis: 5, m_vars: 15, r_vars: 7, n_a: 2, n_b: 1, n_d: 1 }),
         GeneratedStep::Fold(GeneratedFoldStep { ring_d: 128, log_basis: 5, m_vars: 11, r_vars: 6, n_a: 3, n_b: 1, n_d: 1 }),
         GeneratedStep::Fold(GeneratedFoldStep { ring_d: 128, log_basis: 6, m_vars: 10, r_vars: 4, n_a: 2, n_b: 1, n_d: 1 }),
@@ -743,7 +743,7 @@ pub(crate) static FP128_D128_ONEHOT_SCHEDULES: &[GeneratedScheduleTableEntry] = 
         GeneratedStep::Fold(GeneratedFoldStep { ring_d: 128, log_basis: 6, m_vars: 8, r_vars: 2, n_a: 2, n_b: 1, n_d: 1 }),
         GeneratedStep::Direct(GeneratedDirectStep { commit: None }),
     ] },
-    GeneratedScheduleTableEntry { final_group: PolynomialGroupLayout::new(30, 1), precommitteds: &[PrecommittedGroupParams { group: PolynomialGroupLayout::new(15, 1), m_vars: 3, r_vars: 5, log_basis: 2, n_a: 1, conservative_n_b: 1 }], steps: &[
+    GeneratedScheduleTableEntry { final_group: PolynomialGroupLayout::new(30, 1), precommitteds: &[PrecommittedGroupParams { group: PolynomialGroupLayout::new(15, 1), m_vars: 3, r_vars: 5, log_basis: 2, n_a: 1, conservative_n_b: 1, log_commit_bound: 1, onehot_chunk_size: 1, basis_range: (2, 6) }], steps: &[
         GeneratedStep::Fold(GeneratedFoldStep { ring_d: 128, log_basis: 4, m_vars: 14, r_vars: 9, n_a: 3, n_b: 1, n_d: 1 }),
         GeneratedStep::Fold(GeneratedFoldStep { ring_d: 128, log_basis: 4, m_vars: 11, r_vars: 6, n_a: 3, n_b: 1, n_d: 1 }),
         GeneratedStep::Fold(GeneratedFoldStep { ring_d: 128, log_basis: 6, m_vars: 10, r_vars: 4, n_a: 2, n_b: 1, n_d: 1 }),
@@ -752,7 +752,7 @@ pub(crate) static FP128_D128_ONEHOT_SCHEDULES: &[GeneratedScheduleTableEntry] = 
         GeneratedStep::Fold(GeneratedFoldStep { ring_d: 128, log_basis: 6, m_vars: 8, r_vars: 2, n_a: 2, n_b: 1, n_d: 1 }),
         GeneratedStep::Direct(GeneratedDirectStep { commit: None }),
     ] },
-    GeneratedScheduleTableEntry { final_group: PolynomialGroupLayout::new(30, 1), precommitteds: &[PrecommittedGroupParams { group: PolynomialGroupLayout::new(15, 1), m_vars: 3, r_vars: 5, log_basis: 2, n_a: 1, conservative_n_b: 1 }, PrecommittedGroupParams { group: PolynomialGroupLayout::new(15, 1), m_vars: 3, r_vars: 5, log_basis: 2, n_a: 1, conservative_n_b: 1 }], steps: &[
+    GeneratedScheduleTableEntry { final_group: PolynomialGroupLayout::new(30, 1), precommitteds: &[PrecommittedGroupParams { group: PolynomialGroupLayout::new(15, 1), m_vars: 3, r_vars: 5, log_basis: 2, n_a: 1, conservative_n_b: 1, log_commit_bound: 1, onehot_chunk_size: 1, basis_range: (2, 6) }, PrecommittedGroupParams { group: PolynomialGroupLayout::new(15, 1), m_vars: 3, r_vars: 5, log_basis: 2, n_a: 1, conservative_n_b: 1, log_commit_bound: 1, onehot_chunk_size: 1, basis_range: (2, 6) }], steps: &[
         GeneratedStep::Fold(GeneratedFoldStep { ring_d: 128, log_basis: 3, m_vars: 14, r_vars: 9, n_a: 3, n_b: 1, n_d: 1 }),
         GeneratedStep::Fold(GeneratedFoldStep { ring_d: 128, log_basis: 4, m_vars: 12, r_vars: 6, n_a: 3, n_b: 1, n_d: 1 }),
         GeneratedStep::Fold(GeneratedFoldStep { ring_d: 128, log_basis: 6, m_vars: 10, r_vars: 4, n_a: 2, n_b: 1, n_d: 1 }),
@@ -770,7 +770,7 @@ pub(crate) static FP128_D128_ONEHOT_SCHEDULES: &[GeneratedScheduleTableEntry] = 
         GeneratedStep::Fold(GeneratedFoldStep { ring_d: 128, log_basis: 6, m_vars: 8, r_vars: 2, n_a: 2, n_b: 1, n_d: 1 }),
         GeneratedStep::Direct(GeneratedDirectStep { commit: None }),
     ] },
-    GeneratedScheduleTableEntry { final_group: PolynomialGroupLayout::new(30, 4), precommitteds: &[PrecommittedGroupParams { group: PolynomialGroupLayout::new(15, 1), m_vars: 3, r_vars: 5, log_basis: 2, n_a: 1, conservative_n_b: 1 }], steps: &[
+    GeneratedScheduleTableEntry { final_group: PolynomialGroupLayout::new(30, 4), precommitteds: &[PrecommittedGroupParams { group: PolynomialGroupLayout::new(15, 1), m_vars: 3, r_vars: 5, log_basis: 2, n_a: 1, conservative_n_b: 1, log_commit_bound: 1, onehot_chunk_size: 1, basis_range: (2, 6) }], steps: &[
         GeneratedStep::Fold(GeneratedFoldStep { ring_d: 128, log_basis: 4, m_vars: 15, r_vars: 8, n_a: 3, n_b: 1, n_d: 1 }),
         GeneratedStep::Fold(GeneratedFoldStep { ring_d: 128, log_basis: 4, m_vars: 12, r_vars: 6, n_a: 3, n_b: 1, n_d: 1 }),
         GeneratedStep::Fold(GeneratedFoldStep { ring_d: 128, log_basis: 6, m_vars: 11, r_vars: 4, n_a: 2, n_b: 1, n_d: 1 }),
@@ -779,7 +779,7 @@ pub(crate) static FP128_D128_ONEHOT_SCHEDULES: &[GeneratedScheduleTableEntry] = 
         GeneratedStep::Fold(GeneratedFoldStep { ring_d: 128, log_basis: 6, m_vars: 8, r_vars: 2, n_a: 2, n_b: 1, n_d: 1 }),
         GeneratedStep::Direct(GeneratedDirectStep { commit: None }),
     ] },
-    GeneratedScheduleTableEntry { final_group: PolynomialGroupLayout::new(30, 4), precommitteds: &[PrecommittedGroupParams { group: PolynomialGroupLayout::new(15, 1), m_vars: 3, r_vars: 5, log_basis: 2, n_a: 1, conservative_n_b: 1 }, PrecommittedGroupParams { group: PolynomialGroupLayout::new(15, 1), m_vars: 3, r_vars: 5, log_basis: 2, n_a: 1, conservative_n_b: 1 }], steps: &[
+    GeneratedScheduleTableEntry { final_group: PolynomialGroupLayout::new(30, 4), precommitteds: &[PrecommittedGroupParams { group: PolynomialGroupLayout::new(15, 1), m_vars: 3, r_vars: 5, log_basis: 2, n_a: 1, conservative_n_b: 1, log_commit_bound: 1, onehot_chunk_size: 1, basis_range: (2, 6) }, PrecommittedGroupParams { group: PolynomialGroupLayout::new(15, 1), m_vars: 3, r_vars: 5, log_basis: 2, n_a: 1, conservative_n_b: 1, log_commit_bound: 1, onehot_chunk_size: 1, basis_range: (2, 6) }], steps: &[
         GeneratedStep::Fold(GeneratedFoldStep { ring_d: 128, log_basis: 4, m_vars: 15, r_vars: 8, n_a: 3, n_b: 1, n_d: 1 }),
         GeneratedStep::Fold(GeneratedFoldStep { ring_d: 128, log_basis: 4, m_vars: 12, r_vars: 6, n_a: 3, n_b: 1, n_d: 1 }),
         GeneratedStep::Fold(GeneratedFoldStep { ring_d: 128, log_basis: 6, m_vars: 11, r_vars: 4, n_a: 2, n_b: 1, n_d: 1 }),
@@ -797,7 +797,7 @@ pub(crate) static FP128_D128_ONEHOT_SCHEDULES: &[GeneratedScheduleTableEntry] = 
         GeneratedStep::Fold(GeneratedFoldStep { ring_d: 128, log_basis: 6, m_vars: 8, r_vars: 2, n_a: 2, n_b: 1, n_d: 1 }),
         GeneratedStep::Direct(GeneratedDirectStep { commit: None }),
     ] },
-    GeneratedScheduleTableEntry { final_group: PolynomialGroupLayout::new(31, 1), precommitteds: &[PrecommittedGroupParams { group: PolynomialGroupLayout::new(15, 1), m_vars: 3, r_vars: 5, log_basis: 2, n_a: 1, conservative_n_b: 1 }], steps: &[
+    GeneratedScheduleTableEntry { final_group: PolynomialGroupLayout::new(31, 1), precommitteds: &[PrecommittedGroupParams { group: PolynomialGroupLayout::new(15, 1), m_vars: 3, r_vars: 5, log_basis: 2, n_a: 1, conservative_n_b: 1, log_commit_bound: 1, onehot_chunk_size: 1, basis_range: (2, 6) }], steps: &[
         GeneratedStep::Fold(GeneratedFoldStep { ring_d: 128, log_basis: 5, m_vars: 15, r_vars: 9, n_a: 2, n_b: 1, n_d: 1 }),
         GeneratedStep::Fold(GeneratedFoldStep { ring_d: 128, log_basis: 5, m_vars: 11, r_vars: 6, n_a: 3, n_b: 1, n_d: 1 }),
         GeneratedStep::Fold(GeneratedFoldStep { ring_d: 128, log_basis: 6, m_vars: 10, r_vars: 4, n_a: 2, n_b: 1, n_d: 1 }),
@@ -806,7 +806,7 @@ pub(crate) static FP128_D128_ONEHOT_SCHEDULES: &[GeneratedScheduleTableEntry] = 
         GeneratedStep::Fold(GeneratedFoldStep { ring_d: 128, log_basis: 6, m_vars: 8, r_vars: 2, n_a: 2, n_b: 1, n_d: 1 }),
         GeneratedStep::Direct(GeneratedDirectStep { commit: None }),
     ] },
-    GeneratedScheduleTableEntry { final_group: PolynomialGroupLayout::new(31, 1), precommitteds: &[PrecommittedGroupParams { group: PolynomialGroupLayout::new(15, 1), m_vars: 3, r_vars: 5, log_basis: 2, n_a: 1, conservative_n_b: 1 }, PrecommittedGroupParams { group: PolynomialGroupLayout::new(15, 1), m_vars: 3, r_vars: 5, log_basis: 2, n_a: 1, conservative_n_b: 1 }], steps: &[
+    GeneratedScheduleTableEntry { final_group: PolynomialGroupLayout::new(31, 1), precommitteds: &[PrecommittedGroupParams { group: PolynomialGroupLayout::new(15, 1), m_vars: 3, r_vars: 5, log_basis: 2, n_a: 1, conservative_n_b: 1, log_commit_bound: 1, onehot_chunk_size: 1, basis_range: (2, 6) }, PrecommittedGroupParams { group: PolynomialGroupLayout::new(15, 1), m_vars: 3, r_vars: 5, log_basis: 2, n_a: 1, conservative_n_b: 1, log_commit_bound: 1, onehot_chunk_size: 1, basis_range: (2, 6) }], steps: &[
         GeneratedStep::Fold(GeneratedFoldStep { ring_d: 128, log_basis: 5, m_vars: 15, r_vars: 9, n_a: 2, n_b: 1, n_d: 1 }),
         GeneratedStep::Fold(GeneratedFoldStep { ring_d: 128, log_basis: 5, m_vars: 11, r_vars: 6, n_a: 3, n_b: 1, n_d: 1 }),
         GeneratedStep::Fold(GeneratedFoldStep { ring_d: 128, log_basis: 6, m_vars: 10, r_vars: 4, n_a: 2, n_b: 1, n_d: 1 }),
@@ -824,7 +824,7 @@ pub(crate) static FP128_D128_ONEHOT_SCHEDULES: &[GeneratedScheduleTableEntry] = 
         GeneratedStep::Fold(GeneratedFoldStep { ring_d: 128, log_basis: 6, m_vars: 8, r_vars: 3, n_a: 2, n_b: 1, n_d: 1 }),
         GeneratedStep::Direct(GeneratedDirectStep { commit: None }),
     ] },
-    GeneratedScheduleTableEntry { final_group: PolynomialGroupLayout::new(31, 4), precommitteds: &[PrecommittedGroupParams { group: PolynomialGroupLayout::new(15, 1), m_vars: 3, r_vars: 5, log_basis: 2, n_a: 1, conservative_n_b: 1 }], steps: &[
+    GeneratedScheduleTableEntry { final_group: PolynomialGroupLayout::new(31, 4), precommitteds: &[PrecommittedGroupParams { group: PolynomialGroupLayout::new(15, 1), m_vars: 3, r_vars: 5, log_basis: 2, n_a: 1, conservative_n_b: 1, log_commit_bound: 1, onehot_chunk_size: 1, basis_range: (2, 6) }], steps: &[
         GeneratedStep::Fold(GeneratedFoldStep { ring_d: 128, log_basis: 3, m_vars: 16, r_vars: 8, n_a: 3, n_b: 1, n_d: 1 }),
         GeneratedStep::Fold(GeneratedFoldStep { ring_d: 128, log_basis: 4, m_vars: 12, r_vars: 7, n_a: 3, n_b: 1, n_d: 1 }),
         GeneratedStep::Fold(GeneratedFoldStep { ring_d: 128, log_basis: 6, m_vars: 11, r_vars: 4, n_a: 2, n_b: 1, n_d: 1 }),
@@ -833,7 +833,7 @@ pub(crate) static FP128_D128_ONEHOT_SCHEDULES: &[GeneratedScheduleTableEntry] = 
         GeneratedStep::Fold(GeneratedFoldStep { ring_d: 128, log_basis: 6, m_vars: 8, r_vars: 3, n_a: 2, n_b: 1, n_d: 1 }),
         GeneratedStep::Direct(GeneratedDirectStep { commit: None }),
     ] },
-    GeneratedScheduleTableEntry { final_group: PolynomialGroupLayout::new(31, 4), precommitteds: &[PrecommittedGroupParams { group: PolynomialGroupLayout::new(15, 1), m_vars: 3, r_vars: 5, log_basis: 2, n_a: 1, conservative_n_b: 1 }, PrecommittedGroupParams { group: PolynomialGroupLayout::new(15, 1), m_vars: 3, r_vars: 5, log_basis: 2, n_a: 1, conservative_n_b: 1 }], steps: &[
+    GeneratedScheduleTableEntry { final_group: PolynomialGroupLayout::new(31, 4), precommitteds: &[PrecommittedGroupParams { group: PolynomialGroupLayout::new(15, 1), m_vars: 3, r_vars: 5, log_basis: 2, n_a: 1, conservative_n_b: 1, log_commit_bound: 1, onehot_chunk_size: 1, basis_range: (2, 6) }, PrecommittedGroupParams { group: PolynomialGroupLayout::new(15, 1), m_vars: 3, r_vars: 5, log_basis: 2, n_a: 1, conservative_n_b: 1, log_commit_bound: 1, onehot_chunk_size: 1, basis_range: (2, 6) }], steps: &[
         GeneratedStep::Fold(GeneratedFoldStep { ring_d: 128, log_basis: 3, m_vars: 16, r_vars: 8, n_a: 3, n_b: 1, n_d: 1 }),
         GeneratedStep::Fold(GeneratedFoldStep { ring_d: 128, log_basis: 4, m_vars: 12, r_vars: 7, n_a: 3, n_b: 1, n_d: 1 }),
         GeneratedStep::Fold(GeneratedFoldStep { ring_d: 128, log_basis: 6, m_vars: 11, r_vars: 4, n_a: 2, n_b: 1, n_d: 1 }),
@@ -851,7 +851,7 @@ pub(crate) static FP128_D128_ONEHOT_SCHEDULES: &[GeneratedScheduleTableEntry] = 
         GeneratedStep::Fold(GeneratedFoldStep { ring_d: 128, log_basis: 6, m_vars: 8, r_vars: 2, n_a: 2, n_b: 1, n_d: 1 }),
         GeneratedStep::Direct(GeneratedDirectStep { commit: None }),
     ] },
-    GeneratedScheduleTableEntry { final_group: PolynomialGroupLayout::new(32, 1), precommitteds: &[PrecommittedGroupParams { group: PolynomialGroupLayout::new(16, 1), m_vars: 4, r_vars: 5, log_basis: 2, n_a: 2, conservative_n_b: 1 }], steps: &[
+    GeneratedScheduleTableEntry { final_group: PolynomialGroupLayout::new(32, 1), precommitteds: &[PrecommittedGroupParams { group: PolynomialGroupLayout::new(16, 1), m_vars: 4, r_vars: 5, log_basis: 2, n_a: 2, conservative_n_b: 1, log_commit_bound: 1, onehot_chunk_size: 1, basis_range: (2, 6) }], steps: &[
         GeneratedStep::Fold(GeneratedFoldStep { ring_d: 128, log_basis: 4, m_vars: 15, r_vars: 10, n_a: 3, n_b: 1, n_d: 1 }),
         GeneratedStep::Fold(GeneratedFoldStep { ring_d: 128, log_basis: 4, m_vars: 12, r_vars: 6, n_a: 3, n_b: 1, n_d: 1 }),
         GeneratedStep::Fold(GeneratedFoldStep { ring_d: 128, log_basis: 6, m_vars: 11, r_vars: 4, n_a: 2, n_b: 1, n_d: 1 }),
@@ -860,7 +860,7 @@ pub(crate) static FP128_D128_ONEHOT_SCHEDULES: &[GeneratedScheduleTableEntry] = 
         GeneratedStep::Fold(GeneratedFoldStep { ring_d: 128, log_basis: 6, m_vars: 8, r_vars: 2, n_a: 2, n_b: 1, n_d: 1 }),
         GeneratedStep::Direct(GeneratedDirectStep { commit: None }),
     ] },
-    GeneratedScheduleTableEntry { final_group: PolynomialGroupLayout::new(32, 1), precommitteds: &[PrecommittedGroupParams { group: PolynomialGroupLayout::new(16, 1), m_vars: 4, r_vars: 5, log_basis: 2, n_a: 2, conservative_n_b: 1 }, PrecommittedGroupParams { group: PolynomialGroupLayout::new(16, 1), m_vars: 4, r_vars: 5, log_basis: 2, n_a: 2, conservative_n_b: 1 }], steps: &[
+    GeneratedScheduleTableEntry { final_group: PolynomialGroupLayout::new(32, 1), precommitteds: &[PrecommittedGroupParams { group: PolynomialGroupLayout::new(16, 1), m_vars: 4, r_vars: 5, log_basis: 2, n_a: 2, conservative_n_b: 1, log_commit_bound: 1, onehot_chunk_size: 1, basis_range: (2, 6) }, PrecommittedGroupParams { group: PolynomialGroupLayout::new(16, 1), m_vars: 4, r_vars: 5, log_basis: 2, n_a: 2, conservative_n_b: 1, log_commit_bound: 1, onehot_chunk_size: 1, basis_range: (2, 6) }], steps: &[
         GeneratedStep::Fold(GeneratedFoldStep { ring_d: 128, log_basis: 5, m_vars: 16, r_vars: 9, n_a: 3, n_b: 1, n_d: 1 }),
         GeneratedStep::Fold(GeneratedFoldStep { ring_d: 128, log_basis: 5, m_vars: 12, r_vars: 6, n_a: 3, n_b: 1, n_d: 1 }),
         GeneratedStep::Fold(GeneratedFoldStep { ring_d: 128, log_basis: 6, m_vars: 10, r_vars: 4, n_a: 2, n_b: 1, n_d: 1 }),
@@ -879,7 +879,7 @@ pub(crate) static FP128_D128_ONEHOT_SCHEDULES: &[GeneratedScheduleTableEntry] = 
         GeneratedStep::Fold(GeneratedFoldStep { ring_d: 128, log_basis: 6, m_vars: 8, r_vars: 2, n_a: 2, n_b: 1, n_d: 1 }),
         GeneratedStep::Direct(GeneratedDirectStep { commit: None }),
     ] },
-    GeneratedScheduleTableEntry { final_group: PolynomialGroupLayout::new(32, 4), precommitteds: &[PrecommittedGroupParams { group: PolynomialGroupLayout::new(16, 1), m_vars: 4, r_vars: 5, log_basis: 2, n_a: 2, conservative_n_b: 1 }], steps: &[
+    GeneratedScheduleTableEntry { final_group: PolynomialGroupLayout::new(32, 4), precommitteds: &[PrecommittedGroupParams { group: PolynomialGroupLayout::new(16, 1), m_vars: 4, r_vars: 5, log_basis: 2, n_a: 2, conservative_n_b: 1, log_commit_bound: 1, onehot_chunk_size: 1, basis_range: (2, 6) }], steps: &[
         GeneratedStep::Fold(GeneratedFoldStep { ring_d: 128, log_basis: 2, m_vars: 16, r_vars: 9, n_a: 3, n_b: 1, n_d: 1 }),
         GeneratedStep::Fold(GeneratedFoldStep { ring_d: 128, log_basis: 3, m_vars: 13, r_vars: 7, n_a: 3, n_b: 1, n_d: 1 }),
         GeneratedStep::Fold(GeneratedFoldStep { ring_d: 128, log_basis: 4, m_vars: 11, r_vars: 5, n_a: 3, n_b: 1, n_d: 1 }),
@@ -889,7 +889,7 @@ pub(crate) static FP128_D128_ONEHOT_SCHEDULES: &[GeneratedScheduleTableEntry] = 
         GeneratedStep::Fold(GeneratedFoldStep { ring_d: 128, log_basis: 6, m_vars: 8, r_vars: 2, n_a: 2, n_b: 1, n_d: 1 }),
         GeneratedStep::Direct(GeneratedDirectStep { commit: None }),
     ] },
-    GeneratedScheduleTableEntry { final_group: PolynomialGroupLayout::new(32, 4), precommitteds: &[PrecommittedGroupParams { group: PolynomialGroupLayout::new(16, 1), m_vars: 4, r_vars: 5, log_basis: 2, n_a: 2, conservative_n_b: 1 }, PrecommittedGroupParams { group: PolynomialGroupLayout::new(16, 1), m_vars: 4, r_vars: 5, log_basis: 2, n_a: 2, conservative_n_b: 1 }], steps: &[
+    GeneratedScheduleTableEntry { final_group: PolynomialGroupLayout::new(32, 4), precommitteds: &[PrecommittedGroupParams { group: PolynomialGroupLayout::new(16, 1), m_vars: 4, r_vars: 5, log_basis: 2, n_a: 2, conservative_n_b: 1, log_commit_bound: 1, onehot_chunk_size: 1, basis_range: (2, 6) }, PrecommittedGroupParams { group: PolynomialGroupLayout::new(16, 1), m_vars: 4, r_vars: 5, log_basis: 2, n_a: 2, conservative_n_b: 1, log_commit_bound: 1, onehot_chunk_size: 1, basis_range: (2, 6) }], steps: &[
         GeneratedStep::Fold(GeneratedFoldStep { ring_d: 128, log_basis: 2, m_vars: 16, r_vars: 9, n_a: 3, n_b: 1, n_d: 1 }),
         GeneratedStep::Fold(GeneratedFoldStep { ring_d: 128, log_basis: 3, m_vars: 13, r_vars: 7, n_a: 3, n_b: 1, n_d: 1 }),
         GeneratedStep::Fold(GeneratedFoldStep { ring_d: 128, log_basis: 4, m_vars: 11, r_vars: 5, n_a: 3, n_b: 1, n_d: 1 }),
@@ -908,7 +908,7 @@ pub(crate) static FP128_D128_ONEHOT_SCHEDULES: &[GeneratedScheduleTableEntry] = 
         GeneratedStep::Fold(GeneratedFoldStep { ring_d: 128, log_basis: 6, m_vars: 8, r_vars: 3, n_a: 2, n_b: 1, n_d: 1 }),
         GeneratedStep::Direct(GeneratedDirectStep { commit: None }),
     ] },
-    GeneratedScheduleTableEntry { final_group: PolynomialGroupLayout::new(33, 1), precommitteds: &[PrecommittedGroupParams { group: PolynomialGroupLayout::new(16, 1), m_vars: 4, r_vars: 5, log_basis: 2, n_a: 2, conservative_n_b: 1 }], steps: &[
+    GeneratedScheduleTableEntry { final_group: PolynomialGroupLayout::new(33, 1), precommitteds: &[PrecommittedGroupParams { group: PolynomialGroupLayout::new(16, 1), m_vars: 4, r_vars: 5, log_basis: 2, n_a: 2, conservative_n_b: 1, log_commit_bound: 1, onehot_chunk_size: 1, basis_range: (2, 6) }], steps: &[
         GeneratedStep::Fold(GeneratedFoldStep { ring_d: 128, log_basis: 3, m_vars: 16, r_vars: 10, n_a: 3, n_b: 1, n_d: 1 }),
         GeneratedStep::Fold(GeneratedFoldStep { ring_d: 128, log_basis: 4, m_vars: 12, r_vars: 7, n_a: 3, n_b: 1, n_d: 1 }),
         GeneratedStep::Fold(GeneratedFoldStep { ring_d: 128, log_basis: 6, m_vars: 11, r_vars: 4, n_a: 2, n_b: 1, n_d: 1 }),
@@ -917,7 +917,7 @@ pub(crate) static FP128_D128_ONEHOT_SCHEDULES: &[GeneratedScheduleTableEntry] = 
         GeneratedStep::Fold(GeneratedFoldStep { ring_d: 128, log_basis: 6, m_vars: 8, r_vars: 3, n_a: 2, n_b: 1, n_d: 1 }),
         GeneratedStep::Direct(GeneratedDirectStep { commit: None }),
     ] },
-    GeneratedScheduleTableEntry { final_group: PolynomialGroupLayout::new(33, 1), precommitteds: &[PrecommittedGroupParams { group: PolynomialGroupLayout::new(16, 1), m_vars: 4, r_vars: 5, log_basis: 2, n_a: 2, conservative_n_b: 1 }, PrecommittedGroupParams { group: PolynomialGroupLayout::new(16, 1), m_vars: 4, r_vars: 5, log_basis: 2, n_a: 2, conservative_n_b: 1 }], steps: &[
+    GeneratedScheduleTableEntry { final_group: PolynomialGroupLayout::new(33, 1), precommitteds: &[PrecommittedGroupParams { group: PolynomialGroupLayout::new(16, 1), m_vars: 4, r_vars: 5, log_basis: 2, n_a: 2, conservative_n_b: 1, log_commit_bound: 1, onehot_chunk_size: 1, basis_range: (2, 6) }, PrecommittedGroupParams { group: PolynomialGroupLayout::new(16, 1), m_vars: 4, r_vars: 5, log_basis: 2, n_a: 2, conservative_n_b: 1, log_commit_bound: 1, onehot_chunk_size: 1, basis_range: (2, 6) }], steps: &[
         GeneratedStep::Fold(GeneratedFoldStep { ring_d: 128, log_basis: 2, m_vars: 16, r_vars: 10, n_a: 3, n_b: 1, n_d: 1 }),
         GeneratedStep::Fold(GeneratedFoldStep { ring_d: 128, log_basis: 4, m_vars: 13, r_vars: 7, n_a: 3, n_b: 1, n_d: 1 }),
         GeneratedStep::Fold(GeneratedFoldStep { ring_d: 128, log_basis: 6, m_vars: 11, r_vars: 4, n_a: 3, n_b: 1, n_d: 1 }),
@@ -936,7 +936,7 @@ pub(crate) static FP128_D128_ONEHOT_SCHEDULES: &[GeneratedScheduleTableEntry] = 
         GeneratedStep::Fold(GeneratedFoldStep { ring_d: 128, log_basis: 6, m_vars: 8, r_vars: 2, n_a: 2, n_b: 1, n_d: 1 }),
         GeneratedStep::Direct(GeneratedDirectStep { commit: None }),
     ] },
-    GeneratedScheduleTableEntry { final_group: PolynomialGroupLayout::new(33, 4), precommitteds: &[PrecommittedGroupParams { group: PolynomialGroupLayout::new(16, 1), m_vars: 4, r_vars: 5, log_basis: 2, n_a: 2, conservative_n_b: 1 }], steps: &[
+    GeneratedScheduleTableEntry { final_group: PolynomialGroupLayout::new(33, 4), precommitteds: &[PrecommittedGroupParams { group: PolynomialGroupLayout::new(16, 1), m_vars: 4, r_vars: 5, log_basis: 2, n_a: 2, conservative_n_b: 1, log_commit_bound: 1, onehot_chunk_size: 1, basis_range: (2, 6) }], steps: &[
         GeneratedStep::Fold(GeneratedFoldStep { ring_d: 128, log_basis: 2, m_vars: 17, r_vars: 9, n_a: 3, n_b: 1, n_d: 1 }),
         GeneratedStep::Fold(GeneratedFoldStep { ring_d: 128, log_basis: 3, m_vars: 14, r_vars: 7, n_a: 3, n_b: 1, n_d: 1 }),
         GeneratedStep::Fold(GeneratedFoldStep { ring_d: 128, log_basis: 4, m_vars: 11, r_vars: 5, n_a: 3, n_b: 1, n_d: 1 }),
@@ -946,7 +946,7 @@ pub(crate) static FP128_D128_ONEHOT_SCHEDULES: &[GeneratedScheduleTableEntry] = 
         GeneratedStep::Fold(GeneratedFoldStep { ring_d: 128, log_basis: 6, m_vars: 8, r_vars: 2, n_a: 2, n_b: 1, n_d: 1 }),
         GeneratedStep::Direct(GeneratedDirectStep { commit: None }),
     ] },
-    GeneratedScheduleTableEntry { final_group: PolynomialGroupLayout::new(33, 4), precommitteds: &[PrecommittedGroupParams { group: PolynomialGroupLayout::new(16, 1), m_vars: 4, r_vars: 5, log_basis: 2, n_a: 2, conservative_n_b: 1 }, PrecommittedGroupParams { group: PolynomialGroupLayout::new(16, 1), m_vars: 4, r_vars: 5, log_basis: 2, n_a: 2, conservative_n_b: 1 }], steps: &[
+    GeneratedScheduleTableEntry { final_group: PolynomialGroupLayout::new(33, 4), precommitteds: &[PrecommittedGroupParams { group: PolynomialGroupLayout::new(16, 1), m_vars: 4, r_vars: 5, log_basis: 2, n_a: 2, conservative_n_b: 1, log_commit_bound: 1, onehot_chunk_size: 1, basis_range: (2, 6) }, PrecommittedGroupParams { group: PolynomialGroupLayout::new(16, 1), m_vars: 4, r_vars: 5, log_basis: 2, n_a: 2, conservative_n_b: 1, log_commit_bound: 1, onehot_chunk_size: 1, basis_range: (2, 6) }], steps: &[
         GeneratedStep::Fold(GeneratedFoldStep { ring_d: 128, log_basis: 2, m_vars: 17, r_vars: 9, n_a: 3, n_b: 1, n_d: 1 }),
         GeneratedStep::Fold(GeneratedFoldStep { ring_d: 128, log_basis: 3, m_vars: 14, r_vars: 7, n_a: 3, n_b: 1, n_d: 1 }),
         GeneratedStep::Fold(GeneratedFoldStep { ring_d: 128, log_basis: 4, m_vars: 11, r_vars: 5, n_a: 3, n_b: 1, n_d: 1 }),
@@ -966,7 +966,7 @@ pub(crate) static FP128_D128_ONEHOT_SCHEDULES: &[GeneratedScheduleTableEntry] = 
         GeneratedStep::Fold(GeneratedFoldStep { ring_d: 128, log_basis: 6, m_vars: 8, r_vars: 2, n_a: 2, n_b: 1, n_d: 1 }),
         GeneratedStep::Direct(GeneratedDirectStep { commit: None }),
     ] },
-    GeneratedScheduleTableEntry { final_group: PolynomialGroupLayout::new(34, 1), precommitteds: &[PrecommittedGroupParams { group: PolynomialGroupLayout::new(17, 1), m_vars: 5, r_vars: 5, log_basis: 2, n_a: 2, conservative_n_b: 1 }], steps: &[
+    GeneratedScheduleTableEntry { final_group: PolynomialGroupLayout::new(34, 1), precommitteds: &[PrecommittedGroupParams { group: PolynomialGroupLayout::new(17, 1), m_vars: 5, r_vars: 5, log_basis: 2, n_a: 2, conservative_n_b: 1, log_commit_bound: 1, onehot_chunk_size: 1, basis_range: (2, 6) }], steps: &[
         GeneratedStep::Fold(GeneratedFoldStep { ring_d: 128, log_basis: 2, m_vars: 16, r_vars: 11, n_a: 3, n_b: 1, n_d: 1 }),
         GeneratedStep::Fold(GeneratedFoldStep { ring_d: 128, log_basis: 3, m_vars: 13, r_vars: 7, n_a: 3, n_b: 1, n_d: 1 }),
         GeneratedStep::Fold(GeneratedFoldStep { ring_d: 128, log_basis: 4, m_vars: 11, r_vars: 5, n_a: 3, n_b: 1, n_d: 1 }),
@@ -976,7 +976,7 @@ pub(crate) static FP128_D128_ONEHOT_SCHEDULES: &[GeneratedScheduleTableEntry] = 
         GeneratedStep::Fold(GeneratedFoldStep { ring_d: 128, log_basis: 6, m_vars: 8, r_vars: 2, n_a: 2, n_b: 1, n_d: 1 }),
         GeneratedStep::Direct(GeneratedDirectStep { commit: None }),
     ] },
-    GeneratedScheduleTableEntry { final_group: PolynomialGroupLayout::new(34, 1), precommitteds: &[PrecommittedGroupParams { group: PolynomialGroupLayout::new(17, 1), m_vars: 5, r_vars: 5, log_basis: 2, n_a: 2, conservative_n_b: 1 }, PrecommittedGroupParams { group: PolynomialGroupLayout::new(17, 1), m_vars: 5, r_vars: 5, log_basis: 2, n_a: 2, conservative_n_b: 1 }], steps: &[
+    GeneratedScheduleTableEntry { final_group: PolynomialGroupLayout::new(34, 1), precommitteds: &[PrecommittedGroupParams { group: PolynomialGroupLayout::new(17, 1), m_vars: 5, r_vars: 5, log_basis: 2, n_a: 2, conservative_n_b: 1, log_commit_bound: 1, onehot_chunk_size: 1, basis_range: (2, 6) }, PrecommittedGroupParams { group: PolynomialGroupLayout::new(17, 1), m_vars: 5, r_vars: 5, log_basis: 2, n_a: 2, conservative_n_b: 1, log_commit_bound: 1, onehot_chunk_size: 1, basis_range: (2, 6) }], steps: &[
         GeneratedStep::Fold(GeneratedFoldStep { ring_d: 128, log_basis: 2, m_vars: 16, r_vars: 11, n_a: 3, n_b: 1, n_d: 1 }),
         GeneratedStep::Fold(GeneratedFoldStep { ring_d: 128, log_basis: 3, m_vars: 13, r_vars: 7, n_a: 3, n_b: 1, n_d: 1 }),
         GeneratedStep::Fold(GeneratedFoldStep { ring_d: 128, log_basis: 4, m_vars: 11, r_vars: 5, n_a: 3, n_b: 1, n_d: 1 }),
@@ -996,7 +996,7 @@ pub(crate) static FP128_D128_ONEHOT_SCHEDULES: &[GeneratedScheduleTableEntry] = 
         GeneratedStep::Fold(GeneratedFoldStep { ring_d: 128, log_basis: 6, m_vars: 8, r_vars: 2, n_a: 2, n_b: 1, n_d: 1 }),
         GeneratedStep::Direct(GeneratedDirectStep { commit: None }),
     ] },
-    GeneratedScheduleTableEntry { final_group: PolynomialGroupLayout::new(34, 4), precommitteds: &[PrecommittedGroupParams { group: PolynomialGroupLayout::new(17, 1), m_vars: 5, r_vars: 5, log_basis: 2, n_a: 2, conservative_n_b: 1 }], steps: &[
+    GeneratedScheduleTableEntry { final_group: PolynomialGroupLayout::new(34, 4), precommitteds: &[PrecommittedGroupParams { group: PolynomialGroupLayout::new(17, 1), m_vars: 5, r_vars: 5, log_basis: 2, n_a: 2, conservative_n_b: 1, log_commit_bound: 1, onehot_chunk_size: 1, basis_range: (2, 6) }], steps: &[
         GeneratedStep::Fold(GeneratedFoldStep { ring_d: 128, log_basis: 2, m_vars: 17, r_vars: 10, n_a: 3, n_b: 1, n_d: 1 }),
         GeneratedStep::Fold(GeneratedFoldStep { ring_d: 128, log_basis: 2, m_vars: 13, r_vars: 8, n_a: 3, n_b: 1, n_d: 1 }),
         GeneratedStep::Fold(GeneratedFoldStep { ring_d: 128, log_basis: 4, m_vars: 11, r_vars: 6, n_a: 3, n_b: 1, n_d: 1 }),
@@ -1006,7 +1006,7 @@ pub(crate) static FP128_D128_ONEHOT_SCHEDULES: &[GeneratedScheduleTableEntry] = 
         GeneratedStep::Fold(GeneratedFoldStep { ring_d: 128, log_basis: 6, m_vars: 8, r_vars: 2, n_a: 2, n_b: 1, n_d: 1 }),
         GeneratedStep::Direct(GeneratedDirectStep { commit: None }),
     ] },
-    GeneratedScheduleTableEntry { final_group: PolynomialGroupLayout::new(34, 4), precommitteds: &[PrecommittedGroupParams { group: PolynomialGroupLayout::new(17, 1), m_vars: 5, r_vars: 5, log_basis: 2, n_a: 2, conservative_n_b: 1 }, PrecommittedGroupParams { group: PolynomialGroupLayout::new(17, 1), m_vars: 5, r_vars: 5, log_basis: 2, n_a: 2, conservative_n_b: 1 }], steps: &[
+    GeneratedScheduleTableEntry { final_group: PolynomialGroupLayout::new(34, 4), precommitteds: &[PrecommittedGroupParams { group: PolynomialGroupLayout::new(17, 1), m_vars: 5, r_vars: 5, log_basis: 2, n_a: 2, conservative_n_b: 1, log_commit_bound: 1, onehot_chunk_size: 1, basis_range: (2, 6) }, PrecommittedGroupParams { group: PolynomialGroupLayout::new(17, 1), m_vars: 5, r_vars: 5, log_basis: 2, n_a: 2, conservative_n_b: 1, log_commit_bound: 1, onehot_chunk_size: 1, basis_range: (2, 6) }], steps: &[
         GeneratedStep::Fold(GeneratedFoldStep { ring_d: 128, log_basis: 2, m_vars: 17, r_vars: 10, n_a: 3, n_b: 1, n_d: 1 }),
         GeneratedStep::Fold(GeneratedFoldStep { ring_d: 128, log_basis: 2, m_vars: 13, r_vars: 8, n_a: 3, n_b: 1, n_d: 1 }),
         GeneratedStep::Fold(GeneratedFoldStep { ring_d: 128, log_basis: 4, m_vars: 11, r_vars: 6, n_a: 3, n_b: 1, n_d: 1 }),
@@ -1026,7 +1026,7 @@ pub(crate) static FP128_D128_ONEHOT_SCHEDULES: &[GeneratedScheduleTableEntry] = 
         GeneratedStep::Fold(GeneratedFoldStep { ring_d: 128, log_basis: 6, m_vars: 8, r_vars: 2, n_a: 2, n_b: 1, n_d: 1 }),
         GeneratedStep::Direct(GeneratedDirectStep { commit: None }),
     ] },
-    GeneratedScheduleTableEntry { final_group: PolynomialGroupLayout::new(35, 1), precommitteds: &[PrecommittedGroupParams { group: PolynomialGroupLayout::new(17, 1), m_vars: 5, r_vars: 5, log_basis: 2, n_a: 2, conservative_n_b: 1 }], steps: &[
+    GeneratedScheduleTableEntry { final_group: PolynomialGroupLayout::new(35, 1), precommitteds: &[PrecommittedGroupParams { group: PolynomialGroupLayout::new(17, 1), m_vars: 5, r_vars: 5, log_basis: 2, n_a: 2, conservative_n_b: 1, log_commit_bound: 1, onehot_chunk_size: 1, basis_range: (2, 6) }], steps: &[
         GeneratedStep::Fold(GeneratedFoldStep { ring_d: 128, log_basis: 2, m_vars: 17, r_vars: 11, n_a: 3, n_b: 1, n_d: 1 }),
         GeneratedStep::Fold(GeneratedFoldStep { ring_d: 128, log_basis: 3, m_vars: 14, r_vars: 7, n_a: 3, n_b: 1, n_d: 1 }),
         GeneratedStep::Fold(GeneratedFoldStep { ring_d: 128, log_basis: 4, m_vars: 11, r_vars: 5, n_a: 3, n_b: 1, n_d: 1 }),
@@ -1036,7 +1036,7 @@ pub(crate) static FP128_D128_ONEHOT_SCHEDULES: &[GeneratedScheduleTableEntry] = 
         GeneratedStep::Fold(GeneratedFoldStep { ring_d: 128, log_basis: 6, m_vars: 8, r_vars: 2, n_a: 2, n_b: 1, n_d: 1 }),
         GeneratedStep::Direct(GeneratedDirectStep { commit: None }),
     ] },
-    GeneratedScheduleTableEntry { final_group: PolynomialGroupLayout::new(35, 1), precommitteds: &[PrecommittedGroupParams { group: PolynomialGroupLayout::new(17, 1), m_vars: 5, r_vars: 5, log_basis: 2, n_a: 2, conservative_n_b: 1 }, PrecommittedGroupParams { group: PolynomialGroupLayout::new(17, 1), m_vars: 5, r_vars: 5, log_basis: 2, n_a: 2, conservative_n_b: 1 }], steps: &[
+    GeneratedScheduleTableEntry { final_group: PolynomialGroupLayout::new(35, 1), precommitteds: &[PrecommittedGroupParams { group: PolynomialGroupLayout::new(17, 1), m_vars: 5, r_vars: 5, log_basis: 2, n_a: 2, conservative_n_b: 1, log_commit_bound: 1, onehot_chunk_size: 1, basis_range: (2, 6) }, PrecommittedGroupParams { group: PolynomialGroupLayout::new(17, 1), m_vars: 5, r_vars: 5, log_basis: 2, n_a: 2, conservative_n_b: 1, log_commit_bound: 1, onehot_chunk_size: 1, basis_range: (2, 6) }], steps: &[
         GeneratedStep::Fold(GeneratedFoldStep { ring_d: 128, log_basis: 2, m_vars: 17, r_vars: 11, n_a: 3, n_b: 1, n_d: 1 }),
         GeneratedStep::Fold(GeneratedFoldStep { ring_d: 128, log_basis: 3, m_vars: 14, r_vars: 7, n_a: 3, n_b: 1, n_d: 1 }),
         GeneratedStep::Fold(GeneratedFoldStep { ring_d: 128, log_basis: 4, m_vars: 11, r_vars: 5, n_a: 3, n_b: 1, n_d: 1 }),
@@ -1056,7 +1056,7 @@ pub(crate) static FP128_D128_ONEHOT_SCHEDULES: &[GeneratedScheduleTableEntry] = 
         GeneratedStep::Fold(GeneratedFoldStep { ring_d: 128, log_basis: 6, m_vars: 8, r_vars: 2, n_a: 2, n_b: 1, n_d: 1 }),
         GeneratedStep::Direct(GeneratedDirectStep { commit: None }),
     ] },
-    GeneratedScheduleTableEntry { final_group: PolynomialGroupLayout::new(35, 4), precommitteds: &[PrecommittedGroupParams { group: PolynomialGroupLayout::new(17, 1), m_vars: 5, r_vars: 5, log_basis: 2, n_a: 2, conservative_n_b: 1 }], steps: &[
+    GeneratedScheduleTableEntry { final_group: PolynomialGroupLayout::new(35, 4), precommitteds: &[PrecommittedGroupParams { group: PolynomialGroupLayout::new(17, 1), m_vars: 5, r_vars: 5, log_basis: 2, n_a: 2, conservative_n_b: 1, log_commit_bound: 1, onehot_chunk_size: 1, basis_range: (2, 6) }], steps: &[
         GeneratedStep::Fold(GeneratedFoldStep { ring_d: 128, log_basis: 2, m_vars: 18, r_vars: 10, n_a: 3, n_b: 1, n_d: 1 }),
         GeneratedStep::Fold(GeneratedFoldStep { ring_d: 128, log_basis: 2, m_vars: 14, r_vars: 8, n_a: 3, n_b: 1, n_d: 1 }),
         GeneratedStep::Fold(GeneratedFoldStep { ring_d: 128, log_basis: 4, m_vars: 11, r_vars: 6, n_a: 3, n_b: 1, n_d: 1 }),
@@ -1066,7 +1066,7 @@ pub(crate) static FP128_D128_ONEHOT_SCHEDULES: &[GeneratedScheduleTableEntry] = 
         GeneratedStep::Fold(GeneratedFoldStep { ring_d: 128, log_basis: 6, m_vars: 8, r_vars: 2, n_a: 2, n_b: 1, n_d: 1 }),
         GeneratedStep::Direct(GeneratedDirectStep { commit: None }),
     ] },
-    GeneratedScheduleTableEntry { final_group: PolynomialGroupLayout::new(35, 4), precommitteds: &[PrecommittedGroupParams { group: PolynomialGroupLayout::new(17, 1), m_vars: 5, r_vars: 5, log_basis: 2, n_a: 2, conservative_n_b: 1 }, PrecommittedGroupParams { group: PolynomialGroupLayout::new(17, 1), m_vars: 5, r_vars: 5, log_basis: 2, n_a: 2, conservative_n_b: 1 }], steps: &[
+    GeneratedScheduleTableEntry { final_group: PolynomialGroupLayout::new(35, 4), precommitteds: &[PrecommittedGroupParams { group: PolynomialGroupLayout::new(17, 1), m_vars: 5, r_vars: 5, log_basis: 2, n_a: 2, conservative_n_b: 1, log_commit_bound: 1, onehot_chunk_size: 1, basis_range: (2, 6) }, PrecommittedGroupParams { group: PolynomialGroupLayout::new(17, 1), m_vars: 5, r_vars: 5, log_basis: 2, n_a: 2, conservative_n_b: 1, log_commit_bound: 1, onehot_chunk_size: 1, basis_range: (2, 6) }], steps: &[
         GeneratedStep::Fold(GeneratedFoldStep { ring_d: 128, log_basis: 2, m_vars: 18, r_vars: 10, n_a: 3, n_b: 1, n_d: 1 }),
         GeneratedStep::Fold(GeneratedFoldStep { ring_d: 128, log_basis: 2, m_vars: 14, r_vars: 8, n_a: 3, n_b: 1, n_d: 1 }),
         GeneratedStep::Fold(GeneratedFoldStep { ring_d: 128, log_basis: 4, m_vars: 11, r_vars: 6, n_a: 3, n_b: 1, n_d: 1 }),
@@ -1086,7 +1086,7 @@ pub(crate) static FP128_D128_ONEHOT_SCHEDULES: &[GeneratedScheduleTableEntry] = 
         GeneratedStep::Fold(GeneratedFoldStep { ring_d: 128, log_basis: 6, m_vars: 8, r_vars: 2, n_a: 2, n_b: 1, n_d: 1 }),
         GeneratedStep::Direct(GeneratedDirectStep { commit: None }),
     ] },
-    GeneratedScheduleTableEntry { final_group: PolynomialGroupLayout::new(36, 1), precommitteds: &[PrecommittedGroupParams { group: PolynomialGroupLayout::new(18, 1), m_vars: 10, r_vars: 1, log_basis: 2, n_a: 2, conservative_n_b: 1 }], steps: &[
+    GeneratedScheduleTableEntry { final_group: PolynomialGroupLayout::new(36, 1), precommitteds: &[PrecommittedGroupParams { group: PolynomialGroupLayout::new(18, 1), m_vars: 10, r_vars: 1, log_basis: 2, n_a: 2, conservative_n_b: 1, log_commit_bound: 1, onehot_chunk_size: 1, basis_range: (2, 6) }], steps: &[
         GeneratedStep::Fold(GeneratedFoldStep { ring_d: 128, log_basis: 2, m_vars: 17, r_vars: 12, n_a: 3, n_b: 1, n_d: 1 }),
         GeneratedStep::Fold(GeneratedFoldStep { ring_d: 128, log_basis: 2, m_vars: 13, r_vars: 8, n_a: 3, n_b: 1, n_d: 1 }),
         GeneratedStep::Fold(GeneratedFoldStep { ring_d: 128, log_basis: 4, m_vars: 11, r_vars: 6, n_a: 3, n_b: 1, n_d: 1 }),
@@ -1096,7 +1096,7 @@ pub(crate) static FP128_D128_ONEHOT_SCHEDULES: &[GeneratedScheduleTableEntry] = 
         GeneratedStep::Fold(GeneratedFoldStep { ring_d: 128, log_basis: 6, m_vars: 8, r_vars: 2, n_a: 2, n_b: 1, n_d: 1 }),
         GeneratedStep::Direct(GeneratedDirectStep { commit: None }),
     ] },
-    GeneratedScheduleTableEntry { final_group: PolynomialGroupLayout::new(36, 1), precommitteds: &[PrecommittedGroupParams { group: PolynomialGroupLayout::new(18, 1), m_vars: 10, r_vars: 1, log_basis: 2, n_a: 2, conservative_n_b: 1 }, PrecommittedGroupParams { group: PolynomialGroupLayout::new(18, 1), m_vars: 10, r_vars: 1, log_basis: 2, n_a: 2, conservative_n_b: 1 }], steps: &[
+    GeneratedScheduleTableEntry { final_group: PolynomialGroupLayout::new(36, 1), precommitteds: &[PrecommittedGroupParams { group: PolynomialGroupLayout::new(18, 1), m_vars: 10, r_vars: 1, log_basis: 2, n_a: 2, conservative_n_b: 1, log_commit_bound: 1, onehot_chunk_size: 1, basis_range: (2, 6) }, PrecommittedGroupParams { group: PolynomialGroupLayout::new(18, 1), m_vars: 10, r_vars: 1, log_basis: 2, n_a: 2, conservative_n_b: 1, log_commit_bound: 1, onehot_chunk_size: 1, basis_range: (2, 6) }], steps: &[
         GeneratedStep::Fold(GeneratedFoldStep { ring_d: 128, log_basis: 2, m_vars: 17, r_vars: 12, n_a: 3, n_b: 1, n_d: 1 }),
         GeneratedStep::Fold(GeneratedFoldStep { ring_d: 128, log_basis: 2, m_vars: 13, r_vars: 8, n_a: 3, n_b: 1, n_d: 1 }),
         GeneratedStep::Fold(GeneratedFoldStep { ring_d: 128, log_basis: 4, m_vars: 11, r_vars: 6, n_a: 3, n_b: 1, n_d: 1 }),
@@ -1116,7 +1116,7 @@ pub(crate) static FP128_D128_ONEHOT_SCHEDULES: &[GeneratedScheduleTableEntry] = 
         GeneratedStep::Fold(GeneratedFoldStep { ring_d: 128, log_basis: 6, m_vars: 8, r_vars: 2, n_a: 2, n_b: 1, n_d: 1 }),
         GeneratedStep::Direct(GeneratedDirectStep { commit: None }),
     ] },
-    GeneratedScheduleTableEntry { final_group: PolynomialGroupLayout::new(36, 4), precommitteds: &[PrecommittedGroupParams { group: PolynomialGroupLayout::new(18, 1), m_vars: 10, r_vars: 1, log_basis: 2, n_a: 2, conservative_n_b: 1 }], steps: &[
+    GeneratedScheduleTableEntry { final_group: PolynomialGroupLayout::new(36, 4), precommitteds: &[PrecommittedGroupParams { group: PolynomialGroupLayout::new(18, 1), m_vars: 10, r_vars: 1, log_basis: 2, n_a: 2, conservative_n_b: 1, log_commit_bound: 1, onehot_chunk_size: 1, basis_range: (2, 6) }], steps: &[
         GeneratedStep::Fold(GeneratedFoldStep { ring_d: 128, log_basis: 2, m_vars: 19, r_vars: 10, n_a: 3, n_b: 1, n_d: 1 }),
         GeneratedStep::Fold(GeneratedFoldStep { ring_d: 128, log_basis: 3, m_vars: 15, r_vars: 8, n_a: 3, n_b: 1, n_d: 1 }),
         GeneratedStep::Fold(GeneratedFoldStep { ring_d: 128, log_basis: 5, m_vars: 11, r_vars: 6, n_a: 3, n_b: 1, n_d: 1 }),
@@ -1126,7 +1126,7 @@ pub(crate) static FP128_D128_ONEHOT_SCHEDULES: &[GeneratedScheduleTableEntry] = 
         GeneratedStep::Fold(GeneratedFoldStep { ring_d: 128, log_basis: 6, m_vars: 8, r_vars: 2, n_a: 2, n_b: 1, n_d: 1 }),
         GeneratedStep::Direct(GeneratedDirectStep { commit: None }),
     ] },
-    GeneratedScheduleTableEntry { final_group: PolynomialGroupLayout::new(36, 4), precommitteds: &[PrecommittedGroupParams { group: PolynomialGroupLayout::new(18, 1), m_vars: 10, r_vars: 1, log_basis: 2, n_a: 2, conservative_n_b: 1 }, PrecommittedGroupParams { group: PolynomialGroupLayout::new(18, 1), m_vars: 10, r_vars: 1, log_basis: 2, n_a: 2, conservative_n_b: 1 }], steps: &[
+    GeneratedScheduleTableEntry { final_group: PolynomialGroupLayout::new(36, 4), precommitteds: &[PrecommittedGroupParams { group: PolynomialGroupLayout::new(18, 1), m_vars: 10, r_vars: 1, log_basis: 2, n_a: 2, conservative_n_b: 1, log_commit_bound: 1, onehot_chunk_size: 1, basis_range: (2, 6) }, PrecommittedGroupParams { group: PolynomialGroupLayout::new(18, 1), m_vars: 10, r_vars: 1, log_basis: 2, n_a: 2, conservative_n_b: 1, log_commit_bound: 1, onehot_chunk_size: 1, basis_range: (2, 6) }], steps: &[
         GeneratedStep::Fold(GeneratedFoldStep { ring_d: 128, log_basis: 2, m_vars: 19, r_vars: 10, n_a: 3, n_b: 1, n_d: 1 }),
         GeneratedStep::Fold(GeneratedFoldStep { ring_d: 128, log_basis: 3, m_vars: 15, r_vars: 8, n_a: 3, n_b: 1, n_d: 1 }),
         GeneratedStep::Fold(GeneratedFoldStep { ring_d: 128, log_basis: 5, m_vars: 11, r_vars: 6, n_a: 3, n_b: 1, n_d: 1 }),
@@ -1146,7 +1146,7 @@ pub(crate) static FP128_D128_ONEHOT_SCHEDULES: &[GeneratedScheduleTableEntry] = 
         GeneratedStep::Fold(GeneratedFoldStep { ring_d: 128, log_basis: 6, m_vars: 8, r_vars: 2, n_a: 2, n_b: 1, n_d: 1 }),
         GeneratedStep::Direct(GeneratedDirectStep { commit: None }),
     ] },
-    GeneratedScheduleTableEntry { final_group: PolynomialGroupLayout::new(37, 1), precommitteds: &[PrecommittedGroupParams { group: PolynomialGroupLayout::new(18, 1), m_vars: 10, r_vars: 1, log_basis: 2, n_a: 2, conservative_n_b: 1 }], steps: &[
+    GeneratedScheduleTableEntry { final_group: PolynomialGroupLayout::new(37, 1), precommitteds: &[PrecommittedGroupParams { group: PolynomialGroupLayout::new(18, 1), m_vars: 10, r_vars: 1, log_basis: 2, n_a: 2, conservative_n_b: 1, log_commit_bound: 1, onehot_chunk_size: 1, basis_range: (2, 6) }], steps: &[
         GeneratedStep::Fold(GeneratedFoldStep { ring_d: 128, log_basis: 2, m_vars: 18, r_vars: 12, n_a: 3, n_b: 1, n_d: 1 }),
         GeneratedStep::Fold(GeneratedFoldStep { ring_d: 128, log_basis: 2, m_vars: 14, r_vars: 8, n_a: 3, n_b: 1, n_d: 1 }),
         GeneratedStep::Fold(GeneratedFoldStep { ring_d: 128, log_basis: 4, m_vars: 11, r_vars: 6, n_a: 3, n_b: 1, n_d: 1 }),
@@ -1156,7 +1156,7 @@ pub(crate) static FP128_D128_ONEHOT_SCHEDULES: &[GeneratedScheduleTableEntry] = 
         GeneratedStep::Fold(GeneratedFoldStep { ring_d: 128, log_basis: 6, m_vars: 8, r_vars: 2, n_a: 2, n_b: 1, n_d: 1 }),
         GeneratedStep::Direct(GeneratedDirectStep { commit: None }),
     ] },
-    GeneratedScheduleTableEntry { final_group: PolynomialGroupLayout::new(37, 1), precommitteds: &[PrecommittedGroupParams { group: PolynomialGroupLayout::new(18, 1), m_vars: 10, r_vars: 1, log_basis: 2, n_a: 2, conservative_n_b: 1 }, PrecommittedGroupParams { group: PolynomialGroupLayout::new(18, 1), m_vars: 10, r_vars: 1, log_basis: 2, n_a: 2, conservative_n_b: 1 }], steps: &[
+    GeneratedScheduleTableEntry { final_group: PolynomialGroupLayout::new(37, 1), precommitteds: &[PrecommittedGroupParams { group: PolynomialGroupLayout::new(18, 1), m_vars: 10, r_vars: 1, log_basis: 2, n_a: 2, conservative_n_b: 1, log_commit_bound: 1, onehot_chunk_size: 1, basis_range: (2, 6) }, PrecommittedGroupParams { group: PolynomialGroupLayout::new(18, 1), m_vars: 10, r_vars: 1, log_basis: 2, n_a: 2, conservative_n_b: 1, log_commit_bound: 1, onehot_chunk_size: 1, basis_range: (2, 6) }], steps: &[
         GeneratedStep::Fold(GeneratedFoldStep { ring_d: 128, log_basis: 2, m_vars: 18, r_vars: 12, n_a: 3, n_b: 1, n_d: 1 }),
         GeneratedStep::Fold(GeneratedFoldStep { ring_d: 128, log_basis: 2, m_vars: 14, r_vars: 8, n_a: 3, n_b: 1, n_d: 1 }),
         GeneratedStep::Fold(GeneratedFoldStep { ring_d: 128, log_basis: 4, m_vars: 11, r_vars: 6, n_a: 3, n_b: 1, n_d: 1 }),
@@ -1176,7 +1176,7 @@ pub(crate) static FP128_D128_ONEHOT_SCHEDULES: &[GeneratedScheduleTableEntry] = 
         GeneratedStep::Fold(GeneratedFoldStep { ring_d: 128, log_basis: 6, m_vars: 8, r_vars: 2, n_a: 2, n_b: 1, n_d: 1 }),
         GeneratedStep::Direct(GeneratedDirectStep { commit: None }),
     ] },
-    GeneratedScheduleTableEntry { final_group: PolynomialGroupLayout::new(37, 4), precommitteds: &[PrecommittedGroupParams { group: PolynomialGroupLayout::new(18, 1), m_vars: 10, r_vars: 1, log_basis: 2, n_a: 2, conservative_n_b: 1 }], steps: &[
+    GeneratedScheduleTableEntry { final_group: PolynomialGroupLayout::new(37, 4), precommitteds: &[PrecommittedGroupParams { group: PolynomialGroupLayout::new(18, 1), m_vars: 10, r_vars: 1, log_basis: 2, n_a: 2, conservative_n_b: 1, log_commit_bound: 1, onehot_chunk_size: 1, basis_range: (2, 6) }], steps: &[
         GeneratedStep::Fold(GeneratedFoldStep { ring_d: 128, log_basis: 2, m_vars: 19, r_vars: 11, n_a: 4, n_b: 1, n_d: 1 }),
         GeneratedStep::Fold(GeneratedFoldStep { ring_d: 128, log_basis: 3, m_vars: 14, r_vars: 9, n_a: 3, n_b: 1, n_d: 1 }),
         GeneratedStep::Fold(GeneratedFoldStep { ring_d: 128, log_basis: 4, m_vars: 12, r_vars: 6, n_a: 3, n_b: 1, n_d: 1 }),
@@ -1186,7 +1186,7 @@ pub(crate) static FP128_D128_ONEHOT_SCHEDULES: &[GeneratedScheduleTableEntry] = 
         GeneratedStep::Fold(GeneratedFoldStep { ring_d: 128, log_basis: 6, m_vars: 8, r_vars: 2, n_a: 2, n_b: 1, n_d: 1 }),
         GeneratedStep::Direct(GeneratedDirectStep { commit: None }),
     ] },
-    GeneratedScheduleTableEntry { final_group: PolynomialGroupLayout::new(37, 4), precommitteds: &[PrecommittedGroupParams { group: PolynomialGroupLayout::new(18, 1), m_vars: 10, r_vars: 1, log_basis: 2, n_a: 2, conservative_n_b: 1 }, PrecommittedGroupParams { group: PolynomialGroupLayout::new(18, 1), m_vars: 10, r_vars: 1, log_basis: 2, n_a: 2, conservative_n_b: 1 }], steps: &[
+    GeneratedScheduleTableEntry { final_group: PolynomialGroupLayout::new(37, 4), precommitteds: &[PrecommittedGroupParams { group: PolynomialGroupLayout::new(18, 1), m_vars: 10, r_vars: 1, log_basis: 2, n_a: 2, conservative_n_b: 1, log_commit_bound: 1, onehot_chunk_size: 1, basis_range: (2, 6) }, PrecommittedGroupParams { group: PolynomialGroupLayout::new(18, 1), m_vars: 10, r_vars: 1, log_basis: 2, n_a: 2, conservative_n_b: 1, log_commit_bound: 1, onehot_chunk_size: 1, basis_range: (2, 6) }], steps: &[
         GeneratedStep::Fold(GeneratedFoldStep { ring_d: 128, log_basis: 2, m_vars: 19, r_vars: 11, n_a: 4, n_b: 1, n_d: 1 }),
         GeneratedStep::Fold(GeneratedFoldStep { ring_d: 128, log_basis: 3, m_vars: 14, r_vars: 9, n_a: 3, n_b: 1, n_d: 1 }),
         GeneratedStep::Fold(GeneratedFoldStep { ring_d: 128, log_basis: 4, m_vars: 12, r_vars: 6, n_a: 3, n_b: 1, n_d: 1 }),
@@ -1206,7 +1206,7 @@ pub(crate) static FP128_D128_ONEHOT_SCHEDULES: &[GeneratedScheduleTableEntry] = 
         GeneratedStep::Fold(GeneratedFoldStep { ring_d: 128, log_basis: 6, m_vars: 8, r_vars: 2, n_a: 2, n_b: 1, n_d: 1 }),
         GeneratedStep::Direct(GeneratedDirectStep { commit: None }),
     ] },
-    GeneratedScheduleTableEntry { final_group: PolynomialGroupLayout::new(38, 1), precommitteds: &[PrecommittedGroupParams { group: PolynomialGroupLayout::new(19, 1), m_vars: 9, r_vars: 3, log_basis: 2, n_a: 2, conservative_n_b: 1 }], steps: &[
+    GeneratedScheduleTableEntry { final_group: PolynomialGroupLayout::new(38, 1), precommitteds: &[PrecommittedGroupParams { group: PolynomialGroupLayout::new(19, 1), m_vars: 9, r_vars: 3, log_basis: 2, n_a: 2, conservative_n_b: 1, log_commit_bound: 1, onehot_chunk_size: 1, basis_range: (2, 6) }], steps: &[
         GeneratedStep::Fold(GeneratedFoldStep { ring_d: 128, log_basis: 2, m_vars: 19, r_vars: 12, n_a: 3, n_b: 1, n_d: 1 }),
         GeneratedStep::Fold(GeneratedFoldStep { ring_d: 128, log_basis: 3, m_vars: 15, r_vars: 8, n_a: 3, n_b: 1, n_d: 1 }),
         GeneratedStep::Fold(GeneratedFoldStep { ring_d: 128, log_basis: 5, m_vars: 11, r_vars: 6, n_a: 3, n_b: 1, n_d: 1 }),
@@ -1216,7 +1216,7 @@ pub(crate) static FP128_D128_ONEHOT_SCHEDULES: &[GeneratedScheduleTableEntry] = 
         GeneratedStep::Fold(GeneratedFoldStep { ring_d: 128, log_basis: 6, m_vars: 8, r_vars: 2, n_a: 2, n_b: 1, n_d: 1 }),
         GeneratedStep::Direct(GeneratedDirectStep { commit: None }),
     ] },
-    GeneratedScheduleTableEntry { final_group: PolynomialGroupLayout::new(38, 1), precommitteds: &[PrecommittedGroupParams { group: PolynomialGroupLayout::new(19, 1), m_vars: 9, r_vars: 3, log_basis: 2, n_a: 2, conservative_n_b: 1 }, PrecommittedGroupParams { group: PolynomialGroupLayout::new(19, 1), m_vars: 9, r_vars: 3, log_basis: 2, n_a: 2, conservative_n_b: 1 }], steps: &[
+    GeneratedScheduleTableEntry { final_group: PolynomialGroupLayout::new(38, 1), precommitteds: &[PrecommittedGroupParams { group: PolynomialGroupLayout::new(19, 1), m_vars: 9, r_vars: 3, log_basis: 2, n_a: 2, conservative_n_b: 1, log_commit_bound: 1, onehot_chunk_size: 1, basis_range: (2, 6) }, PrecommittedGroupParams { group: PolynomialGroupLayout::new(19, 1), m_vars: 9, r_vars: 3, log_basis: 2, n_a: 2, conservative_n_b: 1, log_commit_bound: 1, onehot_chunk_size: 1, basis_range: (2, 6) }], steps: &[
         GeneratedStep::Fold(GeneratedFoldStep { ring_d: 128, log_basis: 2, m_vars: 19, r_vars: 12, n_a: 3, n_b: 1, n_d: 1 }),
         GeneratedStep::Fold(GeneratedFoldStep { ring_d: 128, log_basis: 3, m_vars: 15, r_vars: 8, n_a: 3, n_b: 1, n_d: 1 }),
         GeneratedStep::Fold(GeneratedFoldStep { ring_d: 128, log_basis: 5, m_vars: 11, r_vars: 6, n_a: 3, n_b: 1, n_d: 1 }),
@@ -1236,7 +1236,7 @@ pub(crate) static FP128_D128_ONEHOT_SCHEDULES: &[GeneratedScheduleTableEntry] = 
         GeneratedStep::Fold(GeneratedFoldStep { ring_d: 128, log_basis: 6, m_vars: 8, r_vars: 2, n_a: 2, n_b: 1, n_d: 1 }),
         GeneratedStep::Direct(GeneratedDirectStep { commit: None }),
     ] },
-    GeneratedScheduleTableEntry { final_group: PolynomialGroupLayout::new(38, 4), precommitteds: &[PrecommittedGroupParams { group: PolynomialGroupLayout::new(19, 1), m_vars: 9, r_vars: 3, log_basis: 2, n_a: 2, conservative_n_b: 1 }], steps: &[
+    GeneratedScheduleTableEntry { final_group: PolynomialGroupLayout::new(38, 4), precommitteds: &[PrecommittedGroupParams { group: PolynomialGroupLayout::new(19, 1), m_vars: 9, r_vars: 3, log_basis: 2, n_a: 2, conservative_n_b: 1, log_commit_bound: 1, onehot_chunk_size: 1, basis_range: (2, 6) }], steps: &[
         GeneratedStep::Fold(GeneratedFoldStep { ring_d: 128, log_basis: 2, m_vars: 19, r_vars: 12, n_a: 4, n_b: 1, n_d: 1 }),
         GeneratedStep::Fold(GeneratedFoldStep { ring_d: 128, log_basis: 3, m_vars: 15, r_vars: 9, n_a: 3, n_b: 1, n_d: 1 }),
         GeneratedStep::Fold(GeneratedFoldStep { ring_d: 128, log_basis: 4, m_vars: 12, r_vars: 6, n_a: 3, n_b: 1, n_d: 1 }),
@@ -1246,7 +1246,7 @@ pub(crate) static FP128_D128_ONEHOT_SCHEDULES: &[GeneratedScheduleTableEntry] = 
         GeneratedStep::Fold(GeneratedFoldStep { ring_d: 128, log_basis: 6, m_vars: 8, r_vars: 2, n_a: 2, n_b: 1, n_d: 1 }),
         GeneratedStep::Direct(GeneratedDirectStep { commit: None }),
     ] },
-    GeneratedScheduleTableEntry { final_group: PolynomialGroupLayout::new(38, 4), precommitteds: &[PrecommittedGroupParams { group: PolynomialGroupLayout::new(19, 1), m_vars: 9, r_vars: 3, log_basis: 2, n_a: 2, conservative_n_b: 1 }, PrecommittedGroupParams { group: PolynomialGroupLayout::new(19, 1), m_vars: 9, r_vars: 3, log_basis: 2, n_a: 2, conservative_n_b: 1 }], steps: &[
+    GeneratedScheduleTableEntry { final_group: PolynomialGroupLayout::new(38, 4), precommitteds: &[PrecommittedGroupParams { group: PolynomialGroupLayout::new(19, 1), m_vars: 9, r_vars: 3, log_basis: 2, n_a: 2, conservative_n_b: 1, log_commit_bound: 1, onehot_chunk_size: 1, basis_range: (2, 6) }, PrecommittedGroupParams { group: PolynomialGroupLayout::new(19, 1), m_vars: 9, r_vars: 3, log_basis: 2, n_a: 2, conservative_n_b: 1, log_commit_bound: 1, onehot_chunk_size: 1, basis_range: (2, 6) }], steps: &[
         GeneratedStep::Fold(GeneratedFoldStep { ring_d: 128, log_basis: 2, m_vars: 19, r_vars: 12, n_a: 4, n_b: 1, n_d: 1 }),
         GeneratedStep::Fold(GeneratedFoldStep { ring_d: 128, log_basis: 3, m_vars: 15, r_vars: 9, n_a: 3, n_b: 1, n_d: 1 }),
         GeneratedStep::Fold(GeneratedFoldStep { ring_d: 128, log_basis: 4, m_vars: 12, r_vars: 6, n_a: 3, n_b: 1, n_d: 1 }),
@@ -1266,7 +1266,7 @@ pub(crate) static FP128_D128_ONEHOT_SCHEDULES: &[GeneratedScheduleTableEntry] = 
         GeneratedStep::Fold(GeneratedFoldStep { ring_d: 128, log_basis: 6, m_vars: 8, r_vars: 2, n_a: 2, n_b: 1, n_d: 1 }),
         GeneratedStep::Direct(GeneratedDirectStep { commit: None }),
     ] },
-    GeneratedScheduleTableEntry { final_group: PolynomialGroupLayout::new(39, 1), precommitteds: &[PrecommittedGroupParams { group: PolynomialGroupLayout::new(19, 1), m_vars: 9, r_vars: 3, log_basis: 2, n_a: 2, conservative_n_b: 1 }], steps: &[
+    GeneratedScheduleTableEntry { final_group: PolynomialGroupLayout::new(39, 1), precommitteds: &[PrecommittedGroupParams { group: PolynomialGroupLayout::new(19, 1), m_vars: 9, r_vars: 3, log_basis: 2, n_a: 2, conservative_n_b: 1, log_commit_bound: 1, onehot_chunk_size: 1, basis_range: (2, 6) }], steps: &[
         GeneratedStep::Fold(GeneratedFoldStep { ring_d: 128, log_basis: 2, m_vars: 19, r_vars: 13, n_a: 4, n_b: 1, n_d: 1 }),
         GeneratedStep::Fold(GeneratedFoldStep { ring_d: 128, log_basis: 3, m_vars: 14, r_vars: 9, n_a: 3, n_b: 1, n_d: 1 }),
         GeneratedStep::Fold(GeneratedFoldStep { ring_d: 128, log_basis: 4, m_vars: 12, r_vars: 6, n_a: 3, n_b: 1, n_d: 1 }),
@@ -1276,7 +1276,7 @@ pub(crate) static FP128_D128_ONEHOT_SCHEDULES: &[GeneratedScheduleTableEntry] = 
         GeneratedStep::Fold(GeneratedFoldStep { ring_d: 128, log_basis: 6, m_vars: 8, r_vars: 2, n_a: 2, n_b: 1, n_d: 1 }),
         GeneratedStep::Direct(GeneratedDirectStep { commit: None }),
     ] },
-    GeneratedScheduleTableEntry { final_group: PolynomialGroupLayout::new(39, 1), precommitteds: &[PrecommittedGroupParams { group: PolynomialGroupLayout::new(19, 1), m_vars: 9, r_vars: 3, log_basis: 2, n_a: 2, conservative_n_b: 1 }, PrecommittedGroupParams { group: PolynomialGroupLayout::new(19, 1), m_vars: 9, r_vars: 3, log_basis: 2, n_a: 2, conservative_n_b: 1 }], steps: &[
+    GeneratedScheduleTableEntry { final_group: PolynomialGroupLayout::new(39, 1), precommitteds: &[PrecommittedGroupParams { group: PolynomialGroupLayout::new(19, 1), m_vars: 9, r_vars: 3, log_basis: 2, n_a: 2, conservative_n_b: 1, log_commit_bound: 1, onehot_chunk_size: 1, basis_range: (2, 6) }, PrecommittedGroupParams { group: PolynomialGroupLayout::new(19, 1), m_vars: 9, r_vars: 3, log_basis: 2, n_a: 2, conservative_n_b: 1, log_commit_bound: 1, onehot_chunk_size: 1, basis_range: (2, 6) }], steps: &[
         GeneratedStep::Fold(GeneratedFoldStep { ring_d: 128, log_basis: 2, m_vars: 19, r_vars: 13, n_a: 4, n_b: 1, n_d: 1 }),
         GeneratedStep::Fold(GeneratedFoldStep { ring_d: 128, log_basis: 3, m_vars: 14, r_vars: 9, n_a: 3, n_b: 1, n_d: 1 }),
         GeneratedStep::Fold(GeneratedFoldStep { ring_d: 128, log_basis: 4, m_vars: 12, r_vars: 6, n_a: 3, n_b: 1, n_d: 1 }),
@@ -1296,7 +1296,7 @@ pub(crate) static FP128_D128_ONEHOT_SCHEDULES: &[GeneratedScheduleTableEntry] = 
         GeneratedStep::Fold(GeneratedFoldStep { ring_d: 128, log_basis: 6, m_vars: 8, r_vars: 2, n_a: 2, n_b: 1, n_d: 1 }),
         GeneratedStep::Direct(GeneratedDirectStep { commit: None }),
     ] },
-    GeneratedScheduleTableEntry { final_group: PolynomialGroupLayout::new(39, 4), precommitteds: &[PrecommittedGroupParams { group: PolynomialGroupLayout::new(19, 1), m_vars: 9, r_vars: 3, log_basis: 2, n_a: 2, conservative_n_b: 1 }], steps: &[
+    GeneratedScheduleTableEntry { final_group: PolynomialGroupLayout::new(39, 4), precommitteds: &[PrecommittedGroupParams { group: PolynomialGroupLayout::new(19, 1), m_vars: 9, r_vars: 3, log_basis: 2, n_a: 2, conservative_n_b: 1, log_commit_bound: 1, onehot_chunk_size: 1, basis_range: (2, 6) }], steps: &[
         GeneratedStep::Fold(GeneratedFoldStep { ring_d: 128, log_basis: 2, m_vars: 20, r_vars: 12, n_a: 4, n_b: 1, n_d: 1 }),
         GeneratedStep::Fold(GeneratedFoldStep { ring_d: 128, log_basis: 3, m_vars: 15, r_vars: 9, n_a: 3, n_b: 1, n_d: 1 }),
         GeneratedStep::Fold(GeneratedFoldStep { ring_d: 128, log_basis: 5, m_vars: 12, r_vars: 6, n_a: 3, n_b: 1, n_d: 1 }),
@@ -1306,7 +1306,7 @@ pub(crate) static FP128_D128_ONEHOT_SCHEDULES: &[GeneratedScheduleTableEntry] = 
         GeneratedStep::Fold(GeneratedFoldStep { ring_d: 128, log_basis: 6, m_vars: 8, r_vars: 2, n_a: 2, n_b: 1, n_d: 1 }),
         GeneratedStep::Direct(GeneratedDirectStep { commit: None }),
     ] },
-    GeneratedScheduleTableEntry { final_group: PolynomialGroupLayout::new(39, 4), precommitteds: &[PrecommittedGroupParams { group: PolynomialGroupLayout::new(19, 1), m_vars: 9, r_vars: 3, log_basis: 2, n_a: 2, conservative_n_b: 1 }, PrecommittedGroupParams { group: PolynomialGroupLayout::new(19, 1), m_vars: 9, r_vars: 3, log_basis: 2, n_a: 2, conservative_n_b: 1 }], steps: &[
+    GeneratedScheduleTableEntry { final_group: PolynomialGroupLayout::new(39, 4), precommitteds: &[PrecommittedGroupParams { group: PolynomialGroupLayout::new(19, 1), m_vars: 9, r_vars: 3, log_basis: 2, n_a: 2, conservative_n_b: 1, log_commit_bound: 1, onehot_chunk_size: 1, basis_range: (2, 6) }, PrecommittedGroupParams { group: PolynomialGroupLayout::new(19, 1), m_vars: 9, r_vars: 3, log_basis: 2, n_a: 2, conservative_n_b: 1, log_commit_bound: 1, onehot_chunk_size: 1, basis_range: (2, 6) }], steps: &[
         GeneratedStep::Fold(GeneratedFoldStep { ring_d: 128, log_basis: 2, m_vars: 20, r_vars: 12, n_a: 4, n_b: 1, n_d: 1 }),
         GeneratedStep::Fold(GeneratedFoldStep { ring_d: 128, log_basis: 3, m_vars: 15, r_vars: 9, n_a: 3, n_b: 1, n_d: 1 }),
         GeneratedStep::Fold(GeneratedFoldStep { ring_d: 128, log_basis: 5, m_vars: 12, r_vars: 6, n_a: 3, n_b: 1, n_d: 1 }),
@@ -1326,7 +1326,7 @@ pub(crate) static FP128_D128_ONEHOT_SCHEDULES: &[GeneratedScheduleTableEntry] = 
         GeneratedStep::Fold(GeneratedFoldStep { ring_d: 128, log_basis: 6, m_vars: 8, r_vars: 2, n_a: 2, n_b: 1, n_d: 1 }),
         GeneratedStep::Direct(GeneratedDirectStep { commit: None }),
     ] },
-    GeneratedScheduleTableEntry { final_group: PolynomialGroupLayout::new(40, 1), precommitteds: &[PrecommittedGroupParams { group: PolynomialGroupLayout::new(20, 1), m_vars: 9, r_vars: 4, log_basis: 2, n_a: 2, conservative_n_b: 1 }], steps: &[
+    GeneratedScheduleTableEntry { final_group: PolynomialGroupLayout::new(40, 1), precommitteds: &[PrecommittedGroupParams { group: PolynomialGroupLayout::new(20, 1), m_vars: 9, r_vars: 4, log_basis: 2, n_a: 2, conservative_n_b: 1, log_commit_bound: 1, onehot_chunk_size: 1, basis_range: (2, 6) }], steps: &[
         GeneratedStep::Fold(GeneratedFoldStep { ring_d: 128, log_basis: 2, m_vars: 19, r_vars: 14, n_a: 4, n_b: 1, n_d: 1 }),
         GeneratedStep::Fold(GeneratedFoldStep { ring_d: 128, log_basis: 3, m_vars: 15, r_vars: 9, n_a: 3, n_b: 1, n_d: 1 }),
         GeneratedStep::Fold(GeneratedFoldStep { ring_d: 128, log_basis: 4, m_vars: 12, r_vars: 6, n_a: 3, n_b: 1, n_d: 1 }),
@@ -1336,7 +1336,7 @@ pub(crate) static FP128_D128_ONEHOT_SCHEDULES: &[GeneratedScheduleTableEntry] = 
         GeneratedStep::Fold(GeneratedFoldStep { ring_d: 128, log_basis: 6, m_vars: 8, r_vars: 2, n_a: 2, n_b: 1, n_d: 1 }),
         GeneratedStep::Direct(GeneratedDirectStep { commit: None }),
     ] },
-    GeneratedScheduleTableEntry { final_group: PolynomialGroupLayout::new(40, 1), precommitteds: &[PrecommittedGroupParams { group: PolynomialGroupLayout::new(20, 1), m_vars: 9, r_vars: 4, log_basis: 2, n_a: 2, conservative_n_b: 1 }, PrecommittedGroupParams { group: PolynomialGroupLayout::new(20, 1), m_vars: 9, r_vars: 4, log_basis: 2, n_a: 2, conservative_n_b: 1 }], steps: &[
+    GeneratedScheduleTableEntry { final_group: PolynomialGroupLayout::new(40, 1), precommitteds: &[PrecommittedGroupParams { group: PolynomialGroupLayout::new(20, 1), m_vars: 9, r_vars: 4, log_basis: 2, n_a: 2, conservative_n_b: 1, log_commit_bound: 1, onehot_chunk_size: 1, basis_range: (2, 6) }, PrecommittedGroupParams { group: PolynomialGroupLayout::new(20, 1), m_vars: 9, r_vars: 4, log_basis: 2, n_a: 2, conservative_n_b: 1, log_commit_bound: 1, onehot_chunk_size: 1, basis_range: (2, 6) }], steps: &[
         GeneratedStep::Fold(GeneratedFoldStep { ring_d: 128, log_basis: 2, m_vars: 19, r_vars: 14, n_a: 4, n_b: 1, n_d: 1 }),
         GeneratedStep::Fold(GeneratedFoldStep { ring_d: 128, log_basis: 3, m_vars: 15, r_vars: 9, n_a: 3, n_b: 1, n_d: 1 }),
         GeneratedStep::Fold(GeneratedFoldStep { ring_d: 128, log_basis: 4, m_vars: 12, r_vars: 6, n_a: 3, n_b: 1, n_d: 1 }),
@@ -1356,7 +1356,7 @@ pub(crate) static FP128_D128_ONEHOT_SCHEDULES: &[GeneratedScheduleTableEntry] = 
         GeneratedStep::Fold(GeneratedFoldStep { ring_d: 128, log_basis: 6, m_vars: 8, r_vars: 2, n_a: 2, n_b: 1, n_d: 1 }),
         GeneratedStep::Direct(GeneratedDirectStep { commit: None }),
     ] },
-    GeneratedScheduleTableEntry { final_group: PolynomialGroupLayout::new(40, 4), precommitteds: &[PrecommittedGroupParams { group: PolynomialGroupLayout::new(20, 1), m_vars: 9, r_vars: 4, log_basis: 2, n_a: 2, conservative_n_b: 1 }], steps: &[
+    GeneratedScheduleTableEntry { final_group: PolynomialGroupLayout::new(40, 4), precommitteds: &[PrecommittedGroupParams { group: PolynomialGroupLayout::new(20, 1), m_vars: 9, r_vars: 4, log_basis: 2, n_a: 2, conservative_n_b: 1, log_commit_bound: 1, onehot_chunk_size: 1, basis_range: (2, 6) }], steps: &[
         GeneratedStep::Fold(GeneratedFoldStep { ring_d: 128, log_basis: 2, m_vars: 20, r_vars: 13, n_a: 4, n_b: 1, n_d: 1 }),
         GeneratedStep::Fold(GeneratedFoldStep { ring_d: 128, log_basis: 3, m_vars: 16, r_vars: 9, n_a: 3, n_b: 1, n_d: 1 }),
         GeneratedStep::Fold(GeneratedFoldStep { ring_d: 128, log_basis: 4, m_vars: 12, r_vars: 6, n_a: 3, n_b: 1, n_d: 1 }),
@@ -1366,7 +1366,7 @@ pub(crate) static FP128_D128_ONEHOT_SCHEDULES: &[GeneratedScheduleTableEntry] = 
         GeneratedStep::Fold(GeneratedFoldStep { ring_d: 128, log_basis: 6, m_vars: 8, r_vars: 2, n_a: 2, n_b: 1, n_d: 1 }),
         GeneratedStep::Direct(GeneratedDirectStep { commit: None }),
     ] },
-    GeneratedScheduleTableEntry { final_group: PolynomialGroupLayout::new(40, 4), precommitteds: &[PrecommittedGroupParams { group: PolynomialGroupLayout::new(20, 1), m_vars: 9, r_vars: 4, log_basis: 2, n_a: 2, conservative_n_b: 1 }, PrecommittedGroupParams { group: PolynomialGroupLayout::new(20, 1), m_vars: 9, r_vars: 4, log_basis: 2, n_a: 2, conservative_n_b: 1 }], steps: &[
+    GeneratedScheduleTableEntry { final_group: PolynomialGroupLayout::new(40, 4), precommitteds: &[PrecommittedGroupParams { group: PolynomialGroupLayout::new(20, 1), m_vars: 9, r_vars: 4, log_basis: 2, n_a: 2, conservative_n_b: 1, log_commit_bound: 1, onehot_chunk_size: 1, basis_range: (2, 6) }, PrecommittedGroupParams { group: PolynomialGroupLayout::new(20, 1), m_vars: 9, r_vars: 4, log_basis: 2, n_a: 2, conservative_n_b: 1, log_commit_bound: 1, onehot_chunk_size: 1, basis_range: (2, 6) }], steps: &[
         GeneratedStep::Fold(GeneratedFoldStep { ring_d: 128, log_basis: 2, m_vars: 20, r_vars: 13, n_a: 4, n_b: 1, n_d: 1 }),
         GeneratedStep::Fold(GeneratedFoldStep { ring_d: 128, log_basis: 3, m_vars: 16, r_vars: 9, n_a: 3, n_b: 1, n_d: 1 }),
         GeneratedStep::Fold(GeneratedFoldStep { ring_d: 128, log_basis: 4, m_vars: 12, r_vars: 6, n_a: 3, n_b: 1, n_d: 1 }),
@@ -1386,7 +1386,7 @@ pub(crate) static FP128_D128_ONEHOT_SCHEDULES: &[GeneratedScheduleTableEntry] = 
         GeneratedStep::Fold(GeneratedFoldStep { ring_d: 128, log_basis: 6, m_vars: 8, r_vars: 2, n_a: 2, n_b: 1, n_d: 1 }),
         GeneratedStep::Direct(GeneratedDirectStep { commit: None }),
     ] },
-    GeneratedScheduleTableEntry { final_group: PolynomialGroupLayout::new(41, 1), precommitteds: &[PrecommittedGroupParams { group: PolynomialGroupLayout::new(20, 1), m_vars: 9, r_vars: 4, log_basis: 2, n_a: 2, conservative_n_b: 1 }], steps: &[
+    GeneratedScheduleTableEntry { final_group: PolynomialGroupLayout::new(41, 1), precommitteds: &[PrecommittedGroupParams { group: PolynomialGroupLayout::new(20, 1), m_vars: 9, r_vars: 4, log_basis: 2, n_a: 2, conservative_n_b: 1, log_commit_bound: 1, onehot_chunk_size: 1, basis_range: (2, 6) }], steps: &[
         GeneratedStep::Fold(GeneratedFoldStep { ring_d: 128, log_basis: 2, m_vars: 20, r_vars: 14, n_a: 4, n_b: 1, n_d: 1 }),
         GeneratedStep::Fold(GeneratedFoldStep { ring_d: 128, log_basis: 3, m_vars: 15, r_vars: 9, n_a: 3, n_b: 1, n_d: 1 }),
         GeneratedStep::Fold(GeneratedFoldStep { ring_d: 128, log_basis: 5, m_vars: 12, r_vars: 6, n_a: 3, n_b: 1, n_d: 1 }),
@@ -1396,7 +1396,7 @@ pub(crate) static FP128_D128_ONEHOT_SCHEDULES: &[GeneratedScheduleTableEntry] = 
         GeneratedStep::Fold(GeneratedFoldStep { ring_d: 128, log_basis: 6, m_vars: 8, r_vars: 2, n_a: 2, n_b: 1, n_d: 1 }),
         GeneratedStep::Direct(GeneratedDirectStep { commit: None }),
     ] },
-    GeneratedScheduleTableEntry { final_group: PolynomialGroupLayout::new(41, 1), precommitteds: &[PrecommittedGroupParams { group: PolynomialGroupLayout::new(20, 1), m_vars: 9, r_vars: 4, log_basis: 2, n_a: 2, conservative_n_b: 1 }, PrecommittedGroupParams { group: PolynomialGroupLayout::new(20, 1), m_vars: 9, r_vars: 4, log_basis: 2, n_a: 2, conservative_n_b: 1 }], steps: &[
+    GeneratedScheduleTableEntry { final_group: PolynomialGroupLayout::new(41, 1), precommitteds: &[PrecommittedGroupParams { group: PolynomialGroupLayout::new(20, 1), m_vars: 9, r_vars: 4, log_basis: 2, n_a: 2, conservative_n_b: 1, log_commit_bound: 1, onehot_chunk_size: 1, basis_range: (2, 6) }, PrecommittedGroupParams { group: PolynomialGroupLayout::new(20, 1), m_vars: 9, r_vars: 4, log_basis: 2, n_a: 2, conservative_n_b: 1, log_commit_bound: 1, onehot_chunk_size: 1, basis_range: (2, 6) }], steps: &[
         GeneratedStep::Fold(GeneratedFoldStep { ring_d: 128, log_basis: 2, m_vars: 20, r_vars: 14, n_a: 4, n_b: 1, n_d: 1 }),
         GeneratedStep::Fold(GeneratedFoldStep { ring_d: 128, log_basis: 3, m_vars: 15, r_vars: 9, n_a: 3, n_b: 1, n_d: 1 }),
         GeneratedStep::Fold(GeneratedFoldStep { ring_d: 128, log_basis: 5, m_vars: 12, r_vars: 6, n_a: 3, n_b: 1, n_d: 1 }),
@@ -1416,7 +1416,7 @@ pub(crate) static FP128_D128_ONEHOT_SCHEDULES: &[GeneratedScheduleTableEntry] = 
         GeneratedStep::Fold(GeneratedFoldStep { ring_d: 128, log_basis: 6, m_vars: 8, r_vars: 2, n_a: 2, n_b: 1, n_d: 1 }),
         GeneratedStep::Direct(GeneratedDirectStep { commit: None }),
     ] },
-    GeneratedScheduleTableEntry { final_group: PolynomialGroupLayout::new(41, 4), precommitteds: &[PrecommittedGroupParams { group: PolynomialGroupLayout::new(20, 1), m_vars: 9, r_vars: 4, log_basis: 2, n_a: 2, conservative_n_b: 1 }], steps: &[
+    GeneratedScheduleTableEntry { final_group: PolynomialGroupLayout::new(41, 4), precommitteds: &[PrecommittedGroupParams { group: PolynomialGroupLayout::new(20, 1), m_vars: 9, r_vars: 4, log_basis: 2, n_a: 2, conservative_n_b: 1, log_commit_bound: 1, onehot_chunk_size: 1, basis_range: (2, 6) }], steps: &[
         GeneratedStep::Fold(GeneratedFoldStep { ring_d: 128, log_basis: 2, m_vars: 21, r_vars: 13, n_a: 4, n_b: 1, n_d: 1 }),
         GeneratedStep::Fold(GeneratedFoldStep { ring_d: 128, log_basis: 5, m_vars: 15, r_vars: 10, n_a: 3, n_b: 1, n_d: 1 }),
         GeneratedStep::Fold(GeneratedFoldStep { ring_d: 128, log_basis: 5, m_vars: 12, r_vars: 6, n_a: 3, n_b: 1, n_d: 1 }),
@@ -1426,7 +1426,7 @@ pub(crate) static FP128_D128_ONEHOT_SCHEDULES: &[GeneratedScheduleTableEntry] = 
         GeneratedStep::Fold(GeneratedFoldStep { ring_d: 128, log_basis: 6, m_vars: 8, r_vars: 2, n_a: 2, n_b: 1, n_d: 1 }),
         GeneratedStep::Direct(GeneratedDirectStep { commit: None }),
     ] },
-    GeneratedScheduleTableEntry { final_group: PolynomialGroupLayout::new(41, 4), precommitteds: &[PrecommittedGroupParams { group: PolynomialGroupLayout::new(20, 1), m_vars: 9, r_vars: 4, log_basis: 2, n_a: 2, conservative_n_b: 1 }, PrecommittedGroupParams { group: PolynomialGroupLayout::new(20, 1), m_vars: 9, r_vars: 4, log_basis: 2, n_a: 2, conservative_n_b: 1 }], steps: &[
+    GeneratedScheduleTableEntry { final_group: PolynomialGroupLayout::new(41, 4), precommitteds: &[PrecommittedGroupParams { group: PolynomialGroupLayout::new(20, 1), m_vars: 9, r_vars: 4, log_basis: 2, n_a: 2, conservative_n_b: 1, log_commit_bound: 1, onehot_chunk_size: 1, basis_range: (2, 6) }, PrecommittedGroupParams { group: PolynomialGroupLayout::new(20, 1), m_vars: 9, r_vars: 4, log_basis: 2, n_a: 2, conservative_n_b: 1, log_commit_bound: 1, onehot_chunk_size: 1, basis_range: (2, 6) }], steps: &[
         GeneratedStep::Fold(GeneratedFoldStep { ring_d: 128, log_basis: 2, m_vars: 21, r_vars: 13, n_a: 4, n_b: 1, n_d: 1 }),
         GeneratedStep::Fold(GeneratedFoldStep { ring_d: 128, log_basis: 5, m_vars: 15, r_vars: 10, n_a: 3, n_b: 1, n_d: 1 }),
         GeneratedStep::Fold(GeneratedFoldStep { ring_d: 128, log_basis: 5, m_vars: 12, r_vars: 6, n_a: 3, n_b: 1, n_d: 1 }),
@@ -1446,7 +1446,7 @@ pub(crate) static FP128_D128_ONEHOT_SCHEDULES: &[GeneratedScheduleTableEntry] = 
         GeneratedStep::Fold(GeneratedFoldStep { ring_d: 128, log_basis: 6, m_vars: 8, r_vars: 2, n_a: 2, n_b: 1, n_d: 1 }),
         GeneratedStep::Direct(GeneratedDirectStep { commit: None }),
     ] },
-    GeneratedScheduleTableEntry { final_group: PolynomialGroupLayout::new(42, 1), precommitteds: &[PrecommittedGroupParams { group: PolynomialGroupLayout::new(21, 1), m_vars: 10, r_vars: 4, log_basis: 2, n_a: 2, conservative_n_b: 1 }], steps: &[
+    GeneratedScheduleTableEntry { final_group: PolynomialGroupLayout::new(42, 1), precommitteds: &[PrecommittedGroupParams { group: PolynomialGroupLayout::new(21, 1), m_vars: 10, r_vars: 4, log_basis: 2, n_a: 2, conservative_n_b: 1, log_commit_bound: 1, onehot_chunk_size: 1, basis_range: (2, 6) }], steps: &[
         GeneratedStep::Fold(GeneratedFoldStep { ring_d: 128, log_basis: 2, m_vars: 20, r_vars: 15, n_a: 4, n_b: 1, n_d: 1 }),
         GeneratedStep::Fold(GeneratedFoldStep { ring_d: 128, log_basis: 3, m_vars: 16, r_vars: 9, n_a: 3, n_b: 1, n_d: 1 }),
         GeneratedStep::Fold(GeneratedFoldStep { ring_d: 128, log_basis: 4, m_vars: 12, r_vars: 6, n_a: 3, n_b: 1, n_d: 1 }),
@@ -1456,7 +1456,7 @@ pub(crate) static FP128_D128_ONEHOT_SCHEDULES: &[GeneratedScheduleTableEntry] = 
         GeneratedStep::Fold(GeneratedFoldStep { ring_d: 128, log_basis: 6, m_vars: 8, r_vars: 2, n_a: 2, n_b: 1, n_d: 1 }),
         GeneratedStep::Direct(GeneratedDirectStep { commit: None }),
     ] },
-    GeneratedScheduleTableEntry { final_group: PolynomialGroupLayout::new(42, 1), precommitteds: &[PrecommittedGroupParams { group: PolynomialGroupLayout::new(21, 1), m_vars: 10, r_vars: 4, log_basis: 2, n_a: 2, conservative_n_b: 1 }, PrecommittedGroupParams { group: PolynomialGroupLayout::new(21, 1), m_vars: 10, r_vars: 4, log_basis: 2, n_a: 2, conservative_n_b: 1 }], steps: &[
+    GeneratedScheduleTableEntry { final_group: PolynomialGroupLayout::new(42, 1), precommitteds: &[PrecommittedGroupParams { group: PolynomialGroupLayout::new(21, 1), m_vars: 10, r_vars: 4, log_basis: 2, n_a: 2, conservative_n_b: 1, log_commit_bound: 1, onehot_chunk_size: 1, basis_range: (2, 6) }, PrecommittedGroupParams { group: PolynomialGroupLayout::new(21, 1), m_vars: 10, r_vars: 4, log_basis: 2, n_a: 2, conservative_n_b: 1, log_commit_bound: 1, onehot_chunk_size: 1, basis_range: (2, 6) }], steps: &[
         GeneratedStep::Fold(GeneratedFoldStep { ring_d: 128, log_basis: 2, m_vars: 20, r_vars: 15, n_a: 4, n_b: 1, n_d: 1 }),
         GeneratedStep::Fold(GeneratedFoldStep { ring_d: 128, log_basis: 3, m_vars: 16, r_vars: 9, n_a: 3, n_b: 1, n_d: 1 }),
         GeneratedStep::Fold(GeneratedFoldStep { ring_d: 128, log_basis: 4, m_vars: 12, r_vars: 6, n_a: 3, n_b: 1, n_d: 1 }),
@@ -1476,7 +1476,7 @@ pub(crate) static FP128_D128_ONEHOT_SCHEDULES: &[GeneratedScheduleTableEntry] = 
         GeneratedStep::Fold(GeneratedFoldStep { ring_d: 128, log_basis: 6, m_vars: 8, r_vars: 3, n_a: 2, n_b: 1, n_d: 1 }),
         GeneratedStep::Direct(GeneratedDirectStep { commit: None }),
     ] },
-    GeneratedScheduleTableEntry { final_group: PolynomialGroupLayout::new(42, 4), precommitteds: &[PrecommittedGroupParams { group: PolynomialGroupLayout::new(21, 1), m_vars: 10, r_vars: 4, log_basis: 2, n_a: 2, conservative_n_b: 1 }], steps: &[
+    GeneratedScheduleTableEntry { final_group: PolynomialGroupLayout::new(42, 4), precommitteds: &[PrecommittedGroupParams { group: PolynomialGroupLayout::new(21, 1), m_vars: 10, r_vars: 4, log_basis: 2, n_a: 2, conservative_n_b: 1, log_commit_bound: 1, onehot_chunk_size: 1, basis_range: (2, 6) }], steps: &[
         GeneratedStep::Fold(GeneratedFoldStep { ring_d: 128, log_basis: 2, m_vars: 21, r_vars: 14, n_a: 4, n_b: 1, n_d: 1 }),
         GeneratedStep::Fold(GeneratedFoldStep { ring_d: 128, log_basis: 2, m_vars: 16, r_vars: 10, n_a: 3, n_b: 1, n_d: 1 }),
         GeneratedStep::Fold(GeneratedFoldStep { ring_d: 128, log_basis: 4, m_vars: 12, r_vars: 7, n_a: 3, n_b: 1, n_d: 1 }),
@@ -1486,7 +1486,7 @@ pub(crate) static FP128_D128_ONEHOT_SCHEDULES: &[GeneratedScheduleTableEntry] = 
         GeneratedStep::Fold(GeneratedFoldStep { ring_d: 128, log_basis: 6, m_vars: 8, r_vars: 3, n_a: 2, n_b: 1, n_d: 1 }),
         GeneratedStep::Direct(GeneratedDirectStep { commit: None }),
     ] },
-    GeneratedScheduleTableEntry { final_group: PolynomialGroupLayout::new(42, 4), precommitteds: &[PrecommittedGroupParams { group: PolynomialGroupLayout::new(21, 1), m_vars: 10, r_vars: 4, log_basis: 2, n_a: 2, conservative_n_b: 1 }, PrecommittedGroupParams { group: PolynomialGroupLayout::new(21, 1), m_vars: 10, r_vars: 4, log_basis: 2, n_a: 2, conservative_n_b: 1 }], steps: &[
+    GeneratedScheduleTableEntry { final_group: PolynomialGroupLayout::new(42, 4), precommitteds: &[PrecommittedGroupParams { group: PolynomialGroupLayout::new(21, 1), m_vars: 10, r_vars: 4, log_basis: 2, n_a: 2, conservative_n_b: 1, log_commit_bound: 1, onehot_chunk_size: 1, basis_range: (2, 6) }, PrecommittedGroupParams { group: PolynomialGroupLayout::new(21, 1), m_vars: 10, r_vars: 4, log_basis: 2, n_a: 2, conservative_n_b: 1, log_commit_bound: 1, onehot_chunk_size: 1, basis_range: (2, 6) }], steps: &[
         GeneratedStep::Fold(GeneratedFoldStep { ring_d: 128, log_basis: 2, m_vars: 21, r_vars: 14, n_a: 4, n_b: 1, n_d: 1 }),
         GeneratedStep::Fold(GeneratedFoldStep { ring_d: 128, log_basis: 2, m_vars: 16, r_vars: 10, n_a: 3, n_b: 1, n_d: 1 }),
         GeneratedStep::Fold(GeneratedFoldStep { ring_d: 128, log_basis: 4, m_vars: 12, r_vars: 7, n_a: 3, n_b: 1, n_d: 1 }),
@@ -1506,7 +1506,7 @@ pub(crate) static FP128_D128_ONEHOT_SCHEDULES: &[GeneratedScheduleTableEntry] = 
         GeneratedStep::Fold(GeneratedFoldStep { ring_d: 128, log_basis: 6, m_vars: 8, r_vars: 2, n_a: 2, n_b: 1, n_d: 1 }),
         GeneratedStep::Direct(GeneratedDirectStep { commit: None }),
     ] },
-    GeneratedScheduleTableEntry { final_group: PolynomialGroupLayout::new(43, 1), precommitteds: &[PrecommittedGroupParams { group: PolynomialGroupLayout::new(21, 1), m_vars: 10, r_vars: 4, log_basis: 2, n_a: 2, conservative_n_b: 1 }], steps: &[
+    GeneratedScheduleTableEntry { final_group: PolynomialGroupLayout::new(43, 1), precommitteds: &[PrecommittedGroupParams { group: PolynomialGroupLayout::new(21, 1), m_vars: 10, r_vars: 4, log_basis: 2, n_a: 2, conservative_n_b: 1, log_commit_bound: 1, onehot_chunk_size: 1, basis_range: (2, 6) }], steps: &[
         GeneratedStep::Fold(GeneratedFoldStep { ring_d: 128, log_basis: 2, m_vars: 21, r_vars: 15, n_a: 4, n_b: 1, n_d: 1 }),
         GeneratedStep::Fold(GeneratedFoldStep { ring_d: 128, log_basis: 5, m_vars: 15, r_vars: 10, n_a: 3, n_b: 1, n_d: 1 }),
         GeneratedStep::Fold(GeneratedFoldStep { ring_d: 128, log_basis: 5, m_vars: 12, r_vars: 6, n_a: 3, n_b: 1, n_d: 1 }),
@@ -1516,7 +1516,7 @@ pub(crate) static FP128_D128_ONEHOT_SCHEDULES: &[GeneratedScheduleTableEntry] = 
         GeneratedStep::Fold(GeneratedFoldStep { ring_d: 128, log_basis: 6, m_vars: 8, r_vars: 2, n_a: 2, n_b: 1, n_d: 1 }),
         GeneratedStep::Direct(GeneratedDirectStep { commit: None }),
     ] },
-    GeneratedScheduleTableEntry { final_group: PolynomialGroupLayout::new(43, 1), precommitteds: &[PrecommittedGroupParams { group: PolynomialGroupLayout::new(21, 1), m_vars: 10, r_vars: 4, log_basis: 2, n_a: 2, conservative_n_b: 1 }, PrecommittedGroupParams { group: PolynomialGroupLayout::new(21, 1), m_vars: 10, r_vars: 4, log_basis: 2, n_a: 2, conservative_n_b: 1 }], steps: &[
+    GeneratedScheduleTableEntry { final_group: PolynomialGroupLayout::new(43, 1), precommitteds: &[PrecommittedGroupParams { group: PolynomialGroupLayout::new(21, 1), m_vars: 10, r_vars: 4, log_basis: 2, n_a: 2, conservative_n_b: 1, log_commit_bound: 1, onehot_chunk_size: 1, basis_range: (2, 6) }, PrecommittedGroupParams { group: PolynomialGroupLayout::new(21, 1), m_vars: 10, r_vars: 4, log_basis: 2, n_a: 2, conservative_n_b: 1, log_commit_bound: 1, onehot_chunk_size: 1, basis_range: (2, 6) }], steps: &[
         GeneratedStep::Fold(GeneratedFoldStep { ring_d: 128, log_basis: 2, m_vars: 21, r_vars: 15, n_a: 4, n_b: 1, n_d: 1 }),
         GeneratedStep::Fold(GeneratedFoldStep { ring_d: 128, log_basis: 5, m_vars: 15, r_vars: 10, n_a: 3, n_b: 1, n_d: 1 }),
         GeneratedStep::Fold(GeneratedFoldStep { ring_d: 128, log_basis: 5, m_vars: 12, r_vars: 6, n_a: 3, n_b: 1, n_d: 1 }),
@@ -1536,7 +1536,7 @@ pub(crate) static FP128_D128_ONEHOT_SCHEDULES: &[GeneratedScheduleTableEntry] = 
         GeneratedStep::Fold(GeneratedFoldStep { ring_d: 128, log_basis: 6, m_vars: 8, r_vars: 3, n_a: 2, n_b: 1, n_d: 1 }),
         GeneratedStep::Direct(GeneratedDirectStep { commit: None }),
     ] },
-    GeneratedScheduleTableEntry { final_group: PolynomialGroupLayout::new(43, 4), precommitteds: &[PrecommittedGroupParams { group: PolynomialGroupLayout::new(21, 1), m_vars: 10, r_vars: 4, log_basis: 2, n_a: 2, conservative_n_b: 1 }], steps: &[
+    GeneratedScheduleTableEntry { final_group: PolynomialGroupLayout::new(43, 4), precommitteds: &[PrecommittedGroupParams { group: PolynomialGroupLayout::new(21, 1), m_vars: 10, r_vars: 4, log_basis: 2, n_a: 2, conservative_n_b: 1, log_commit_bound: 1, onehot_chunk_size: 1, basis_range: (2, 6) }], steps: &[
         GeneratedStep::Fold(GeneratedFoldStep { ring_d: 128, log_basis: 2, m_vars: 22, r_vars: 14, n_a: 4, n_b: 1, n_d: 1 }),
         GeneratedStep::Fold(GeneratedFoldStep { ring_d: 128, log_basis: 2, m_vars: 16, r_vars: 10, n_a: 3, n_b: 1, n_d: 1 }),
         GeneratedStep::Fold(GeneratedFoldStep { ring_d: 128, log_basis: 4, m_vars: 13, r_vars: 7, n_a: 3, n_b: 1, n_d: 1 }),
@@ -1546,7 +1546,7 @@ pub(crate) static FP128_D128_ONEHOT_SCHEDULES: &[GeneratedScheduleTableEntry] = 
         GeneratedStep::Fold(GeneratedFoldStep { ring_d: 128, log_basis: 6, m_vars: 8, r_vars: 3, n_a: 2, n_b: 1, n_d: 1 }),
         GeneratedStep::Direct(GeneratedDirectStep { commit: None }),
     ] },
-    GeneratedScheduleTableEntry { final_group: PolynomialGroupLayout::new(43, 4), precommitteds: &[PrecommittedGroupParams { group: PolynomialGroupLayout::new(21, 1), m_vars: 10, r_vars: 4, log_basis: 2, n_a: 2, conservative_n_b: 1 }, PrecommittedGroupParams { group: PolynomialGroupLayout::new(21, 1), m_vars: 10, r_vars: 4, log_basis: 2, n_a: 2, conservative_n_b: 1 }], steps: &[
+    GeneratedScheduleTableEntry { final_group: PolynomialGroupLayout::new(43, 4), precommitteds: &[PrecommittedGroupParams { group: PolynomialGroupLayout::new(21, 1), m_vars: 10, r_vars: 4, log_basis: 2, n_a: 2, conservative_n_b: 1, log_commit_bound: 1, onehot_chunk_size: 1, basis_range: (2, 6) }, PrecommittedGroupParams { group: PolynomialGroupLayout::new(21, 1), m_vars: 10, r_vars: 4, log_basis: 2, n_a: 2, conservative_n_b: 1, log_commit_bound: 1, onehot_chunk_size: 1, basis_range: (2, 6) }], steps: &[
         GeneratedStep::Fold(GeneratedFoldStep { ring_d: 128, log_basis: 2, m_vars: 22, r_vars: 14, n_a: 4, n_b: 1, n_d: 1 }),
         GeneratedStep::Fold(GeneratedFoldStep { ring_d: 128, log_basis: 2, m_vars: 16, r_vars: 10, n_a: 3, n_b: 1, n_d: 1 }),
         GeneratedStep::Fold(GeneratedFoldStep { ring_d: 128, log_basis: 4, m_vars: 13, r_vars: 7, n_a: 3, n_b: 1, n_d: 1 }),
@@ -1566,7 +1566,7 @@ pub(crate) static FP128_D128_ONEHOT_SCHEDULES: &[GeneratedScheduleTableEntry] = 
         GeneratedStep::Fold(GeneratedFoldStep { ring_d: 128, log_basis: 6, m_vars: 8, r_vars: 3, n_a: 2, n_b: 1, n_d: 1 }),
         GeneratedStep::Direct(GeneratedDirectStep { commit: None }),
     ] },
-    GeneratedScheduleTableEntry { final_group: PolynomialGroupLayout::new(44, 1), precommitteds: &[PrecommittedGroupParams { group: PolynomialGroupLayout::new(22, 1), m_vars: 10, r_vars: 5, log_basis: 2, n_a: 2, conservative_n_b: 1 }], steps: &[
+    GeneratedScheduleTableEntry { final_group: PolynomialGroupLayout::new(44, 1), precommitteds: &[PrecommittedGroupParams { group: PolynomialGroupLayout::new(22, 1), m_vars: 10, r_vars: 5, log_basis: 2, n_a: 2, conservative_n_b: 1, log_commit_bound: 1, onehot_chunk_size: 1, basis_range: (2, 6) }], steps: &[
         GeneratedStep::Fold(GeneratedFoldStep { ring_d: 128, log_basis: 2, m_vars: 21, r_vars: 16, n_a: 4, n_b: 1, n_d: 1 }),
         GeneratedStep::Fold(GeneratedFoldStep { ring_d: 128, log_basis: 2, m_vars: 16, r_vars: 10, n_a: 3, n_b: 1, n_d: 1 }),
         GeneratedStep::Fold(GeneratedFoldStep { ring_d: 128, log_basis: 4, m_vars: 12, r_vars: 7, n_a: 3, n_b: 1, n_d: 1 }),
@@ -1576,7 +1576,7 @@ pub(crate) static FP128_D128_ONEHOT_SCHEDULES: &[GeneratedScheduleTableEntry] = 
         GeneratedStep::Fold(GeneratedFoldStep { ring_d: 128, log_basis: 6, m_vars: 8, r_vars: 3, n_a: 2, n_b: 1, n_d: 1 }),
         GeneratedStep::Direct(GeneratedDirectStep { commit: None }),
     ] },
-    GeneratedScheduleTableEntry { final_group: PolynomialGroupLayout::new(44, 1), precommitteds: &[PrecommittedGroupParams { group: PolynomialGroupLayout::new(22, 1), m_vars: 10, r_vars: 5, log_basis: 2, n_a: 2, conservative_n_b: 1 }, PrecommittedGroupParams { group: PolynomialGroupLayout::new(22, 1), m_vars: 10, r_vars: 5, log_basis: 2, n_a: 2, conservative_n_b: 1 }], steps: &[
+    GeneratedScheduleTableEntry { final_group: PolynomialGroupLayout::new(44, 1), precommitteds: &[PrecommittedGroupParams { group: PolynomialGroupLayout::new(22, 1), m_vars: 10, r_vars: 5, log_basis: 2, n_a: 2, conservative_n_b: 1, log_commit_bound: 1, onehot_chunk_size: 1, basis_range: (2, 6) }, PrecommittedGroupParams { group: PolynomialGroupLayout::new(22, 1), m_vars: 10, r_vars: 5, log_basis: 2, n_a: 2, conservative_n_b: 1, log_commit_bound: 1, onehot_chunk_size: 1, basis_range: (2, 6) }], steps: &[
         GeneratedStep::Fold(GeneratedFoldStep { ring_d: 128, log_basis: 2, m_vars: 21, r_vars: 16, n_a: 4, n_b: 1, n_d: 1 }),
         GeneratedStep::Fold(GeneratedFoldStep { ring_d: 128, log_basis: 2, m_vars: 16, r_vars: 10, n_a: 3, n_b: 1, n_d: 1 }),
         GeneratedStep::Fold(GeneratedFoldStep { ring_d: 128, log_basis: 4, m_vars: 12, r_vars: 7, n_a: 3, n_b: 1, n_d: 1 }),
@@ -1596,7 +1596,7 @@ pub(crate) static FP128_D128_ONEHOT_SCHEDULES: &[GeneratedScheduleTableEntry] = 
         GeneratedStep::Fold(GeneratedFoldStep { ring_d: 128, log_basis: 6, m_vars: 8, r_vars: 3, n_a: 2, n_b: 1, n_d: 1 }),
         GeneratedStep::Direct(GeneratedDirectStep { commit: None }),
     ] },
-    GeneratedScheduleTableEntry { final_group: PolynomialGroupLayout::new(44, 4), precommitteds: &[PrecommittedGroupParams { group: PolynomialGroupLayout::new(22, 1), m_vars: 10, r_vars: 5, log_basis: 2, n_a: 2, conservative_n_b: 1 }], steps: &[
+    GeneratedScheduleTableEntry { final_group: PolynomialGroupLayout::new(44, 4), precommitteds: &[PrecommittedGroupParams { group: PolynomialGroupLayout::new(22, 1), m_vars: 10, r_vars: 5, log_basis: 2, n_a: 2, conservative_n_b: 1, log_commit_bound: 1, onehot_chunk_size: 1, basis_range: (2, 6) }], steps: &[
         GeneratedStep::Fold(GeneratedFoldStep { ring_d: 128, log_basis: 2, m_vars: 22, r_vars: 15, n_a: 4, n_b: 1, n_d: 1 }),
         GeneratedStep::Fold(GeneratedFoldStep { ring_d: 128, log_basis: 2, m_vars: 17, r_vars: 10, n_a: 3, n_b: 1, n_d: 1 }),
         GeneratedStep::Fold(GeneratedFoldStep { ring_d: 128, log_basis: 4, m_vars: 13, r_vars: 7, n_a: 3, n_b: 1, n_d: 1 }),
@@ -1606,7 +1606,7 @@ pub(crate) static FP128_D128_ONEHOT_SCHEDULES: &[GeneratedScheduleTableEntry] = 
         GeneratedStep::Fold(GeneratedFoldStep { ring_d: 128, log_basis: 6, m_vars: 8, r_vars: 3, n_a: 2, n_b: 1, n_d: 1 }),
         GeneratedStep::Direct(GeneratedDirectStep { commit: None }),
     ] },
-    GeneratedScheduleTableEntry { final_group: PolynomialGroupLayout::new(44, 4), precommitteds: &[PrecommittedGroupParams { group: PolynomialGroupLayout::new(22, 1), m_vars: 10, r_vars: 5, log_basis: 2, n_a: 2, conservative_n_b: 1 }, PrecommittedGroupParams { group: PolynomialGroupLayout::new(22, 1), m_vars: 10, r_vars: 5, log_basis: 2, n_a: 2, conservative_n_b: 1 }], steps: &[
+    GeneratedScheduleTableEntry { final_group: PolynomialGroupLayout::new(44, 4), precommitteds: &[PrecommittedGroupParams { group: PolynomialGroupLayout::new(22, 1), m_vars: 10, r_vars: 5, log_basis: 2, n_a: 2, conservative_n_b: 1, log_commit_bound: 1, onehot_chunk_size: 1, basis_range: (2, 6) }, PrecommittedGroupParams { group: PolynomialGroupLayout::new(22, 1), m_vars: 10, r_vars: 5, log_basis: 2, n_a: 2, conservative_n_b: 1, log_commit_bound: 1, onehot_chunk_size: 1, basis_range: (2, 6) }], steps: &[
         GeneratedStep::Fold(GeneratedFoldStep { ring_d: 128, log_basis: 2, m_vars: 22, r_vars: 15, n_a: 4, n_b: 1, n_d: 1 }),
         GeneratedStep::Fold(GeneratedFoldStep { ring_d: 128, log_basis: 2, m_vars: 17, r_vars: 10, n_a: 3, n_b: 1, n_d: 1 }),
         GeneratedStep::Fold(GeneratedFoldStep { ring_d: 128, log_basis: 4, m_vars: 13, r_vars: 7, n_a: 3, n_b: 1, n_d: 1 }),
@@ -1626,7 +1626,7 @@ pub(crate) static FP128_D128_ONEHOT_SCHEDULES: &[GeneratedScheduleTableEntry] = 
         GeneratedStep::Fold(GeneratedFoldStep { ring_d: 128, log_basis: 6, m_vars: 8, r_vars: 3, n_a: 2, n_b: 1, n_d: 1 }),
         GeneratedStep::Direct(GeneratedDirectStep { commit: None }),
     ] },
-    GeneratedScheduleTableEntry { final_group: PolynomialGroupLayout::new(45, 1), precommitteds: &[PrecommittedGroupParams { group: PolynomialGroupLayout::new(22, 1), m_vars: 10, r_vars: 5, log_basis: 2, n_a: 2, conservative_n_b: 1 }], steps: &[
+    GeneratedScheduleTableEntry { final_group: PolynomialGroupLayout::new(45, 1), precommitteds: &[PrecommittedGroupParams { group: PolynomialGroupLayout::new(22, 1), m_vars: 10, r_vars: 5, log_basis: 2, n_a: 2, conservative_n_b: 1, log_commit_bound: 1, onehot_chunk_size: 1, basis_range: (2, 6) }], steps: &[
         GeneratedStep::Fold(GeneratedFoldStep { ring_d: 128, log_basis: 2, m_vars: 22, r_vars: 16, n_a: 4, n_b: 1, n_d: 1 }),
         GeneratedStep::Fold(GeneratedFoldStep { ring_d: 128, log_basis: 2, m_vars: 16, r_vars: 10, n_a: 3, n_b: 1, n_d: 1 }),
         GeneratedStep::Fold(GeneratedFoldStep { ring_d: 128, log_basis: 4, m_vars: 13, r_vars: 7, n_a: 3, n_b: 1, n_d: 1 }),
@@ -1636,7 +1636,7 @@ pub(crate) static FP128_D128_ONEHOT_SCHEDULES: &[GeneratedScheduleTableEntry] = 
         GeneratedStep::Fold(GeneratedFoldStep { ring_d: 128, log_basis: 6, m_vars: 8, r_vars: 3, n_a: 2, n_b: 1, n_d: 1 }),
         GeneratedStep::Direct(GeneratedDirectStep { commit: None }),
     ] },
-    GeneratedScheduleTableEntry { final_group: PolynomialGroupLayout::new(45, 1), precommitteds: &[PrecommittedGroupParams { group: PolynomialGroupLayout::new(22, 1), m_vars: 10, r_vars: 5, log_basis: 2, n_a: 2, conservative_n_b: 1 }, PrecommittedGroupParams { group: PolynomialGroupLayout::new(22, 1), m_vars: 10, r_vars: 5, log_basis: 2, n_a: 2, conservative_n_b: 1 }], steps: &[
+    GeneratedScheduleTableEntry { final_group: PolynomialGroupLayout::new(45, 1), precommitteds: &[PrecommittedGroupParams { group: PolynomialGroupLayout::new(22, 1), m_vars: 10, r_vars: 5, log_basis: 2, n_a: 2, conservative_n_b: 1, log_commit_bound: 1, onehot_chunk_size: 1, basis_range: (2, 6) }, PrecommittedGroupParams { group: PolynomialGroupLayout::new(22, 1), m_vars: 10, r_vars: 5, log_basis: 2, n_a: 2, conservative_n_b: 1, log_commit_bound: 1, onehot_chunk_size: 1, basis_range: (2, 6) }], steps: &[
         GeneratedStep::Fold(GeneratedFoldStep { ring_d: 128, log_basis: 2, m_vars: 22, r_vars: 16, n_a: 4, n_b: 1, n_d: 1 }),
         GeneratedStep::Fold(GeneratedFoldStep { ring_d: 128, log_basis: 2, m_vars: 16, r_vars: 10, n_a: 3, n_b: 1, n_d: 1 }),
         GeneratedStep::Fold(GeneratedFoldStep { ring_d: 128, log_basis: 4, m_vars: 13, r_vars: 7, n_a: 3, n_b: 1, n_d: 1 }),
@@ -1657,7 +1657,7 @@ pub(crate) static FP128_D128_ONEHOT_SCHEDULES: &[GeneratedScheduleTableEntry] = 
         GeneratedStep::Fold(GeneratedFoldStep { ring_d: 128, log_basis: 6, m_vars: 8, r_vars: 2, n_a: 2, n_b: 1, n_d: 1 }),
         GeneratedStep::Direct(GeneratedDirectStep { commit: None }),
     ] },
-    GeneratedScheduleTableEntry { final_group: PolynomialGroupLayout::new(45, 4), precommitteds: &[PrecommittedGroupParams { group: PolynomialGroupLayout::new(22, 1), m_vars: 10, r_vars: 5, log_basis: 2, n_a: 2, conservative_n_b: 1 }], steps: &[
+    GeneratedScheduleTableEntry { final_group: PolynomialGroupLayout::new(45, 4), precommitteds: &[PrecommittedGroupParams { group: PolynomialGroupLayout::new(22, 1), m_vars: 10, r_vars: 5, log_basis: 2, n_a: 2, conservative_n_b: 1, log_commit_bound: 1, onehot_chunk_size: 1, basis_range: (2, 6) }], steps: &[
         GeneratedStep::Fold(GeneratedFoldStep { ring_d: 128, log_basis: 2, m_vars: 22, r_vars: 16, n_a: 4, n_b: 1, n_d: 1 }),
         GeneratedStep::Fold(GeneratedFoldStep { ring_d: 128, log_basis: 2, m_vars: 16, r_vars: 11, n_a: 3, n_b: 1, n_d: 1 }),
         GeneratedStep::Fold(GeneratedFoldStep { ring_d: 128, log_basis: 3, m_vars: 13, r_vars: 7, n_a: 3, n_b: 1, n_d: 1 }),
@@ -1668,7 +1668,7 @@ pub(crate) static FP128_D128_ONEHOT_SCHEDULES: &[GeneratedScheduleTableEntry] = 
         GeneratedStep::Fold(GeneratedFoldStep { ring_d: 128, log_basis: 6, m_vars: 8, r_vars: 2, n_a: 2, n_b: 1, n_d: 1 }),
         GeneratedStep::Direct(GeneratedDirectStep { commit: None }),
     ] },
-    GeneratedScheduleTableEntry { final_group: PolynomialGroupLayout::new(45, 4), precommitteds: &[PrecommittedGroupParams { group: PolynomialGroupLayout::new(22, 1), m_vars: 10, r_vars: 5, log_basis: 2, n_a: 2, conservative_n_b: 1 }, PrecommittedGroupParams { group: PolynomialGroupLayout::new(22, 1), m_vars: 10, r_vars: 5, log_basis: 2, n_a: 2, conservative_n_b: 1 }], steps: &[
+    GeneratedScheduleTableEntry { final_group: PolynomialGroupLayout::new(45, 4), precommitteds: &[PrecommittedGroupParams { group: PolynomialGroupLayout::new(22, 1), m_vars: 10, r_vars: 5, log_basis: 2, n_a: 2, conservative_n_b: 1, log_commit_bound: 1, onehot_chunk_size: 1, basis_range: (2, 6) }, PrecommittedGroupParams { group: PolynomialGroupLayout::new(22, 1), m_vars: 10, r_vars: 5, log_basis: 2, n_a: 2, conservative_n_b: 1, log_commit_bound: 1, onehot_chunk_size: 1, basis_range: (2, 6) }], steps: &[
         GeneratedStep::Fold(GeneratedFoldStep { ring_d: 128, log_basis: 2, m_vars: 22, r_vars: 16, n_a: 4, n_b: 1, n_d: 1 }),
         GeneratedStep::Fold(GeneratedFoldStep { ring_d: 128, log_basis: 2, m_vars: 16, r_vars: 11, n_a: 3, n_b: 1, n_d: 1 }),
         GeneratedStep::Fold(GeneratedFoldStep { ring_d: 128, log_basis: 3, m_vars: 13, r_vars: 7, n_a: 3, n_b: 1, n_d: 1 }),
@@ -1689,7 +1689,7 @@ pub(crate) static FP128_D128_ONEHOT_SCHEDULES: &[GeneratedScheduleTableEntry] = 
         GeneratedStep::Fold(GeneratedFoldStep { ring_d: 128, log_basis: 6, m_vars: 8, r_vars: 3, n_a: 2, n_b: 1, n_d: 1 }),
         GeneratedStep::Direct(GeneratedDirectStep { commit: None }),
     ] },
-    GeneratedScheduleTableEntry { final_group: PolynomialGroupLayout::new(46, 1), precommitteds: &[PrecommittedGroupParams { group: PolynomialGroupLayout::new(23, 1), m_vars: 11, r_vars: 5, log_basis: 2, n_a: 2, conservative_n_b: 1 }], steps: &[
+    GeneratedScheduleTableEntry { final_group: PolynomialGroupLayout::new(46, 1), precommitteds: &[PrecommittedGroupParams { group: PolynomialGroupLayout::new(23, 1), m_vars: 11, r_vars: 5, log_basis: 2, n_a: 2, conservative_n_b: 1, log_commit_bound: 1, onehot_chunk_size: 1, basis_range: (2, 6) }], steps: &[
         GeneratedStep::Fold(GeneratedFoldStep { ring_d: 128, log_basis: 2, m_vars: 22, r_vars: 17, n_a: 4, n_b: 1, n_d: 1 }),
         GeneratedStep::Fold(GeneratedFoldStep { ring_d: 128, log_basis: 2, m_vars: 17, r_vars: 10, n_a: 3, n_b: 1, n_d: 1 }),
         GeneratedStep::Fold(GeneratedFoldStep { ring_d: 128, log_basis: 4, m_vars: 13, r_vars: 7, n_a: 3, n_b: 1, n_d: 1 }),
@@ -1699,7 +1699,7 @@ pub(crate) static FP128_D128_ONEHOT_SCHEDULES: &[GeneratedScheduleTableEntry] = 
         GeneratedStep::Fold(GeneratedFoldStep { ring_d: 128, log_basis: 6, m_vars: 8, r_vars: 3, n_a: 2, n_b: 1, n_d: 1 }),
         GeneratedStep::Direct(GeneratedDirectStep { commit: None }),
     ] },
-    GeneratedScheduleTableEntry { final_group: PolynomialGroupLayout::new(46, 1), precommitteds: &[PrecommittedGroupParams { group: PolynomialGroupLayout::new(23, 1), m_vars: 11, r_vars: 5, log_basis: 2, n_a: 2, conservative_n_b: 1 }, PrecommittedGroupParams { group: PolynomialGroupLayout::new(23, 1), m_vars: 11, r_vars: 5, log_basis: 2, n_a: 2, conservative_n_b: 1 }], steps: &[
+    GeneratedScheduleTableEntry { final_group: PolynomialGroupLayout::new(46, 1), precommitteds: &[PrecommittedGroupParams { group: PolynomialGroupLayout::new(23, 1), m_vars: 11, r_vars: 5, log_basis: 2, n_a: 2, conservative_n_b: 1, log_commit_bound: 1, onehot_chunk_size: 1, basis_range: (2, 6) }, PrecommittedGroupParams { group: PolynomialGroupLayout::new(23, 1), m_vars: 11, r_vars: 5, log_basis: 2, n_a: 2, conservative_n_b: 1, log_commit_bound: 1, onehot_chunk_size: 1, basis_range: (2, 6) }], steps: &[
         GeneratedStep::Fold(GeneratedFoldStep { ring_d: 128, log_basis: 2, m_vars: 22, r_vars: 17, n_a: 4, n_b: 1, n_d: 1 }),
         GeneratedStep::Fold(GeneratedFoldStep { ring_d: 128, log_basis: 2, m_vars: 17, r_vars: 10, n_a: 3, n_b: 1, n_d: 1 }),
         GeneratedStep::Fold(GeneratedFoldStep { ring_d: 128, log_basis: 4, m_vars: 13, r_vars: 7, n_a: 3, n_b: 1, n_d: 1 }),
@@ -1720,7 +1720,7 @@ pub(crate) static FP128_D128_ONEHOT_SCHEDULES: &[GeneratedScheduleTableEntry] = 
         GeneratedStep::Fold(GeneratedFoldStep { ring_d: 128, log_basis: 6, m_vars: 8, r_vars: 2, n_a: 2, n_b: 1, n_d: 1 }),
         GeneratedStep::Direct(GeneratedDirectStep { commit: None }),
     ] },
-    GeneratedScheduleTableEntry { final_group: PolynomialGroupLayout::new(46, 4), precommitteds: &[PrecommittedGroupParams { group: PolynomialGroupLayout::new(23, 1), m_vars: 11, r_vars: 5, log_basis: 2, n_a: 2, conservative_n_b: 1 }], steps: &[
+    GeneratedScheduleTableEntry { final_group: PolynomialGroupLayout::new(46, 4), precommitteds: &[PrecommittedGroupParams { group: PolynomialGroupLayout::new(23, 1), m_vars: 11, r_vars: 5, log_basis: 2, n_a: 2, conservative_n_b: 1, log_commit_bound: 1, onehot_chunk_size: 1, basis_range: (2, 6) }], steps: &[
         GeneratedStep::Fold(GeneratedFoldStep { ring_d: 128, log_basis: 2, m_vars: 23, r_vars: 16, n_a: 4, n_b: 1, n_d: 1 }),
         GeneratedStep::Fold(GeneratedFoldStep { ring_d: 128, log_basis: 2, m_vars: 17, r_vars: 11, n_a: 3, n_b: 1, n_d: 1 }),
         GeneratedStep::Fold(GeneratedFoldStep { ring_d: 128, log_basis: 3, m_vars: 13, r_vars: 7, n_a: 3, n_b: 1, n_d: 1 }),
@@ -1731,7 +1731,7 @@ pub(crate) static FP128_D128_ONEHOT_SCHEDULES: &[GeneratedScheduleTableEntry] = 
         GeneratedStep::Fold(GeneratedFoldStep { ring_d: 128, log_basis: 6, m_vars: 8, r_vars: 2, n_a: 2, n_b: 1, n_d: 1 }),
         GeneratedStep::Direct(GeneratedDirectStep { commit: None }),
     ] },
-    GeneratedScheduleTableEntry { final_group: PolynomialGroupLayout::new(46, 4), precommitteds: &[PrecommittedGroupParams { group: PolynomialGroupLayout::new(23, 1), m_vars: 11, r_vars: 5, log_basis: 2, n_a: 2, conservative_n_b: 1 }, PrecommittedGroupParams { group: PolynomialGroupLayout::new(23, 1), m_vars: 11, r_vars: 5, log_basis: 2, n_a: 2, conservative_n_b: 1 }], steps: &[
+    GeneratedScheduleTableEntry { final_group: PolynomialGroupLayout::new(46, 4), precommitteds: &[PrecommittedGroupParams { group: PolynomialGroupLayout::new(23, 1), m_vars: 11, r_vars: 5, log_basis: 2, n_a: 2, conservative_n_b: 1, log_commit_bound: 1, onehot_chunk_size: 1, basis_range: (2, 6) }, PrecommittedGroupParams { group: PolynomialGroupLayout::new(23, 1), m_vars: 11, r_vars: 5, log_basis: 2, n_a: 2, conservative_n_b: 1, log_commit_bound: 1, onehot_chunk_size: 1, basis_range: (2, 6) }], steps: &[
         GeneratedStep::Fold(GeneratedFoldStep { ring_d: 128, log_basis: 2, m_vars: 23, r_vars: 16, n_a: 4, n_b: 1, n_d: 1 }),
         GeneratedStep::Fold(GeneratedFoldStep { ring_d: 128, log_basis: 2, m_vars: 17, r_vars: 11, n_a: 3, n_b: 1, n_d: 1 }),
         GeneratedStep::Fold(GeneratedFoldStep { ring_d: 128, log_basis: 3, m_vars: 13, r_vars: 7, n_a: 3, n_b: 1, n_d: 1 }),
@@ -1753,7 +1753,7 @@ pub(crate) static FP128_D128_ONEHOT_SCHEDULES: &[GeneratedScheduleTableEntry] = 
         GeneratedStep::Fold(GeneratedFoldStep { ring_d: 128, log_basis: 6, m_vars: 8, r_vars: 2, n_a: 2, n_b: 1, n_d: 1 }),
         GeneratedStep::Direct(GeneratedDirectStep { commit: None }),
     ] },
-    GeneratedScheduleTableEntry { final_group: PolynomialGroupLayout::new(47, 1), precommitteds: &[PrecommittedGroupParams { group: PolynomialGroupLayout::new(23, 1), m_vars: 11, r_vars: 5, log_basis: 2, n_a: 2, conservative_n_b: 1 }], steps: &[
+    GeneratedScheduleTableEntry { final_group: PolynomialGroupLayout::new(47, 1), precommitteds: &[PrecommittedGroupParams { group: PolynomialGroupLayout::new(23, 1), m_vars: 11, r_vars: 5, log_basis: 2, n_a: 2, conservative_n_b: 1, log_commit_bound: 1, onehot_chunk_size: 1, basis_range: (2, 6) }], steps: &[
         GeneratedStep::Fold(GeneratedFoldStep { ring_d: 128, log_basis: 2, m_vars: 22, r_vars: 18, n_a: 4, n_b: 1, n_d: 1 }),
         GeneratedStep::Fold(GeneratedFoldStep { ring_d: 128, log_basis: 2, m_vars: 16, r_vars: 11, n_a: 3, n_b: 1, n_d: 1 }),
         GeneratedStep::Fold(GeneratedFoldStep { ring_d: 128, log_basis: 3, m_vars: 13, r_vars: 7, n_a: 3, n_b: 1, n_d: 1 }),
@@ -1764,7 +1764,7 @@ pub(crate) static FP128_D128_ONEHOT_SCHEDULES: &[GeneratedScheduleTableEntry] = 
         GeneratedStep::Fold(GeneratedFoldStep { ring_d: 128, log_basis: 6, m_vars: 8, r_vars: 2, n_a: 2, n_b: 1, n_d: 1 }),
         GeneratedStep::Direct(GeneratedDirectStep { commit: None }),
     ] },
-    GeneratedScheduleTableEntry { final_group: PolynomialGroupLayout::new(47, 1), precommitteds: &[PrecommittedGroupParams { group: PolynomialGroupLayout::new(23, 1), m_vars: 11, r_vars: 5, log_basis: 2, n_a: 2, conservative_n_b: 1 }, PrecommittedGroupParams { group: PolynomialGroupLayout::new(23, 1), m_vars: 11, r_vars: 5, log_basis: 2, n_a: 2, conservative_n_b: 1 }], steps: &[
+    GeneratedScheduleTableEntry { final_group: PolynomialGroupLayout::new(47, 1), precommitteds: &[PrecommittedGroupParams { group: PolynomialGroupLayout::new(23, 1), m_vars: 11, r_vars: 5, log_basis: 2, n_a: 2, conservative_n_b: 1, log_commit_bound: 1, onehot_chunk_size: 1, basis_range: (2, 6) }, PrecommittedGroupParams { group: PolynomialGroupLayout::new(23, 1), m_vars: 11, r_vars: 5, log_basis: 2, n_a: 2, conservative_n_b: 1, log_commit_bound: 1, onehot_chunk_size: 1, basis_range: (2, 6) }], steps: &[
         GeneratedStep::Fold(GeneratedFoldStep { ring_d: 128, log_basis: 2, m_vars: 22, r_vars: 18, n_a: 4, n_b: 1, n_d: 1 }),
         GeneratedStep::Fold(GeneratedFoldStep { ring_d: 128, log_basis: 2, m_vars: 16, r_vars: 11, n_a: 3, n_b: 1, n_d: 1 }),
         GeneratedStep::Fold(GeneratedFoldStep { ring_d: 128, log_basis: 3, m_vars: 13, r_vars: 7, n_a: 3, n_b: 1, n_d: 1 }),
@@ -1786,7 +1786,7 @@ pub(crate) static FP128_D128_ONEHOT_SCHEDULES: &[GeneratedScheduleTableEntry] = 
         GeneratedStep::Fold(GeneratedFoldStep { ring_d: 128, log_basis: 6, m_vars: 8, r_vars: 2, n_a: 2, n_b: 1, n_d: 1 }),
         GeneratedStep::Direct(GeneratedDirectStep { commit: None }),
     ] },
-    GeneratedScheduleTableEntry { final_group: PolynomialGroupLayout::new(47, 4), precommitteds: &[PrecommittedGroupParams { group: PolynomialGroupLayout::new(23, 1), m_vars: 11, r_vars: 5, log_basis: 2, n_a: 2, conservative_n_b: 1 }], steps: &[
+    GeneratedScheduleTableEntry { final_group: PolynomialGroupLayout::new(47, 4), precommitteds: &[PrecommittedGroupParams { group: PolynomialGroupLayout::new(23, 1), m_vars: 11, r_vars: 5, log_basis: 2, n_a: 2, conservative_n_b: 1, log_commit_bound: 1, onehot_chunk_size: 1, basis_range: (2, 6) }], steps: &[
         GeneratedStep::Fold(GeneratedFoldStep { ring_d: 128, log_basis: 2, m_vars: 23, r_vars: 17, n_a: 4, n_b: 1, n_d: 1 }),
         GeneratedStep::Fold(GeneratedFoldStep { ring_d: 128, log_basis: 2, m_vars: 17, r_vars: 11, n_a: 3, n_b: 1, n_d: 1 }),
         GeneratedStep::Fold(GeneratedFoldStep { ring_d: 128, log_basis: 3, m_vars: 14, r_vars: 7, n_a: 3, n_b: 1, n_d: 1 }),
@@ -1797,7 +1797,7 @@ pub(crate) static FP128_D128_ONEHOT_SCHEDULES: &[GeneratedScheduleTableEntry] = 
         GeneratedStep::Fold(GeneratedFoldStep { ring_d: 128, log_basis: 6, m_vars: 8, r_vars: 2, n_a: 2, n_b: 1, n_d: 1 }),
         GeneratedStep::Direct(GeneratedDirectStep { commit: None }),
     ] },
-    GeneratedScheduleTableEntry { final_group: PolynomialGroupLayout::new(47, 4), precommitteds: &[PrecommittedGroupParams { group: PolynomialGroupLayout::new(23, 1), m_vars: 11, r_vars: 5, log_basis: 2, n_a: 2, conservative_n_b: 1 }, PrecommittedGroupParams { group: PolynomialGroupLayout::new(23, 1), m_vars: 11, r_vars: 5, log_basis: 2, n_a: 2, conservative_n_b: 1 }], steps: &[
+    GeneratedScheduleTableEntry { final_group: PolynomialGroupLayout::new(47, 4), precommitteds: &[PrecommittedGroupParams { group: PolynomialGroupLayout::new(23, 1), m_vars: 11, r_vars: 5, log_basis: 2, n_a: 2, conservative_n_b: 1, log_commit_bound: 1, onehot_chunk_size: 1, basis_range: (2, 6) }, PrecommittedGroupParams { group: PolynomialGroupLayout::new(23, 1), m_vars: 11, r_vars: 5, log_basis: 2, n_a: 2, conservative_n_b: 1, log_commit_bound: 1, onehot_chunk_size: 1, basis_range: (2, 6) }], steps: &[
         GeneratedStep::Fold(GeneratedFoldStep { ring_d: 128, log_basis: 2, m_vars: 23, r_vars: 17, n_a: 4, n_b: 1, n_d: 1 }),
         GeneratedStep::Fold(GeneratedFoldStep { ring_d: 128, log_basis: 2, m_vars: 17, r_vars: 11, n_a: 3, n_b: 1, n_d: 1 }),
         GeneratedStep::Fold(GeneratedFoldStep { ring_d: 128, log_basis: 3, m_vars: 14, r_vars: 7, n_a: 3, n_b: 1, n_d: 1 }),
@@ -1819,7 +1819,7 @@ pub(crate) static FP128_D128_ONEHOT_SCHEDULES: &[GeneratedScheduleTableEntry] = 
         GeneratedStep::Fold(GeneratedFoldStep { ring_d: 128, log_basis: 6, m_vars: 8, r_vars: 2, n_a: 2, n_b: 1, n_d: 1 }),
         GeneratedStep::Direct(GeneratedDirectStep { commit: None }),
     ] },
-    GeneratedScheduleTableEntry { final_group: PolynomialGroupLayout::new(48, 1), precommitteds: &[PrecommittedGroupParams { group: PolynomialGroupLayout::new(24, 1), m_vars: 11, r_vars: 6, log_basis: 2, n_a: 2, conservative_n_b: 1 }], steps: &[
+    GeneratedScheduleTableEntry { final_group: PolynomialGroupLayout::new(48, 1), precommitteds: &[PrecommittedGroupParams { group: PolynomialGroupLayout::new(24, 1), m_vars: 11, r_vars: 6, log_basis: 2, n_a: 2, conservative_n_b: 1, log_commit_bound: 1, onehot_chunk_size: 1, basis_range: (2, 6) }], steps: &[
         GeneratedStep::Fold(GeneratedFoldStep { ring_d: 128, log_basis: 2, m_vars: 23, r_vars: 18, n_a: 4, n_b: 1, n_d: 1 }),
         GeneratedStep::Fold(GeneratedFoldStep { ring_d: 128, log_basis: 2, m_vars: 17, r_vars: 11, n_a: 3, n_b: 1, n_d: 1 }),
         GeneratedStep::Fold(GeneratedFoldStep { ring_d: 128, log_basis: 3, m_vars: 13, r_vars: 7, n_a: 3, n_b: 1, n_d: 1 }),
@@ -1830,7 +1830,7 @@ pub(crate) static FP128_D128_ONEHOT_SCHEDULES: &[GeneratedScheduleTableEntry] = 
         GeneratedStep::Fold(GeneratedFoldStep { ring_d: 128, log_basis: 6, m_vars: 8, r_vars: 2, n_a: 2, n_b: 1, n_d: 1 }),
         GeneratedStep::Direct(GeneratedDirectStep { commit: None }),
     ] },
-    GeneratedScheduleTableEntry { final_group: PolynomialGroupLayout::new(48, 1), precommitteds: &[PrecommittedGroupParams { group: PolynomialGroupLayout::new(24, 1), m_vars: 11, r_vars: 6, log_basis: 2, n_a: 2, conservative_n_b: 1 }, PrecommittedGroupParams { group: PolynomialGroupLayout::new(24, 1), m_vars: 11, r_vars: 6, log_basis: 2, n_a: 2, conservative_n_b: 1 }], steps: &[
+    GeneratedScheduleTableEntry { final_group: PolynomialGroupLayout::new(48, 1), precommitteds: &[PrecommittedGroupParams { group: PolynomialGroupLayout::new(24, 1), m_vars: 11, r_vars: 6, log_basis: 2, n_a: 2, conservative_n_b: 1, log_commit_bound: 1, onehot_chunk_size: 1, basis_range: (2, 6) }, PrecommittedGroupParams { group: PolynomialGroupLayout::new(24, 1), m_vars: 11, r_vars: 6, log_basis: 2, n_a: 2, conservative_n_b: 1, log_commit_bound: 1, onehot_chunk_size: 1, basis_range: (2, 6) }], steps: &[
         GeneratedStep::Fold(GeneratedFoldStep { ring_d: 128, log_basis: 2, m_vars: 23, r_vars: 18, n_a: 4, n_b: 1, n_d: 1 }),
         GeneratedStep::Fold(GeneratedFoldStep { ring_d: 128, log_basis: 2, m_vars: 17, r_vars: 11, n_a: 3, n_b: 1, n_d: 1 }),
         GeneratedStep::Fold(GeneratedFoldStep { ring_d: 128, log_basis: 3, m_vars: 13, r_vars: 7, n_a: 3, n_b: 1, n_d: 1 }),
@@ -1852,7 +1852,7 @@ pub(crate) static FP128_D128_ONEHOT_SCHEDULES: &[GeneratedScheduleTableEntry] = 
         GeneratedStep::Fold(GeneratedFoldStep { ring_d: 128, log_basis: 6, m_vars: 8, r_vars: 2, n_a: 2, n_b: 1, n_d: 1 }),
         GeneratedStep::Direct(GeneratedDirectStep { commit: None }),
     ] },
-    GeneratedScheduleTableEntry { final_group: PolynomialGroupLayout::new(48, 4), precommitteds: &[PrecommittedGroupParams { group: PolynomialGroupLayout::new(24, 1), m_vars: 11, r_vars: 6, log_basis: 2, n_a: 2, conservative_n_b: 1 }], steps: &[
+    GeneratedScheduleTableEntry { final_group: PolynomialGroupLayout::new(48, 4), precommitteds: &[PrecommittedGroupParams { group: PolynomialGroupLayout::new(24, 1), m_vars: 11, r_vars: 6, log_basis: 2, n_a: 2, conservative_n_b: 1, log_commit_bound: 1, onehot_chunk_size: 1, basis_range: (2, 6) }], steps: &[
         GeneratedStep::Fold(GeneratedFoldStep { ring_d: 128, log_basis: 2, m_vars: 24, r_vars: 17, n_a: 5, n_b: 1, n_d: 1 }),
         GeneratedStep::Fold(GeneratedFoldStep { ring_d: 128, log_basis: 2, m_vars: 17, r_vars: 12, n_a: 3, n_b: 1, n_d: 1 }),
         GeneratedStep::Fold(GeneratedFoldStep { ring_d: 128, log_basis: 3, m_vars: 13, r_vars: 8, n_a: 3, n_b: 1, n_d: 1 }),
@@ -1863,7 +1863,7 @@ pub(crate) static FP128_D128_ONEHOT_SCHEDULES: &[GeneratedScheduleTableEntry] = 
         GeneratedStep::Fold(GeneratedFoldStep { ring_d: 128, log_basis: 6, m_vars: 8, r_vars: 2, n_a: 2, n_b: 1, n_d: 1 }),
         GeneratedStep::Direct(GeneratedDirectStep { commit: None }),
     ] },
-    GeneratedScheduleTableEntry { final_group: PolynomialGroupLayout::new(48, 4), precommitteds: &[PrecommittedGroupParams { group: PolynomialGroupLayout::new(24, 1), m_vars: 11, r_vars: 6, log_basis: 2, n_a: 2, conservative_n_b: 1 }, PrecommittedGroupParams { group: PolynomialGroupLayout::new(24, 1), m_vars: 11, r_vars: 6, log_basis: 2, n_a: 2, conservative_n_b: 1 }], steps: &[
+    GeneratedScheduleTableEntry { final_group: PolynomialGroupLayout::new(48, 4), precommitteds: &[PrecommittedGroupParams { group: PolynomialGroupLayout::new(24, 1), m_vars: 11, r_vars: 6, log_basis: 2, n_a: 2, conservative_n_b: 1, log_commit_bound: 1, onehot_chunk_size: 1, basis_range: (2, 6) }, PrecommittedGroupParams { group: PolynomialGroupLayout::new(24, 1), m_vars: 11, r_vars: 6, log_basis: 2, n_a: 2, conservative_n_b: 1, log_commit_bound: 1, onehot_chunk_size: 1, basis_range: (2, 6) }], steps: &[
         GeneratedStep::Fold(GeneratedFoldStep { ring_d: 128, log_basis: 2, m_vars: 24, r_vars: 17, n_a: 5, n_b: 1, n_d: 1 }),
         GeneratedStep::Fold(GeneratedFoldStep { ring_d: 128, log_basis: 2, m_vars: 17, r_vars: 12, n_a: 3, n_b: 1, n_d: 1 }),
         GeneratedStep::Fold(GeneratedFoldStep { ring_d: 128, log_basis: 3, m_vars: 13, r_vars: 8, n_a: 3, n_b: 1, n_d: 1 }),
@@ -1885,7 +1885,7 @@ pub(crate) static FP128_D128_ONEHOT_SCHEDULES: &[GeneratedScheduleTableEntry] = 
         GeneratedStep::Fold(GeneratedFoldStep { ring_d: 128, log_basis: 6, m_vars: 8, r_vars: 2, n_a: 2, n_b: 1, n_d: 1 }),
         GeneratedStep::Direct(GeneratedDirectStep { commit: None }),
     ] },
-    GeneratedScheduleTableEntry { final_group: PolynomialGroupLayout::new(49, 1), precommitteds: &[PrecommittedGroupParams { group: PolynomialGroupLayout::new(24, 1), m_vars: 11, r_vars: 6, log_basis: 2, n_a: 2, conservative_n_b: 1 }], steps: &[
+    GeneratedScheduleTableEntry { final_group: PolynomialGroupLayout::new(49, 1), precommitteds: &[PrecommittedGroupParams { group: PolynomialGroupLayout::new(24, 1), m_vars: 11, r_vars: 6, log_basis: 2, n_a: 2, conservative_n_b: 1, log_commit_bound: 1, onehot_chunk_size: 1, basis_range: (2, 6) }], steps: &[
         GeneratedStep::Fold(GeneratedFoldStep { ring_d: 128, log_basis: 2, m_vars: 23, r_vars: 19, n_a: 4, n_b: 1, n_d: 1 }),
         GeneratedStep::Fold(GeneratedFoldStep { ring_d: 128, log_basis: 2, m_vars: 17, r_vars: 11, n_a: 3, n_b: 1, n_d: 1 }),
         GeneratedStep::Fold(GeneratedFoldStep { ring_d: 128, log_basis: 3, m_vars: 14, r_vars: 7, n_a: 3, n_b: 1, n_d: 1 }),
@@ -1896,7 +1896,7 @@ pub(crate) static FP128_D128_ONEHOT_SCHEDULES: &[GeneratedScheduleTableEntry] = 
         GeneratedStep::Fold(GeneratedFoldStep { ring_d: 128, log_basis: 6, m_vars: 8, r_vars: 2, n_a: 2, n_b: 1, n_d: 1 }),
         GeneratedStep::Direct(GeneratedDirectStep { commit: None }),
     ] },
-    GeneratedScheduleTableEntry { final_group: PolynomialGroupLayout::new(49, 1), precommitteds: &[PrecommittedGroupParams { group: PolynomialGroupLayout::new(24, 1), m_vars: 11, r_vars: 6, log_basis: 2, n_a: 2, conservative_n_b: 1 }, PrecommittedGroupParams { group: PolynomialGroupLayout::new(24, 1), m_vars: 11, r_vars: 6, log_basis: 2, n_a: 2, conservative_n_b: 1 }], steps: &[
+    GeneratedScheduleTableEntry { final_group: PolynomialGroupLayout::new(49, 1), precommitteds: &[PrecommittedGroupParams { group: PolynomialGroupLayout::new(24, 1), m_vars: 11, r_vars: 6, log_basis: 2, n_a: 2, conservative_n_b: 1, log_commit_bound: 1, onehot_chunk_size: 1, basis_range: (2, 6) }, PrecommittedGroupParams { group: PolynomialGroupLayout::new(24, 1), m_vars: 11, r_vars: 6, log_basis: 2, n_a: 2, conservative_n_b: 1, log_commit_bound: 1, onehot_chunk_size: 1, basis_range: (2, 6) }], steps: &[
         GeneratedStep::Fold(GeneratedFoldStep { ring_d: 128, log_basis: 2, m_vars: 23, r_vars: 19, n_a: 4, n_b: 1, n_d: 1 }),
         GeneratedStep::Fold(GeneratedFoldStep { ring_d: 128, log_basis: 2, m_vars: 17, r_vars: 11, n_a: 3, n_b: 1, n_d: 1 }),
         GeneratedStep::Fold(GeneratedFoldStep { ring_d: 128, log_basis: 3, m_vars: 14, r_vars: 7, n_a: 3, n_b: 1, n_d: 1 }),
@@ -1918,7 +1918,7 @@ pub(crate) static FP128_D128_ONEHOT_SCHEDULES: &[GeneratedScheduleTableEntry] = 
         GeneratedStep::Fold(GeneratedFoldStep { ring_d: 128, log_basis: 6, m_vars: 8, r_vars: 2, n_a: 2, n_b: 1, n_d: 1 }),
         GeneratedStep::Direct(GeneratedDirectStep { commit: None }),
     ] },
-    GeneratedScheduleTableEntry { final_group: PolynomialGroupLayout::new(49, 4), precommitteds: &[PrecommittedGroupParams { group: PolynomialGroupLayout::new(24, 1), m_vars: 11, r_vars: 6, log_basis: 2, n_a: 2, conservative_n_b: 1 }], steps: &[
+    GeneratedScheduleTableEntry { final_group: PolynomialGroupLayout::new(49, 4), precommitteds: &[PrecommittedGroupParams { group: PolynomialGroupLayout::new(24, 1), m_vars: 11, r_vars: 6, log_basis: 2, n_a: 2, conservative_n_b: 1, log_commit_bound: 1, onehot_chunk_size: 1, basis_range: (2, 6) }], steps: &[
         GeneratedStep::Fold(GeneratedFoldStep { ring_d: 128, log_basis: 2, m_vars: 25, r_vars: 17, n_a: 5, n_b: 1, n_d: 1 }),
         GeneratedStep::Fold(GeneratedFoldStep { ring_d: 128, log_basis: 2, m_vars: 17, r_vars: 12, n_a: 3, n_b: 1, n_d: 1 }),
         GeneratedStep::Fold(GeneratedFoldStep { ring_d: 128, log_basis: 2, m_vars: 13, r_vars: 8, n_a: 3, n_b: 1, n_d: 1 }),
@@ -1929,7 +1929,7 @@ pub(crate) static FP128_D128_ONEHOT_SCHEDULES: &[GeneratedScheduleTableEntry] = 
         GeneratedStep::Fold(GeneratedFoldStep { ring_d: 128, log_basis: 6, m_vars: 8, r_vars: 2, n_a: 2, n_b: 1, n_d: 1 }),
         GeneratedStep::Direct(GeneratedDirectStep { commit: None }),
     ] },
-    GeneratedScheduleTableEntry { final_group: PolynomialGroupLayout::new(49, 4), precommitteds: &[PrecommittedGroupParams { group: PolynomialGroupLayout::new(24, 1), m_vars: 11, r_vars: 6, log_basis: 2, n_a: 2, conservative_n_b: 1 }, PrecommittedGroupParams { group: PolynomialGroupLayout::new(24, 1), m_vars: 11, r_vars: 6, log_basis: 2, n_a: 2, conservative_n_b: 1 }], steps: &[
+    GeneratedScheduleTableEntry { final_group: PolynomialGroupLayout::new(49, 4), precommitteds: &[PrecommittedGroupParams { group: PolynomialGroupLayout::new(24, 1), m_vars: 11, r_vars: 6, log_basis: 2, n_a: 2, conservative_n_b: 1, log_commit_bound: 1, onehot_chunk_size: 1, basis_range: (2, 6) }, PrecommittedGroupParams { group: PolynomialGroupLayout::new(24, 1), m_vars: 11, r_vars: 6, log_basis: 2, n_a: 2, conservative_n_b: 1, log_commit_bound: 1, onehot_chunk_size: 1, basis_range: (2, 6) }], steps: &[
         GeneratedStep::Fold(GeneratedFoldStep { ring_d: 128, log_basis: 2, m_vars: 25, r_vars: 17, n_a: 5, n_b: 1, n_d: 1 }),
         GeneratedStep::Fold(GeneratedFoldStep { ring_d: 128, log_basis: 2, m_vars: 17, r_vars: 12, n_a: 3, n_b: 1, n_d: 1 }),
         GeneratedStep::Fold(GeneratedFoldStep { ring_d: 128, log_basis: 2, m_vars: 13, r_vars: 8, n_a: 3, n_b: 1, n_d: 1 }),
@@ -1951,7 +1951,7 @@ pub(crate) static FP128_D128_ONEHOT_SCHEDULES: &[GeneratedScheduleTableEntry] = 
         GeneratedStep::Fold(GeneratedFoldStep { ring_d: 128, log_basis: 6, m_vars: 8, r_vars: 2, n_a: 2, n_b: 1, n_d: 1 }),
         GeneratedStep::Direct(GeneratedDirectStep { commit: None }),
     ] },
-    GeneratedScheduleTableEntry { final_group: PolynomialGroupLayout::new(50, 1), precommitteds: &[PrecommittedGroupParams { group: PolynomialGroupLayout::new(25, 1), m_vars: 12, r_vars: 6, log_basis: 2, n_a: 2, conservative_n_b: 1 }], steps: &[
+    GeneratedScheduleTableEntry { final_group: PolynomialGroupLayout::new(50, 1), precommitteds: &[PrecommittedGroupParams { group: PolynomialGroupLayout::new(25, 1), m_vars: 12, r_vars: 6, log_basis: 2, n_a: 2, conservative_n_b: 1, log_commit_bound: 1, onehot_chunk_size: 1, basis_range: (2, 6) }], steps: &[
         GeneratedStep::Fold(GeneratedFoldStep { ring_d: 128, log_basis: 2, m_vars: 24, r_vars: 19, n_a: 5, n_b: 1, n_d: 1 }),
         GeneratedStep::Fold(GeneratedFoldStep { ring_d: 128, log_basis: 2, m_vars: 17, r_vars: 12, n_a: 3, n_b: 1, n_d: 1 }),
         GeneratedStep::Fold(GeneratedFoldStep { ring_d: 128, log_basis: 3, m_vars: 13, r_vars: 8, n_a: 3, n_b: 1, n_d: 1 }),
@@ -1962,7 +1962,7 @@ pub(crate) static FP128_D128_ONEHOT_SCHEDULES: &[GeneratedScheduleTableEntry] = 
         GeneratedStep::Fold(GeneratedFoldStep { ring_d: 128, log_basis: 6, m_vars: 8, r_vars: 2, n_a: 2, n_b: 1, n_d: 1 }),
         GeneratedStep::Direct(GeneratedDirectStep { commit: None }),
     ] },
-    GeneratedScheduleTableEntry { final_group: PolynomialGroupLayout::new(50, 1), precommitteds: &[PrecommittedGroupParams { group: PolynomialGroupLayout::new(25, 1), m_vars: 12, r_vars: 6, log_basis: 2, n_a: 2, conservative_n_b: 1 }, PrecommittedGroupParams { group: PolynomialGroupLayout::new(25, 1), m_vars: 12, r_vars: 6, log_basis: 2, n_a: 2, conservative_n_b: 1 }], steps: &[
+    GeneratedScheduleTableEntry { final_group: PolynomialGroupLayout::new(50, 1), precommitteds: &[PrecommittedGroupParams { group: PolynomialGroupLayout::new(25, 1), m_vars: 12, r_vars: 6, log_basis: 2, n_a: 2, conservative_n_b: 1, log_commit_bound: 1, onehot_chunk_size: 1, basis_range: (2, 6) }, PrecommittedGroupParams { group: PolynomialGroupLayout::new(25, 1), m_vars: 12, r_vars: 6, log_basis: 2, n_a: 2, conservative_n_b: 1, log_commit_bound: 1, onehot_chunk_size: 1, basis_range: (2, 6) }], steps: &[
         GeneratedStep::Fold(GeneratedFoldStep { ring_d: 128, log_basis: 2, m_vars: 24, r_vars: 19, n_a: 5, n_b: 1, n_d: 1 }),
         GeneratedStep::Fold(GeneratedFoldStep { ring_d: 128, log_basis: 2, m_vars: 17, r_vars: 12, n_a: 3, n_b: 1, n_d: 1 }),
         GeneratedStep::Fold(GeneratedFoldStep { ring_d: 128, log_basis: 3, m_vars: 13, r_vars: 8, n_a: 3, n_b: 1, n_d: 1 }),
@@ -1984,7 +1984,7 @@ pub(crate) static FP128_D128_ONEHOT_SCHEDULES: &[GeneratedScheduleTableEntry] = 
         GeneratedStep::Fold(GeneratedFoldStep { ring_d: 128, log_basis: 6, m_vars: 8, r_vars: 2, n_a: 2, n_b: 1, n_d: 1 }),
         GeneratedStep::Direct(GeneratedDirectStep { commit: None }),
     ] },
-    GeneratedScheduleTableEntry { final_group: PolynomialGroupLayout::new(50, 4), precommitteds: &[PrecommittedGroupParams { group: PolynomialGroupLayout::new(25, 1), m_vars: 12, r_vars: 6, log_basis: 2, n_a: 2, conservative_n_b: 1 }], steps: &[
+    GeneratedScheduleTableEntry { final_group: PolynomialGroupLayout::new(50, 4), precommitteds: &[PrecommittedGroupParams { group: PolynomialGroupLayout::new(25, 1), m_vars: 12, r_vars: 6, log_basis: 2, n_a: 2, conservative_n_b: 1, log_commit_bound: 1, onehot_chunk_size: 1, basis_range: (2, 6) }], steps: &[
         GeneratedStep::Fold(GeneratedFoldStep { ring_d: 128, log_basis: 2, m_vars: 25, r_vars: 18, n_a: 5, n_b: 1, n_d: 1 }),
         GeneratedStep::Fold(GeneratedFoldStep { ring_d: 128, log_basis: 2, m_vars: 18, r_vars: 12, n_a: 4, n_b: 1, n_d: 1 }),
         GeneratedStep::Fold(GeneratedFoldStep { ring_d: 128, log_basis: 2, m_vars: 14, r_vars: 8, n_a: 3, n_b: 1, n_d: 1 }),
@@ -1995,7 +1995,7 @@ pub(crate) static FP128_D128_ONEHOT_SCHEDULES: &[GeneratedScheduleTableEntry] = 
         GeneratedStep::Fold(GeneratedFoldStep { ring_d: 128, log_basis: 6, m_vars: 8, r_vars: 2, n_a: 2, n_b: 1, n_d: 1 }),
         GeneratedStep::Direct(GeneratedDirectStep { commit: None }),
     ] },
-    GeneratedScheduleTableEntry { final_group: PolynomialGroupLayout::new(50, 4), precommitteds: &[PrecommittedGroupParams { group: PolynomialGroupLayout::new(25, 1), m_vars: 12, r_vars: 6, log_basis: 2, n_a: 2, conservative_n_b: 1 }, PrecommittedGroupParams { group: PolynomialGroupLayout::new(25, 1), m_vars: 12, r_vars: 6, log_basis: 2, n_a: 2, conservative_n_b: 1 }], steps: &[
+    GeneratedScheduleTableEntry { final_group: PolynomialGroupLayout::new(50, 4), precommitteds: &[PrecommittedGroupParams { group: PolynomialGroupLayout::new(25, 1), m_vars: 12, r_vars: 6, log_basis: 2, n_a: 2, conservative_n_b: 1, log_commit_bound: 1, onehot_chunk_size: 1, basis_range: (2, 6) }, PrecommittedGroupParams { group: PolynomialGroupLayout::new(25, 1), m_vars: 12, r_vars: 6, log_basis: 2, n_a: 2, conservative_n_b: 1, log_commit_bound: 1, onehot_chunk_size: 1, basis_range: (2, 6) }], steps: &[
         GeneratedStep::Fold(GeneratedFoldStep { ring_d: 128, log_basis: 2, m_vars: 25, r_vars: 18, n_a: 5, n_b: 1, n_d: 1 }),
         GeneratedStep::Fold(GeneratedFoldStep { ring_d: 128, log_basis: 2, m_vars: 18, r_vars: 12, n_a: 4, n_b: 1, n_d: 1 }),
         GeneratedStep::Fold(GeneratedFoldStep { ring_d: 128, log_basis: 2, m_vars: 14, r_vars: 8, n_a: 3, n_b: 1, n_d: 1 }),

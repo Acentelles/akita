@@ -96,6 +96,100 @@ impl<E: FieldCore> ExtensionOpeningReductionTerm<E> {
         })
     }
 
+    /// Construct one *virtually tiled* dense term: a group-domain packed
+    /// witness constant-extended to the full tail domain without materializing
+    /// the replication.
+    ///
+    /// `witness_evals` lives on the group's tail prefix (its length determines
+    /// the group tail arity); the term behaves over the full `tail_point`
+    /// domain, and its round messages equal the physically tiled table's
+    /// messages element-for-element.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if the witness length is not a power of two, exceeds
+    /// the full tail domain, or the tensor opening parameters are malformed.
+    pub fn new_tiled_dense<F>(
+        witness_evals: Vec<E>,
+        tail_point: &[E],
+        eta: &[E],
+        coeff: E,
+    ) -> Result<Self, AkitaError>
+    where
+        F: FieldCore,
+        E: ExtField<F>,
+    {
+        let group_tail_vars = num_rounds_from_table_len(witness_evals.len())?;
+        if group_tail_vars > tail_point.len() {
+            return Err(AkitaError::InvalidSize {
+                expected: tail_point.len(),
+                actual: group_tail_vars,
+            });
+        }
+        // Partition of unity in the summed high coordinates: the per-low-index
+        // aggregated factor is exactly the truncated-tail tensor factor.
+        let factor_evals =
+            tensor_equality_factor_evals::<F, E>(&tail_point[..group_tail_vars], eta)?;
+        validate_reduction_tables(&witness_evals, &factor_evals)?;
+        let tail = TiledTailFactor::new::<F>(tail_point, eta)?;
+        Ok(Self {
+            tables: ExtensionOpeningTables::Tiled {
+                inner: Box::new(ExtensionOpeningTables::Dense {
+                    witness: witness_evals,
+                    factor: factor_evals,
+                }),
+                tail,
+            },
+            coeff,
+            cached_accumulate: None,
+        })
+    }
+
+    /// Construct one *virtually tiled* sparse-witness term (see
+    /// [`Self::new_tiled_dense`]); the inner group-domain factor is the lazy
+    /// truncated-tail tensor factor with `materialize_at` lazy rounds (clamped
+    /// to the group tail arity).
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if the witness domain exceeds the full tail domain or
+    /// the tensor opening parameters are malformed.
+    pub fn new_tiled_sparse<F>(
+        witness_evals: SparseExtensionOpeningWitness<E>,
+        tail_point: &[E],
+        eta: &[E],
+        coeff: E,
+        materialize_at: usize,
+    ) -> Result<Self, AkitaError>
+    where
+        F: FieldCore,
+        E: ExtField<F>,
+    {
+        let group_tail_vars = num_rounds_from_table_len(witness_evals.table_len())?;
+        if group_tail_vars > tail_point.len() {
+            return Err(AkitaError::InvalidSize {
+                expected: tail_point.len(),
+                actual: group_tail_vars,
+            });
+        }
+        let inner = Self::new_sparse_tensor_factor::<F>(
+            witness_evals,
+            tail_point[..group_tail_vars].to_vec(),
+            eta.to_vec(),
+            E::one(),
+            materialize_at.min(group_tail_vars),
+        )?;
+        let tail = TiledTailFactor::new::<F>(tail_point, eta)?;
+        Ok(Self {
+            tables: ExtensionOpeningTables::Tiled {
+                inner: Box::new(inner.tables),
+                tail,
+            },
+            coeff,
+            cached_accumulate: None,
+        })
+    }
+
     /// Batching coefficient multiplying this term.
     pub fn coeff(&self) -> E {
         self.coeff

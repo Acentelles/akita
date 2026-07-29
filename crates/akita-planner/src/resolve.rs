@@ -535,6 +535,7 @@ mod tests {
                     Step::Fold(fold) => Some(&fold.params),
                 })
                 .expect("commit params"),
+            policy.group_bound_policy(),
         );
         AkitaScheduleLookupKey {
             final_group: PolynomialGroupLayout::new(20, 2),

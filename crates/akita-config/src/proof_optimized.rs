@@ -6,11 +6,11 @@
 use super::CommitmentConfig;
 use crate::matrix_envelope::accumulate_matrix_envelope_for_level;
 use akita_field::AkitaError;
+use akita_field::{Ext2, FpExt4, Prime128OffsetA7F7, Prime32Offset99, Prime64Offset59};
 use akita_types::{
     AkitaExpandedSetup, AkitaScheduleLookupKey, LevelParams, OpeningClaimsLayout,
     PolynomialGroupLayout, Schedule, SetupMatrixEnvelope,
 };
-use akita_field::{Ext2, FpExt4, Prime128OffsetA7F7, Prime32Offset99, Prime64Offset59};
 use std::any::TypeId;
 use std::collections::HashMap;
 use std::sync::{LazyLock, Mutex};
@@ -46,11 +46,17 @@ pub(crate) fn proof_optimized_schedule_key<Cfg: CommitmentConfig>(
     if layout.num_groups() == 1 {
         return Ok(AkitaScheduleLookupKey::single(final_group));
     }
+    // Reconstruct each precommitted group's frozen layout from the config's
+    // static per-group-index hook (default: this preset's conservative
+    // adapter). Verifier-side and prover-side key construction both route
+    // through this hook, so the frozen bound policies entering the schedule
+    // key (and, through it, the transcript instance descriptor) are always
+    // config-declared statics.
     let precommitteds = layout
         .root_precommitted_group_layouts()?
         .iter()
-        .copied()
-        .map(crate::conservative_commitment::conservative_precommitted_group_params::<Cfg>)
+        .enumerate()
+        .map(|(group_index, group)| Cfg::precommitted_group_params(group_index, *group))
         .collect::<Result<Vec<_>, _>>()?;
     let key = AkitaScheduleLookupKey {
         final_group,
@@ -138,8 +144,10 @@ fn setup_envelope_scan_layouts<Cfg: CommitmentConfig>(
 ) -> Result<Vec<OpeningClaimsLayout>, AkitaError> {
     let poly_counts: Vec<_> = (1..=max_num_batched_polys).collect();
     let mut layouts = Vec::new();
-    let supports_multi_group_root = Cfg::decomposition().log_commit_bound == 1
-        && !Cfg::chunked_witness_cfg().uses_multi_chunk();
+    // Multi-group roots are supported for one-hot and dense (non-multi-chunk)
+    // configs; the scan conservatively inflates the envelope with representative
+    // multi-group shapes (including frozen conservative-rank precommit keys).
+    let supports_multi_group_root = !Cfg::chunked_witness_cfg().uses_multi_chunk();
 
     for main_num_vars in 1..=max_num_vars {
         for &main_num_polys in &poly_counts {

@@ -1039,9 +1039,26 @@ impl LevelParams {
         opening_batch: &OpeningClaimsLayout,
         layout: RelationMatrixRowLayout,
     ) -> Result<usize, AkitaError> {
-        opening_batch.check()?;
         let modulus = crate::schedule::detect_field_modulus::<F>();
         let field_bits = 128 - (modulus.saturating_sub(1)).leading_zeros();
+        self.next_w_len_for_bits(field_bits, opening_batch, layout)
+    }
+
+    /// [`Self::next_w_len`] for an explicit field-bit width.
+    ///
+    /// The planner sizes schedules from an untyped [`crate::DecompositionParams`]
+    /// policy, so it must supply the policy's field width here; the typed
+    /// wrapper above derives the same width from `F`. The witness digit depths
+    /// (fold digits and the r-tail full-field digits) depend on this width, so
+    /// passing anything other than the runtime field's width desynchronizes
+    /// the schedule from `ring_switch_build_w`.
+    pub fn next_w_len_for_bits(
+        &self,
+        field_bits: u32,
+        opening_batch: &OpeningClaimsLayout,
+        layout: RelationMatrixRowLayout,
+    ) -> Result<usize, AkitaError> {
+        opening_batch.check()?;
         if !self.has_precommitted_groups() {
             if opening_batch.num_groups() != 1 {
                 return Err(AkitaError::InvalidSetup(

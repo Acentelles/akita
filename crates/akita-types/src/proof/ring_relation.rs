@@ -1036,6 +1036,11 @@ mod tests {
             layout: PrecommittedGroupParams::from_params(
                 PolynomialGroupLayout::new(4, 3),
                 &precommit_lp,
+                crate::GroupBoundPolicy {
+                    log_commit_bound: 1,
+                    onehot_chunk_size: 1,
+                    basis_range: (1, 8),
+                },
             ),
             a_key: precommit_lp.a_key.clone(),
             b_key: precommit_lp.b_key.clone(),

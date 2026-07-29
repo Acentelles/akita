@@ -3,6 +3,8 @@ use crate::compute::{
     ComputeBackendSetup, RootTensorSource, TensorPackedWitness, TensorProjectionBatchKernel,
     TensorProjectionKernel,
 };
+use crate::protocol::extension_opening_reduction::SparseExtensionOpeningWitness;
+use akita_types::OpeningClaimsLayout;
 
 pub(in crate::protocol::core) struct PreparedExtensionOpeningReduction<E: FieldCore> {
     pub(in crate::protocol::core) proof_partials: Vec<E>,
@@ -20,6 +22,83 @@ pub(in crate::protocol::core) struct ProvedExtensionOpeningReduction<E: FieldCor
     pub(in crate::protocol::core) protocol_point: Vec<E>,
 }
 
+/// Contiguous per-group claim spans `(start, end, num_vars)` in flat claim
+/// order for the extension-opening reduction.
+///
+/// A single-group (or padded/homogeneous) batch collapses to one span covering
+/// every claim at the shared padded arity, which keeps the historical
+/// byte-identical reduction path. Multi-group roots pass their real layout so
+/// each group is reduced at its own prefix of the shared point and lifted into
+/// the joint sumcheck domain by constant extension (table tiling): a group
+/// claim at a point prefix equals the claim of the constant-extended
+/// polynomial at the full padded point.
+fn eor_claim_spans<F, E>(
+    claim_layout: Option<&OpeningClaimsLayout>,
+    num_claims: usize,
+    num_vars: usize,
+) -> Result<Vec<(usize, usize, usize)>, AkitaError>
+where
+    F: FieldCore,
+    E: ExtField<F>,
+{
+    let Some(layout) = claim_layout else {
+        return Ok(vec![(0, num_claims, num_vars)]);
+    };
+    if layout.num_total_polynomials() != num_claims || layout.max_num_vars() != num_vars {
+        return Err(AkitaError::InvalidInput(
+            "extension-opening reduction claim layout does not match the padded batch".to_string(),
+        ));
+    }
+    let (split_bits, _) = tensor_opening_split::<F, E>()?;
+    let mut spans = Vec::with_capacity(layout.num_groups());
+    let mut start = 0usize;
+    for group_index in 0..layout.num_groups() {
+        let group = layout.group_layout(group_index)?;
+        let group_num_vars = group.num_vars();
+        if group_num_vars < split_bits || group_num_vars > num_vars {
+            return Err(AkitaError::InvalidInput(
+                "extension-opening reduction group arity is outside the padded batch".to_string(),
+            ));
+        }
+        let end = start
+            .checked_add(group.num_polynomials())
+            .ok_or_else(|| AkitaError::InvalidInput("EOR claim span overflow".to_string()))?;
+        spans.push((start, end, group_num_vars));
+        start = end;
+    }
+    if start != num_claims {
+        return Err(AkitaError::InvalidSize {
+            expected: num_claims,
+            actual: start,
+        });
+    }
+    Ok(spans)
+}
+
+/// Build the extension-opening reduction terms span by span.
+///
+/// Each claim span (group) yields terms over its *own* packed tail prefix.
+/// Spans shorter than the padded batch are lifted to the joint sumcheck
+/// domain by **virtual** constant extension instead of physically replicating
+/// tables: the tiled table is the original table repeated end-to-end
+/// (little-endian packing), so
+///
+/// - while the group still has unbound variables, round messages over the
+///   tiled domain decompose into the group-domain accumulation against the
+///   truncated-tail tensor factor (partition of unity of the equality kernel
+///   in the replicated coordinates), and
+/// - once the group is exhausted, the folded tiled witness is one constant
+///   `w*`, so the remaining rounds have a closed form (quadratic coefficient
+///   exactly zero, constant `w*` times the transparent even-half factor sum).
+///
+/// This keeps grouped roots at `>= 2^30` padded variables inside the
+/// equality-table budget (no dense full-tail factor per term) and avoids the
+/// `copies`-fold witness blow-up, while the emitted round messages, and hence
+/// the proof bytes, stay identical to the materialized-tiling computation.
+///
+/// Sparse and dense spans are handled independently: a span whose backend
+/// supports a sparse linear combination keeps the sparse/lazy-tensor path even
+/// when another span in the same batch must fall back to dense witnesses.
 pub(in crate::protocol::core) fn build_extension_opening_reduction_terms<
     F,
     E,
@@ -33,6 +112,7 @@ pub(in crate::protocol::core) fn build_extension_opening_reduction_terms<
     row_coefficients: &[E],
     tail_point: &[E],
     eta: &[E],
+    claim_spans: &[(usize, usize, usize)],
 ) -> Result<Vec<ExtensionOpeningReductionTerm<E>>, AkitaError>
 where
     F: FieldCore + CanonicalField + AkitaSerialize,
@@ -50,56 +130,103 @@ where
             actual: row_coefficients.len(),
         });
     }
+    let (split_bits, _) = tensor_opening_split::<F, E>()?;
+    let mut terms = Vec::with_capacity(claim_spans.len());
+    for &(start, end, group_num_vars) in claim_spans {
+        let group_tail_vars = group_num_vars.checked_sub(split_bits).ok_or_else(|| {
+            AkitaError::InvalidInput("EOR group arity below the tensor split".to_string())
+        })?;
+        if group_tail_vars > tail_point.len() {
+            return Err(AkitaError::InvalidSize {
+                expected: tail_point.len(),
+                actual: group_tail_vars,
+            });
+        }
+        let tiled = group_tail_vars < tail_point.len();
 
-    if let Some(terms) = try_sparse_extension_opening_reduction_terms::<F, E, P, B, D>(
-        backend,
-        prepared,
-        polys,
-        row_coefficients,
-        tail_point,
-        eta,
-    )? {
-        return Ok(terms);
+        let span_witness = {
+            let _span = tracing::info_span!(
+                "extension_opening_sparse_terms",
+                num_terms = end - start,
+                group_tail_vars
+            )
+            .entered();
+            TensorProjectionBatchKernel::sparse_linear_combination(
+                backend,
+                prepared,
+                P::tensor_batch(&polys[start..end])?,
+                &row_coefficients[start..end],
+            )?
+        };
+        if let Some(witness) = span_witness {
+            terms.push(sparse_span_term::<F, E>(
+                witness,
+                tail_point,
+                group_tail_vars,
+                eta,
+                tiled,
+            )?);
+            continue;
+        }
+
+        // Dense fallback for this span only.
+        let _dense_span = tracing::info_span!(
+            "extension_opening_dense_witnesses",
+            num_terms = end - start,
+            group_tail_vars
+        )
+        .entered();
+        for (poly, coeff) in polys[start..end]
+            .iter()
+            .zip(row_coefficients[start..end].iter().copied())
+        {
+            let witness = {
+                let _s = tracing::info_span!("eor_packed_witness").entered();
+                TensorProjectionKernel::packed_witness(backend, prepared, poly.tensor_view()?)?
+            };
+            terms.push(if tiled {
+                tiled_term_from_packed_witness::<F, E>(
+                    witness,
+                    tail_point,
+                    group_tail_vars,
+                    eta,
+                    coeff,
+                )?
+            } else {
+                extension_opening_term_from_packed_witness::<F, E>(witness, tail_point, eta, coeff)?
+            });
+        }
     }
-
-    build_dense_extension_opening_reduction_terms::<F, E, P, B, D>(
-        backend,
-        prepared,
-        polys,
-        row_coefficients,
-        tail_point,
-        eta,
-    )
+    Ok(terms)
 }
 
-fn try_sparse_extension_opening_reduction_terms<F, E, P, B, const D: usize>(
-    backend: &B,
-    prepared: Option<&<B as ComputeBackendSetup<F>>::PreparedSetup>,
-    polys: &[&P],
-    row_coefficients: &[E],
+/// One reduction term for a sparse span, over its own group tail prefix.
+///
+/// Full-arity spans keep the historical byte-identical construction (dense or
+/// lazy tensor factor over the full tail); shorter spans are lifted to the
+/// joint domain by virtual constant extension.
+fn sparse_span_term<F, E>(
+    witness: SparseExtensionOpeningWitness<E>,
     tail_point: &[E],
+    group_tail_vars: usize,
     eta: &[E],
-) -> Result<Option<Vec<ExtensionOpeningReductionTerm<E>>>, AkitaError>
+    tiled: bool,
+) -> Result<ExtensionOpeningReductionTerm<E>, AkitaError>
 where
     F: FieldCore + CanonicalField,
     E: ExtField<F>,
-    P: RootTensorSource<F, D>,
-    B: ComputeBackendSetup<F>
-        + for<'a> TensorProjectionBatchKernel<P::TensorBatchView<'a>, F, E, D>,
 {
-    let _span =
-        tracing::info_span!("extension_opening_sparse_terms", num_terms = polys.len()).entered();
-    let Some(witness_evals) = TensorProjectionBatchKernel::sparse_linear_combination(
-        backend,
-        prepared,
-        P::tensor_batch(polys)?,
-        row_coefficients,
-    )?
-    else {
-        return Ok(None);
-    };
-    let lazy_rounds = tail_point.len().min(SPARSE_TENSOR_FACTOR_MAX_LAZY_ROUNDS);
-    let term = if lazy_rounds == 0 {
+    let lazy_rounds = group_tail_vars.min(SPARSE_TENSOR_FACTOR_MAX_LAZY_ROUNDS);
+    if tiled {
+        return ExtensionOpeningReductionTerm::new_tiled_sparse::<F>(
+            witness,
+            tail_point,
+            eta,
+            E::one(),
+            lazy_rounds,
+        );
+    }
+    if lazy_rounds == 0 {
         let factor_evals = {
             let _span = tracing::debug_span!(
                 "extension_opening_factor_evals",
@@ -108,23 +235,21 @@ where
             .entered();
             tensor_equality_factor_evals::<F, E>(tail_point, eta)?
         };
-        ExtensionOpeningReductionTerm::new_sparse(witness_evals, factor_evals, E::one())?
-    } else {
-        let _span = tracing::debug_span!(
-            "extension_opening_lazy_tensor_factor",
-            tail_vars = tail_point.len(),
-            lazy_rounds
-        )
-        .entered();
-        ExtensionOpeningReductionTerm::new_sparse_tensor_factor::<F>(
-            witness_evals,
-            tail_point.to_vec(),
-            eta.to_vec(),
-            E::one(),
-            lazy_rounds,
-        )?
-    };
-    Ok(Some(vec![term]))
+        return ExtensionOpeningReductionTerm::new_sparse(witness, factor_evals, E::one());
+    }
+    let _span = tracing::debug_span!(
+        "extension_opening_lazy_tensor_factor",
+        tail_vars = tail_point.len(),
+        lazy_rounds
+    )
+    .entered();
+    ExtensionOpeningReductionTerm::new_sparse_tensor_factor::<F>(
+        witness,
+        tail_point.to_vec(),
+        eta.to_vec(),
+        E::one(),
+        lazy_rounds,
+    )
 }
 
 fn extension_opening_term_from_packed_witness<F, E>(
@@ -148,33 +273,35 @@ where
     }
 }
 
-fn build_dense_extension_opening_reduction_terms<F, E, P, B, const D: usize>(
-    backend: &B,
-    prepared: Option<&<B as ComputeBackendSetup<F>>::PreparedSetup>,
-    polys: &[&P],
-    row_coefficients: &[E],
+/// Virtually tiled term for one packed witness of a shorter span.
+fn tiled_term_from_packed_witness<F, E>(
+    witness: TensorPackedWitness<E>,
     tail_point: &[E],
+    group_tail_vars: usize,
     eta: &[E],
-) -> Result<Vec<ExtensionOpeningReductionTerm<E>>, AkitaError>
+    coeff: E,
+) -> Result<ExtensionOpeningReductionTerm<E>, AkitaError>
 where
     F: FieldCore + CanonicalField,
-    E: ExtField<F> + MulBaseUnreduced<F>,
-    P: RootTensorSource<F, D>,
-    B: ComputeBackendSetup<F> + for<'a> TensorProjectionKernel<P::TensorView<'a>, F, E, D>,
+    E: ExtField<F>,
 {
-    let _span =
-        tracing::info_span!("extension_opening_dense_witnesses", num_terms = polys.len()).entered();
-    polys
-        .iter()
-        .zip(row_coefficients.iter().copied())
-        .map(|(poly, coeff)| {
-            let witness = {
-                let _s = tracing::info_span!("eor_packed_witness").entered();
-                TensorProjectionKernel::packed_witness(backend, prepared, poly.tensor_view()?)?
-            };
-            extension_opening_term_from_packed_witness::<F, E>(witness, tail_point, eta, coeff)
-        })
-        .collect()
+    match witness {
+        TensorPackedWitness::Dense(witness_evals) => {
+            ExtensionOpeningReductionTerm::new_tiled_dense::<F>(
+                witness_evals,
+                tail_point,
+                eta,
+                coeff,
+            )
+        }
+        TensorPackedWitness::Sparse(witness) => ExtensionOpeningReductionTerm::new_tiled_sparse::<F>(
+            witness,
+            tail_point,
+            eta,
+            coeff,
+            group_tail_vars.min(SPARSE_TENSOR_FACTOR_MAX_LAZY_ROUNDS),
+        ),
+    }
 }
 
 #[allow(clippy::too_many_arguments)]
@@ -190,6 +317,7 @@ pub(in crate::protocol::core) fn prepare_extension_opening_reduction<
     prepared: Option<&<B as ComputeBackendSetup<F>>::PreparedSetup>,
     polys: &[&P],
     opening_batch: &OpeningClaims<'_, E>,
+    claim_layout: Option<&OpeningClaimsLayout>,
     pad_base_evals: bool,
     transcript: &mut T,
 ) -> Result<PreparedExtensionOpeningReduction<E>, AkitaError>
@@ -218,6 +346,7 @@ where
             "extension-opening reduction input lengths do not match".to_string(),
         ));
     }
+    let claim_spans = eor_claim_spans::<F, E>(claim_layout, num_claims, num_vars)?;
 
     let padded_point = opening_batch.point().to_vec();
 
@@ -227,12 +356,26 @@ where
     {
         let _span =
             tracing::info_span!("extension_opening_prepare_partials", width, split_bits).entered();
-        let point_partials = TensorProjectionBatchKernel::column_partials_batch(
-            backend,
-            prepared,
-            P::tensor_batch(polys)?,
-            &padded_point,
-        )?;
+        // Each span's polynomials are reduced at their own prefix of the
+        // shared padded point; a group claim at that prefix equals the claim
+        // of the constant-extended polynomial at the full point, so the
+        // derived column partials feed the joint reduction unchanged.
+        let mut point_partials = Vec::with_capacity(num_claims);
+        for &(start, end, group_num_vars) in &claim_spans {
+            let span_partials = TensorProjectionBatchKernel::column_partials_batch(
+                backend,
+                prepared,
+                P::tensor_batch(&polys[start..end])?,
+                &padded_point[..group_num_vars],
+            )?;
+            if span_partials.len() != end - start {
+                return Err(AkitaError::InvalidSize {
+                    expected: end - start,
+                    actual: span_partials.len(),
+                });
+            }
+            point_partials.extend(span_partials);
+        }
         if point_partials.len() != num_claims {
             return Err(AkitaError::InvalidSize {
                 expected: num_claims,
@@ -318,6 +461,7 @@ where
         &row_coefficients,
         tail_point,
         &eta,
+        &claim_spans,
     )?;
 
     Ok(PreparedExtensionOpeningReduction {
@@ -337,6 +481,7 @@ pub(in crate::protocol::core) fn prove_extension_opening_reduction<F, E, T, P, B
     tensor_prepared: Option<&<B as ComputeBackendSetup<F>>::PreparedSetup>,
     polys: &[&P],
     opening_batch: &OpeningClaims<'_, E>,
+    claim_layout: Option<&OpeningClaimsLayout>,
     pad_base_evals: bool,
     transcript: &mut T,
     path: &'static str,
@@ -362,6 +507,7 @@ where
         tensor_prepared,
         polys,
         opening_batch,
+        claim_layout,
         pad_base_evals,
         transcript,
     )?;

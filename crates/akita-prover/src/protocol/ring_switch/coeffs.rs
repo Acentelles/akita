@@ -405,7 +405,12 @@ where
 
             // Group-major witness: emit each group's contiguous `[z_g ‖ e_g ‖ t_g]`
             // stride in `root_group_order()`, then the single shared `r` tail.
-            let mut out = Vec::new();
+            // Reserve the exact expected length up front so the append loop
+            // never reallocates (a doubling reallocation transiently holds
+            // ~2x the full witness).
+            let expected =
+                lp.next_w_len::<F>(opening_batch, instance.relation_matrix_row_layout())?;
+            let mut out = Vec::with_capacity(expected);
             for &group_index in &order {
                 let group_layout = opening_batch.group_layout(group_index)?;
                 append_group_witness_segments::<F, D>(
@@ -417,8 +422,6 @@ where
             }
             let levels = r_decomp_levels::<F>(lp.log_basis);
             emit_r_decomposition_tail::<F, D>(&mut out, &r, levels, lp.log_basis);
-            let expected =
-                lp.next_w_len::<F>(opening_batch, instance.relation_matrix_row_layout())?;
             if out.len() != expected {
                 return Err(AkitaError::InvalidSize {
                     expected,

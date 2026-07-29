@@ -16,7 +16,6 @@ use akita_types::{
     RelationMatrixRowLayout, Schedule, SetupContributionMode, Step, SETUP_OFFLOAD_D_SETUP,
     SETUP_OFFLOAD_MIN_PREFIX_FIELD_LEN,
 };
-use akita_field::Prime128OffsetA7F7;
 
 use crate::schedule_params::{
     derive_optimal_suffix_schedule, find_schedule, RingChallengeConfigFn, ScheduleMemo, SuffixCtx,
@@ -39,6 +38,16 @@ pub(crate) fn group_root_params_from_layout(
     fold_challenge_shape: TensorChallengeShape,
     conservative_b_rank: bool,
 ) -> Result<PrecommittedLevelParams, AkitaError> {
+    // Evaluate this group's layout under ITS frozen bound policy, not the
+    // proving preset's. Multi-group roots may mix groups with different
+    // `log_commit_bound` / `onehot_chunk_size` / `basis_range`; the frozen
+    // values are config-declared statics captured at precommit time and bound
+    // into the transcript instance descriptor via the frozen layout. For a
+    // group frozen under the proving preset the view is byte-identical to
+    // `policy`, so same-preset schedules are unchanged.
+    layout.bound_policy().validate()?;
+    let view = policy.for_group_bound(layout.bound_policy());
+    let policy = &view;
     if !policy.root_log_basis_supported(layout.log_basis) {
         return Err(AkitaError::InvalidSetup(
             "multi-group root basis cannot encode tensor-projected one-hot coefficients"
@@ -46,7 +55,10 @@ pub(crate) fn group_root_params_from_layout(
         ));
     }
     if conservative_b_rank {
-        layout.validate_frozen_precommit(policy.ring_dimension, policy.basis_range.0)?;
+        // Conservative precommits freeze at the smallest *root-supported*
+        // log-basis (raised above `basis_range.0` for one-hot roots with a
+        // nontrivial claim extension); validate against the same value.
+        layout.validate_frozen_precommit(policy.ring_dimension, policy.frozen_root_log_basis()?)?;
     } else {
         layout.validate()?;
         layout.validate_root_geometry(policy.ring_dimension)?;
@@ -600,12 +612,6 @@ pub fn find_group_batch_schedule(
             fold_challenge_shape_at_level,
         );
     }
-    if policy.decomposition.log_commit_bound != 1 {
-        return Err(AkitaError::InvalidSetup(
-            "dense multi-group root batching is not supported; see specs/multi-group-batching.md"
-                .to_string(),
-        ));
-    }
     if policy.witness_chunk.uses_multi_chunk() {
         return Err(AkitaError::InvalidSetup(
             akita_types::MULTI_GROUP_ROOT_MULTI_CHUNK_UNSUPPORTED.to_string(),
@@ -710,7 +716,17 @@ pub fn find_group_batch_schedule(
                 continue;
             };
             let opening_batch = key.opening_layout()?;
-            let next_w_len = candidate_params.next_w_len::<Prime128OffsetA7F7>(
+            // Size the grouped next witness with the POLICY's field width: the
+            // fold-digit depth and the r-tail full-field digit count depend on
+            // it, and the runtime (`ring_switch_build_w`) builds the witness
+            // at the true field width. A fixed 128-bit width here oversizes
+            // small-field (fp32/fp64) grouped schedules and trips
+            // `validate_next_w_len` at prove time. Widths equal the true
+            // runtime witness width, so downstream SIS rank floors are the
+            // floors for the real committed vector (fp128 is unchanged:
+            // its policy width is 128).
+            let next_w_len = candidate_params.next_w_len_for_bits(
+                policy.decomposition.field_bits(),
                 &opening_batch,
                 RelationMatrixRowLayout::WithDBlock,
             )?;
@@ -831,11 +847,11 @@ pub fn find_group_batch_schedule(
 mod tests {
     use super::*;
     use crate::find_schedule;
+    use akita_field::Prime128OffsetA7F7;
     use akita_types::{
         AkitaScheduleLookupKey, DecompositionParams, PolynomialGroupLayout,
         RelationMatrixRowLayout, SisModulusFamily, DEFAULT_SIS_SECURITY_BITS,
     };
-    use akita_field::Prime128OffsetA7F7;
 
     fn flat_policy() -> PlannerPolicy {
         PlannerPolicy {
@@ -877,6 +893,9 @@ mod tests {
             log_basis: 3,
             n_a: 1,
             conservative_n_b: 1,
+            log_commit_bound: 1,
+            onehot_chunk_size: 1,
+            basis_range: (3, 4),
         }
     }
 
@@ -892,7 +911,7 @@ mod tests {
             Step::Fold(fold) => fold.params.clone(),
             Step::Direct(direct) => direct.params.clone().expect("root-direct params"),
         };
-        PrecommittedGroupParams::from_params(key, &params)
+        PrecommittedGroupParams::from_params(key, &params, precommitted_policy.group_bound_policy())
     }
 
     #[test]
@@ -1005,6 +1024,9 @@ mod tests {
             log_basis: 3,
             n_a: 1,
             conservative_n_b: 1,
+            log_commit_bound: 1,
+            onehot_chunk_size: 1,
+            basis_range: (3, 4),
         };
         let ring_cfg = ring_challenge_config(policy.ring_dimension).expect("ring challenge");
 
@@ -1180,16 +1202,45 @@ mod tests {
     }
 
     #[test]
-    fn find_group_batch_schedule_rejects_dense_policy() {
+    fn find_group_batch_schedule_accepts_dense_policy() {
         let mut policy = flat_policy();
         policy.decomposition.log_commit_bound = 8;
+        policy.basis_range = (4, 4);
+        let pre_key = PolynomialGroupLayout::new(20, 1);
+        let key = AkitaScheduleLookupKey {
+            final_group: PolynomialGroupLayout::new(40, 2),
+            precommitteds: vec![precommitted_from_policy(pre_key, &policy)],
+        };
+
+        let schedule = find_group_batch_schedule(&key, &policy, ring_challenge_config, fold_shape)
+            .expect("dense multi-group root schedules are supported");
+        let Step::Fold(root) = schedule.steps.first().expect("multi-group root step") else {
+            panic!("expected multi-group root fold");
+        };
+
+        assert_eq!(
+            root.params.precommitted_groups.len(),
+            key.precommitteds.len()
+        );
+        // Dense levels carry no one-hot chunk annotation.
+        assert_eq!(root.params.onehot_chunk_size, 0);
+        assert!(root.next_w_len > 0);
+    }
+
+    #[test]
+    fn find_group_batch_schedule_still_rejects_multi_chunk_policy() {
+        let mut policy = flat_policy();
+        policy.witness_chunk = akita_types::ChunkedWitnessCfg {
+            num_chunks: 2,
+            num_activated_levels: 1,
+        };
         let key = AkitaScheduleLookupKey {
             final_group: PolynomialGroupLayout::new(40, 2),
             precommitteds: vec![precommitted(1, 20)],
         };
 
         let err = find_group_batch_schedule(&key, &policy, ring_challenge_config, fold_shape)
-            .expect_err("dense multi-group root schedules are phase-1 unsupported");
+            .expect_err("multi-chunk multi-group root schedules are unsupported");
 
         assert!(matches!(err, AkitaError::InvalidSetup(_)));
     }

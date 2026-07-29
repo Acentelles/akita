@@ -1,13 +1,13 @@
 //! Prover setup artifact and config-free setup expansion helpers.
 
 use akita_field::AkitaError;
+use akita_field::{CanonicalField, FieldCore, RandomSampling};
 use akita_serialization::{AkitaSerialize, SerializationError, Valid};
 use akita_types::{
     derive_public_matrix_flat, dispatch_for_field, sample_public_matrix_seed, AkitaExpandedSetup,
     AkitaSetupSeed, AkitaVerifierSetup, SetupMatrixEnvelope, SetupPrefixProverRegistry,
     SetupPrefixVerifierRegistry,
 };
-use akita_field::{CanonicalField, FieldCore, RandomSampling};
 use std::sync::Arc;
 
 /// Prover setup artifact.
@@ -306,6 +306,9 @@ mod tests {
                 log_basis: 1,
                 n_a: 1,
                 conservative_n_b: 1,
+                log_commit_bound: 1,
+                onehot_chunk_size: 1,
+                basis_range: (1, 8),
             },
             a_key: AjtaiKeyParams::new_unchecked(
                 akita_types::DEFAULT_SIS_SECURITY_BITS,

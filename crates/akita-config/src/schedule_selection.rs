@@ -2,12 +2,12 @@
 
 use crate::CommitmentConfig;
 use akita_field::AkitaError;
+use akita_field::FieldCore;
 use akita_types::{
     dispatch_for_field, folded_root_supports_opening_shape, root_direct_schedule,
     root_tensor_projection_enabled, schedule_is_root_direct, schedule_root_fold_step,
     FpExtEncoding, OpeningClaimsLayout, Schedule,
 };
-use akita_field::FieldCore;
 
 /// Select the effective runtime schedule for a batched opening, including the
 /// root-direct rewrite when the folded-root opening geometry is unsupported.
@@ -60,9 +60,24 @@ where
 
         if opening_batch.num_groups() > 1 {
             if Cfg::EXT_DEGREE != 1 {
-                return Err(AkitaError::InvalidSetup(
-                    "multi-group extension openings cannot use root-direct rewrite".to_string(),
-                ));
+                // Grouped extension roots are supported only through the
+                // tensor-projection (psi-embedding) extension-opening
+                // reduction: each group's polynomials are committed as their
+                // projected rings, so every group's variable count must admit
+                // the projection at the root fold ring dimension. There is no
+                // grouped root-direct rewrite.
+                for group_index in 0..opening_batch.num_groups() {
+                    let group_num_vars = opening_batch.group_layout(group_index)?.num_vars();
+                    if !root_tensor_projection_enabled::<Cfg::Field, Cfg::ExtField>(
+                        root_step.params.ring_dimension,
+                        group_num_vars,
+                    ) {
+                        return Err(AkitaError::InvalidSetup(
+                            "multi-group extension openings require tensor projection for every group"
+                                .to_string(),
+                        ));
+                    }
+                }
             }
             if needs_root_direct_rewrite {
                 return Err(AkitaError::InvalidSetup(
@@ -83,11 +98,11 @@ where
 mod tests {
     use super::*;
     use akita_challenges::SparseChallengeConfig;
+    use akita_field::{ExtField, Fp32, FpExt4};
     use akita_types::{
         AkitaScheduleLookupKey, CleartextWitnessShape, DirectStep, FoldStep, LevelParams,
         PolynomialGroupLayout, SetupMatrixEnvelope, SisModulusFamily, Step,
     };
-    use akita_field::{ExtField, Fp32, FpExt4};
 
     type Base = Fp32<251>;
     type BaseExt = FpExt4<Base>;

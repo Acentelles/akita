@@ -118,8 +118,8 @@ fn recursive_schedule_key<Cfg: CommitmentConfig>(
     let precommitteds = layout
         .root_precommitted_group_layouts()?
         .iter()
-        .copied()
-        .map(crate::conservative_commitment::conservative_precommitted_group_params::<Cfg>)
+        .enumerate()
+        .map(|(group_index, group)| Cfg::precommitted_group_params(group_index, *group))
         .collect::<Result<Vec<_>, _>>()?;
     let key = AkitaScheduleLookupKey {
         final_group,

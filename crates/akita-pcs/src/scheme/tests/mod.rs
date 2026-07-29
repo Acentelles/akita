@@ -2,6 +2,7 @@ use super::*;
 use akita_config::proof_optimized::fp128;
 use akita_config::test_support::akita_batched_root_layout;
 use akita_config::{CommitmentConfig, ConservativeCommitmentConfig};
+use akita_field::LiftBase;
 use akita_prover::compute::{OpeningFoldKernel, OpeningFoldPlan, RootOpeningSource, RootPolyShape};
 use akita_prover::{ComputeBackendSetup, CpuBackend};
 use akita_prover::{DensePoly, OneHotPoly, ProverOpeningData};
@@ -25,7 +26,6 @@ use akita_types::{
     PolynomialGroupClaims,
 };
 use akita_verifier::cleartext_witness_opening_matches;
-use akita_field::LiftBase;
 use rand::rngs::StdRng;
 use rand::{Rng, SeedableRng};
 type Cfg = fp128::D64Full;
@@ -48,8 +48,11 @@ type ConservativeOneHotScheme = AkitaCommitmentScheme<ConservativeOneHotCfg>;
 const MIN_W_LEN_FOR_FOLDING: usize = 4096;
 
 mod batched;
+mod dense_multi_group;
 mod fp32_ext4;
+mod fp32_multi_group;
 mod layout;
+mod mixed_bound_multi_group;
 mod onehot;
 mod single;
 

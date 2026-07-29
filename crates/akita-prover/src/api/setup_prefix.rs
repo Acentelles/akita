@@ -7,14 +7,14 @@ use crate::api::commitment::{
 use crate::compute::{CommitmentComputeBackend, DenseCommitInput, DenseCommitRowsPlan};
 use crate::kernels::linear::decompose_rows_i8_into;
 use akita_algebra::CyclotomicRing;
+#[cfg(feature = "parallel")]
+use akita_field::parallel::*;
 use akita_field::AkitaError;
+use akita_field::{CanonicalField, FieldCore, RandomSampling};
 use akita_types::{
     setup_prefix_slot_id, AkitaCommitmentHint, AkitaExpandedSetup, DigitBlocks,
     PrecommittedLevelParams, RingVec, SetupPrefixPublicCommitment, SetupPrefixSlot,
 };
-#[cfg(feature = "parallel")]
-use akita_field::parallel::*;
-use akita_field::{CanonicalField, FieldCore, RandomSampling};
 
 /// Commit one padded flat prefix of the shared setup matrix.
 ///
@@ -227,11 +227,11 @@ mod tests {
     use crate::compute::{ComputeBackendSetup, CpuBackend};
     use crate::AkitaProverSetup;
     use akita_challenges::SparseChallengeConfig;
+    use akita_field::Prime128Offset275 as F;
     use akita_types::{
         active_setup_field_len, padded_setup_prefix_len, setup_prefix_precommitted_params,
         LevelParams, OpeningClaimsLayout, SetupMatrixEnvelope, SisModulusFamily,
     };
-    use akita_field::Prime128Offset275 as F;
 
     fn prefix_level_params(ring_dimension: usize) -> LevelParams {
         LevelParams::params_only(
@@ -317,8 +317,16 @@ mod tests {
         let mut setup = test_setup::<D>(&level_params, n_prefix);
         let backend = CpuBackend;
         let prepared = backend.prepare_setup(&setup).expect("prepared setup");
-        let prefix_params =
-            setup_prefix_precommitted_params(&level_params, n_prefix).expect("prefix params");
+        let prefix_params = setup_prefix_precommitted_params(
+            &level_params,
+            n_prefix,
+            akita_types::GroupBoundPolicy {
+                log_commit_bound: 1,
+                onehot_chunk_size: 1,
+                basis_range: (1, 8),
+            },
+        )
+        .expect("prefix params");
         let slot = commit_setup_prefix::<F, D, _>(
             &setup.expanded,
             &backend,

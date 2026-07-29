@@ -12,10 +12,10 @@ use crate::{
 use akita_algebra::CyclotomicRing;
 use akita_challenges::SparseChallengeConfig;
 use akita_field::AkitaError;
+use akita_field::{CanonicalField, FieldCore, Prime128OffsetA7F7};
 use akita_serialization::{AkitaSerialize, Compress};
 use akita_sumcheck::EqFactoredUniPoly;
 use akita_sumcheck::{CompressedUniPoly, EqFactoredSumcheckProof, SumcheckProof};
-use akita_field::{CanonicalField, FieldCore, Prime128OffsetA7F7};
 
 type F = Prime128OffsetA7F7;
 
@@ -142,6 +142,11 @@ fn grouped_level_params() -> LevelParams {
         layout: PrecommittedGroupParams::from_params(
             PolynomialGroupLayout::new(6, 1),
             &precommitted,
+            crate::GroupBoundPolicy {
+                log_commit_bound: 1,
+                onehot_chunk_size: 1,
+                basis_range: (1, 8),
+            },
         ),
         a_key: precommitted.a_key.clone(),
         b_key: precommitted.b_key.clone(),
@@ -410,6 +415,11 @@ fn setup_prefix_only_params() -> LevelParams {
             layout: crate::PrecommittedGroupParams::from_params(
                 PolynomialGroupLayout::new(6, 1),
                 &precommitted,
+                crate::GroupBoundPolicy {
+                    log_commit_bound: 1,
+                    onehot_chunk_size: 1,
+                    basis_range: (1, 8),
+                },
             ),
             a_key: precommitted.a_key.clone(),
             b_key: precommitted.b_key.clone(),
@@ -900,6 +910,9 @@ fn group_batch_key_allows_precommitted_num_vars_above_main() {
             log_basis: 2,
             n_a: 3,
             conservative_n_b: 4,
+            log_commit_bound: 1,
+            onehot_chunk_size: 1,
+            basis_range: (1, 8),
         }],
     };
 
@@ -919,6 +932,9 @@ fn group_batch_key_allows_precommitted_num_vars_above_half_main() {
             log_basis: 2,
             n_a: 3,
             conservative_n_b: 4,
+            log_commit_bound: 1,
+            onehot_chunk_size: 1,
+            basis_range: (1, 8),
         }],
     };
 
@@ -938,6 +954,9 @@ fn group_batch_key_allows_mixed_polynomial_counts() {
             log_basis: 2,
             n_a: 3,
             conservative_n_b: 4,
+            log_commit_bound: 1,
+            onehot_chunk_size: 1,
+            basis_range: (1, 8),
         }],
     };
 
@@ -956,6 +975,9 @@ fn precommitted_group_params_reject_multi_polynomial_group() {
         log_basis: 2,
         n_a: 3,
         conservative_n_b: 4,
+        log_commit_bound: 1,
+        onehot_chunk_size: 1,
+        basis_range: (1, 8),
     };
 
     let err = layout
@@ -973,6 +995,9 @@ fn validate_frozen_precommit_rejects_geometry_mismatch() {
         log_basis: 2,
         n_a: 3,
         conservative_n_b: 4,
+        log_commit_bound: 1,
+        onehot_chunk_size: 1,
+        basis_range: (1, 8),
     };
     let err = layout
         .validate_frozen_precommit(64, 2)

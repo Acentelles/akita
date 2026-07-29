@@ -166,7 +166,11 @@ fn group_batch_keys<Cfg: CommitmentConfig>(
                         break;
                     }
                 };
-                precommitteds.push(PrecommittedGroupParams::from_params(pre_key, &params));
+                precommitteds.push(PrecommittedGroupParams::from_params(
+                    pre_key,
+                    &params,
+                    crate::group_bound_policy_of::<Cfg>(),
+                ));
             }
             if !supported {
                 continue;
@@ -195,8 +199,11 @@ fn recursive_d64_onehot_profile_keys() -> Result<Vec<AkitaScheduleLookupKey>, Ak
     let precommitted_params = conservative_commit_params::<
         ConservativeCommitmentConfig<fp128::D64OneHot>,
     >(&precommitted_group)?;
-    let precommitted =
-        PrecommittedGroupParams::from_params(precommitted_group, &precommitted_params);
+    let precommitted = PrecommittedGroupParams::from_params(
+        precommitted_group,
+        &precommitted_params,
+        crate::group_bound_policy_of::<fp128::D64OneHot>(),
+    );
     Ok(vec![AkitaScheduleLookupKey {
         final_group: PolynomialGroupLayout::new(32, 2),
         precommitteds: vec![precommitted, precommitted],

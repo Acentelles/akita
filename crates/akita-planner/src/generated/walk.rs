@@ -15,7 +15,6 @@ use akita_types::{
     CleartextWitnessShape, DirectStep, FoldStep, LevelParams, PolynomialGroupLayout,
     PrecommittedLevelParams, RelationMatrixRowLayout, Schedule, SetupContributionMode, Step,
 };
-use akita_field::Prime128OffsetA7F7;
 
 use crate::generated::{
     validate_entry_key, GeneratedFoldStep, GeneratedScheduleTableEntry, GeneratedStep,
@@ -416,7 +415,11 @@ fn walk_multi_group_generated_schedule_entry(
                 } else {
                     let len = if fold_level == 0 {
                         let opening_batch = key.opening_layout()?;
-                        lp.next_w_len::<Prime128OffsetA7F7>(
+                        // Policy field width, matching the runtime witness
+                        // build (see `find_group_batch_schedule`): a fixed
+                        // 128-bit width oversizes small-field grouped roots.
+                        lp.next_w_len_for_bits(
+                            field_bits,
                             &opening_batch,
                             RelationMatrixRowLayout::WithDBlock,
                         )?

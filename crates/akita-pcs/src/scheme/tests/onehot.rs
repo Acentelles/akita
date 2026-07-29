@@ -25,7 +25,11 @@ fn conservative_config_commit_returns_frozen_layout() {
             .expect("stack");
     let (commitment, _hint) =
         ConservativeCommitter::commit(&setup, &polys, &stack).expect("conservative commit");
-    let frozen_layout = akita_types::PrecommittedGroupParams::from_params(key, &layout);
+    let frozen_layout = akita_types::PrecommittedGroupParams::from_params(
+        key,
+        &layout,
+        akita_config::group_bound_policy_of::<ConservativeOneHotCfg>(),
+    );
 
     assert_eq!(frozen_layout.group, key);
     assert_eq!(frozen_layout.m_vars, layout.m_vars);
@@ -89,10 +93,16 @@ fn conservative_config_allows_independent_precommitted_groups() {
             ConservativeCommitter::commit(setup, &pre_a_polys, stack).expect("precommit A");
         let (pre_b_commitment, _pre_b_hint) =
             ConservativeCommitter::commit(setup, &pre_b_polys, stack).expect("precommit B");
-        let pre_a_frozen =
-            akita_types::PrecommittedGroupParams::from_params(pre_a_key, &pre_a_layout);
-        let pre_b_frozen =
-            akita_types::PrecommittedGroupParams::from_params(pre_b_key, &pre_b_layout);
+        let pre_a_frozen = akita_types::PrecommittedGroupParams::from_params(
+            pre_a_key,
+            &pre_a_layout,
+            akita_config::group_bound_policy_of::<ConservativeOneHotCfg>(),
+        );
+        let pre_b_frozen = akita_types::PrecommittedGroupParams::from_params(
+            pre_b_key,
+            &pre_b_layout,
+            akita_config::group_bound_policy_of::<ConservativeOneHotCfg>(),
+        );
 
         assert_eq!(pre_a_frozen.group, pre_a_key);
         assert_eq!(pre_b_frozen.group, pre_b_key);
@@ -146,12 +156,21 @@ fn group_batch_schedule_preserves_precommitted_order() {
             ConservativeCommitter::commit(setup, &pre_a_polys, stack).expect("precommit A");
             ConservativeCommitter::commit(setup, &pre_b_polys, stack).expect("precommit B");
             ConservativeCommitter::commit(setup, &pre_c_polys, stack).expect("precommit C");
-            let pre_a_frozen =
-                akita_types::PrecommittedGroupParams::from_params(pre_a_key, &pre_a_layout);
-            let pre_b_frozen =
-                akita_types::PrecommittedGroupParams::from_params(pre_b_key, &pre_b_layout);
-            let pre_c_frozen =
-                akita_types::PrecommittedGroupParams::from_params(pre_c_key, &pre_c_layout);
+            let pre_a_frozen = akita_types::PrecommittedGroupParams::from_params(
+                pre_a_key,
+                &pre_a_layout,
+                akita_config::group_bound_policy_of::<ConservativeOneHotCfg>(),
+            );
+            let pre_b_frozen = akita_types::PrecommittedGroupParams::from_params(
+                pre_b_key,
+                &pre_b_layout,
+                akita_config::group_bound_policy_of::<ConservativeOneHotCfg>(),
+            );
+            let pre_c_frozen = akita_types::PrecommittedGroupParams::from_params(
+                pre_c_key,
+                &pre_c_layout,
+                akita_config::group_bound_policy_of::<ConservativeOneHotCfg>(),
+            );
             let multi_group_key = akita_types::AkitaScheduleLookupKey {
                 final_group: akita_types::PolynomialGroupLayout::new(FINAL_NV, MAIN_SIZE),
                 precommitteds: vec![pre_a_frozen, pre_b_frozen, pre_c_frozen],
@@ -200,10 +219,16 @@ fn group_batch_commits_precommitteds_then_double_size_final_group() {
             ConservativeCommitter::commit::<_, _>(setup, &pre_a_polys, stack).expect("precommit A");
         let (pre_b_commitment, _pre_b_hint) =
             ConservativeCommitter::commit::<_, _>(setup, &pre_b_polys, stack).expect("precommit B");
-        let pre_a_frozen =
-            akita_types::PrecommittedGroupParams::from_params(pre_a_key, &pre_a_layout);
-        let pre_b_frozen =
-            akita_types::PrecommittedGroupParams::from_params(pre_b_key, &pre_b_layout);
+        let pre_a_frozen = akita_types::PrecommittedGroupParams::from_params(
+            pre_a_key,
+            &pre_a_layout,
+            akita_config::group_bound_policy_of::<ConservativeOneHotCfg>(),
+        );
+        let pre_b_frozen = akita_types::PrecommittedGroupParams::from_params(
+            pre_b_key,
+            &pre_b_layout,
+            akita_config::group_bound_policy_of::<ConservativeOneHotCfg>(),
+        );
         let multi_group_key = akita_types::AkitaScheduleLookupKey {
             final_group: akita_types::PolynomialGroupLayout::new(FINAL_NV, GROUP_SIZE),
             precommitteds: vec![pre_a_frozen, pre_b_frozen],
@@ -327,7 +352,9 @@ fn multi_group_root_round_trip_onehot(
         let (commitment, hint) =
             ConservativeCommitter::batched_commit(&setup, &polys[..], &stack).expect("precommit");
         pre_frozen.push(akita_types::PrecommittedGroupParams::from_params(
-            key, &layout,
+            key,
+            &layout,
+            akita_config::group_bound_policy_of::<ConservativeOneHotCfg>(),
         ));
         pre_keys.push(key);
         pre_commitments.push(commitment);
@@ -513,7 +540,11 @@ fn multi_group_root_folded_two_group_onehot_round_trips() {
 
     let (pre_commitment, pre_hint) =
         ConservativeCommitter::batched_commit(&setup, &pre_polys, &stack).expect("precommit");
-    let pre_frozen = akita_types::PrecommittedGroupParams::from_params(pre_key, &pre_layout);
+    let pre_frozen = akita_types::PrecommittedGroupParams::from_params(
+        pre_key,
+        &pre_layout,
+        akita_config::group_bound_policy_of::<ConservativeOneHotCfg>(),
+    );
     let multi_group_key = akita_types::AkitaScheduleLookupKey {
         final_group: akita_types::PolynomialGroupLayout::new(FINAL_NV, FINAL_SIZE),
         precommitteds: vec![pre_frozen],
@@ -713,8 +744,16 @@ fn multi_group_root_folded_three_group_onehot_round_trips() {
         ConservativeCommitter::batched_commit(&setup, &pre_a_polys, &stack).expect("precommit A");
     let (pre_b_commitment, pre_b_hint) =
         ConservativeCommitter::batched_commit(&setup, &pre_b_polys, &stack).expect("precommit B");
-    let pre_a_frozen = akita_types::PrecommittedGroupParams::from_params(pre_a_key, &pre_a_layout);
-    let pre_b_frozen = akita_types::PrecommittedGroupParams::from_params(pre_b_key, &pre_b_layout);
+    let pre_a_frozen = akita_types::PrecommittedGroupParams::from_params(
+        pre_a_key,
+        &pre_a_layout,
+        akita_config::group_bound_policy_of::<ConservativeOneHotCfg>(),
+    );
+    let pre_b_frozen = akita_types::PrecommittedGroupParams::from_params(
+        pre_b_key,
+        &pre_b_layout,
+        akita_config::group_bound_policy_of::<ConservativeOneHotCfg>(),
+    );
     let multi_group_key = akita_types::AkitaScheduleLookupKey {
         final_group: akita_types::PolynomialGroupLayout::new(FINAL_NV, FINAL_SIZE),
         precommitteds: vec![pre_a_frozen, pre_b_frozen],

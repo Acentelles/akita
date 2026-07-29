@@ -7,7 +7,9 @@
 mod recursive_prefixes;
 
 use akita_config::CommitmentConfig;
+use akita_field::unreduced::HasWide;
 use akita_field::AkitaError;
+use akita_field::{CanonicalField, FieldCore, RandomSampling};
 use akita_prover::AkitaProverSetup;
 use akita_serialization::Valid;
 #[cfg(feature = "disk-persistence")]
@@ -23,8 +25,6 @@ use akita_types::{
 };
 #[cfg(test)]
 use akita_types::{AkitaVerifierSetup, SetupPrefixVerifierRegistry};
-use akita_field::unreduced::HasWide;
-use akita_field::{CanonicalField, FieldCore, RandomSampling};
 #[cfg(feature = "disk-persistence")]
 use std::fmt::Write as _;
 #[cfg(feature = "disk-persistence")]
@@ -576,6 +576,9 @@ mod tests {
                         log_basis: 1,
                         n_a: 1,
                         conservative_n_b: 1,
+                        log_commit_bound: 1,
+                        onehot_chunk_size: 1,
+                        basis_range: (1, 8),
                     },
                     a_key: AjtaiKeyParams::new_unchecked(
                         akita_types::DEFAULT_SIS_SECURITY_BITS,

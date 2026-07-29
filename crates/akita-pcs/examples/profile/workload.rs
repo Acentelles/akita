@@ -3,6 +3,12 @@ use crate::report::{
     print_batched_proof_summary, report_crt_profile, report_setup_sizes, report_timing,
 };
 use akita_config::{CommitmentConfig, ConservativeCommitmentConfig, RecursiveCommitmentConfig};
+use akita_field::unreduced::{HasOptimizedFold, HasUnreducedOps, HasWide, ReduceTo};
+use akita_field::{
+    AdditiveGroup, CanonicalBytes, CanonicalField, ExtField, FieldCore, FrobeniusExtField,
+    FromPrimitiveInt, HalvingField, LiftBase, PseudoMersenneField, RandomSampling,
+    TranscriptChallenge,
+};
 use akita_pcs::AkitaCommitmentScheme;
 use akita_prover::compute::{
     OpeningFoldKernel, OpeningFoldPlan, RecursiveProveBackend, RootPolyShape, RootProvePoly,
@@ -18,12 +24,6 @@ use akita_types::{
     BlockOrder, CleartextWitnessProof, CleartextWitnessShape, Commitment, FpExtEncoding,
     LevelParams, OpeningClaims, OpeningClaimsLayout, PointVariableSelection, PolynomialGroupClaims,
     PolynomialGroupLayout, PrecommittedGroupParams, Schedule, SetupContributionMode, Step,
-};
-use akita_field::unreduced::{HasOptimizedFold, HasUnreducedOps, HasWide, ReduceTo};
-use akita_field::{
-    AdditiveGroup, CanonicalBytes, CanonicalField, ExtField, FieldCore, FrobeniusExtField,
-    FromPrimitiveInt, HalvingField, LiftBase, PseudoMersenneField, RandomSampling,
-    TranscriptChallenge,
 };
 use rand::rngs::StdRng;
 use rand::{Rng, SeedableRng};
@@ -1035,7 +1035,11 @@ pub(crate) fn run_recursive_multi_group_onehot<FF, const D: usize, Cfg>(
                 &setup, &polys, &stack,
             )
             .expect("precommit");
-        pre_frozen.push(PrecommittedGroupParams::from_params(key, &layout));
+        pre_frozen.push(PrecommittedGroupParams::from_params(
+            key,
+            &layout,
+            akita_config::group_bound_policy_of::<Cfg>(),
+        ));
         pre_keys.push(key);
         pre_commitments.push(commitment);
         pre_hints.push(hint);

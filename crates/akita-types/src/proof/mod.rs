@@ -29,9 +29,8 @@ mod tests;
 mod wire;
 
 pub use crate::opening_claims::{
-    sample_public_row_coefficients, should_reject_multi_group_root, OpeningClaims,
-    OpeningClaimsLayout, PointVariableSelection, PolynomialGroupClaims, PolynomialGroupLayout,
-    MULTI_GROUP_ROOT_DENSE_UNSUPPORTED, MULTI_GROUP_ROOT_MULTI_CHUNK_UNSUPPORTED,
+    sample_public_row_coefficients, OpeningClaims, OpeningClaimsLayout, PointVariableSelection,
+    PolynomialGroupClaims, PolynomialGroupLayout, MULTI_GROUP_ROOT_MULTI_CHUNK_UNSUPPORTED,
 };
 pub use batch::{
     append_batched_commitments_to_transcript, append_claim_values_to_transcript,
@@ -112,6 +111,7 @@ pub use terminal_witness::{
 use crate::EXTENSION_OPENING_REDUCTION_DEGREE;
 use akita_algebra::CyclotomicRing;
 use akita_field::AkitaError;
+use akita_field::{CanonicalField, FieldCore, HalvingField};
 use akita_serialization::{AkitaDeserialize, AkitaSerialize, DEFAULT_MAX_SEQUENCE_LEN};
 use akita_serialization::{Compress, SerializationError};
 use akita_serialization::{Valid, Validate};
@@ -120,7 +120,6 @@ use akita_sumcheck::{
     uniform_sumcheck_shape, EqFactoredSumcheckProofShape, SumcheckProof, SumcheckProofShape,
 };
 use akita_transcript::Transcript;
-use akita_field::{CanonicalField, FieldCore, HalvingField};
 use std::io::{Read, Write};
 use std::marker::PhantomData;
 

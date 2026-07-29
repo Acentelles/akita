@@ -4,12 +4,12 @@ use super::setup_prefix::SetupPrefixVerifierRegistry;
 use crate::FlatMatrix;
 #[cfg(test)]
 use akita_algebra::CyclotomicRing;
-use akita_serialization::{
-    AkitaDeserialize, AkitaSerialize, Compress, SerializationError, Valid, Validate,
-};
 #[allow(unused_imports)]
 use akita_field::parallel::*;
 use akita_field::{FieldCore, RandomSampling};
+use akita_serialization::{
+    AkitaDeserialize, AkitaSerialize, Compress, SerializationError, Valid, Validate,
+};
 use rand_core::{CryptoRng, RngCore};
 use sha3::digest::{ExtendableOutput, Update, XofReader};
 use sha3::Shake256;
@@ -535,6 +535,9 @@ mod tests {
                 log_basis: 1,
                 n_a: 1,
                 conservative_n_b: 1,
+                log_commit_bound: 1,
+                onehot_chunk_size: 1,
+                basis_range: (1, 8),
             },
             a_key: crate::AjtaiKeyParams::new_unchecked(
                 crate::sis::DEFAULT_SIS_SECURITY_BITS,

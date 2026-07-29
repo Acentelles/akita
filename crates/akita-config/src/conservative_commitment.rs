@@ -1,4 +1,4 @@
-//! Conservative one-hot commitment config adapter.
+//! Conservative commitment config adapter (one-hot and dense roots).
 //!
 //! This adapter is for staggered workflows that need ordinary commit calls to
 //! use a B rank conservative for a later multi-group root whose final basis is not
@@ -93,7 +93,13 @@ impl<Cfg: CommitmentConfig> CommitmentConfig for ConservativeCommitmentConfig<Cf
     }
 }
 
-pub(crate) fn conservative_precommitted_group_params<Cfg: CommitmentConfig>(
+/// Freeze the conservative precommit layout of `group` under `Cfg`.
+///
+/// Stamps `Cfg`'s commitment-bound policy (`log_commit_bound`,
+/// `onehot_chunk_size`, `basis_range`) into the frozen params so a
+/// multi-group root planned under a *different* preset can re-derive this
+/// group's digit depths and norms under the policy it actually froze with.
+pub fn conservative_precommitted_group_params<Cfg: CommitmentConfig>(
     group: PolynomialGroupLayout,
 ) -> Result<PrecommittedGroupParams, AkitaError> {
     group.validate()?;
@@ -102,7 +108,11 @@ pub(crate) fn conservative_precommitted_group_params<Cfg: CommitmentConfig>(
         <ConservativeCommitmentConfig<Cfg> as CommitmentConfig>::get_params_for_batched_commitment(
             &singleton,
         )?;
-    Ok(PrecommittedGroupParams::from_params(group, &params))
+    Ok(PrecommittedGroupParams::from_params(
+        group,
+        &params,
+        crate::group_bound_policy_of::<Cfg>(),
+    ))
 }
 
 pub(crate) fn conservative_commit_params<Cfg: CommitmentConfig>(
@@ -115,14 +125,9 @@ pub(crate) fn conservative_commit_params<Cfg: CommitmentConfig>(
 pub(crate) fn conservative_commit_schedule<Cfg: CommitmentConfig>(
     key: &PolynomialGroupLayout,
 ) -> Result<Schedule, AkitaError> {
-    if Cfg::decomposition().log_commit_bound != 1 {
-        return Err(AkitaError::InvalidSetup(
-            "conservative commitments require a one-hot config".to_string(),
-        ));
-    }
     key.validate()?;
 
-    let (min_basis, _) = Cfg::basis_range();
+    let min_basis = conservative_frozen_log_basis::<Cfg>()?;
     let mut policy = policy_of::<Cfg>();
     policy.basis_range = (min_basis, min_basis);
     policy.decomposition.log_basis = min_basis;
@@ -137,10 +142,27 @@ pub(crate) fn conservative_commit_schedule<Cfg: CommitmentConfig>(
     Ok(schedule)
 }
 
+/// Frozen precommit log-basis: the smallest configured log-basis the root can
+/// actually use.
+///
+/// One-hot roots with a nontrivial claim extension go through the psi
+/// (tensor-projection) embedding, which can add two source lanes at one
+/// projected ring coefficient; the planner's `[-4, 3]` commitment envelope
+/// therefore requires `log_basis >= 3` at the root. Freezing the precommit
+/// below that can only ever produce an uncommittable root-direct schedule, so
+/// the freeze is raised (conservatively: a wider digit alphabet, no envelope
+/// check removed) to the smallest supported basis. Delegates to
+/// [`akita_planner::PlannerPolicy::frozen_root_log_basis`], which the group
+/// planner's frozen-precommit validation uses as well.
+fn conservative_frozen_log_basis<Cfg: CommitmentConfig>() -> Result<u32, AkitaError> {
+    policy_of::<Cfg>().frozen_root_log_basis()
+}
+
 fn widen_conservative_commit_params<Cfg: CommitmentConfig>(
     params: &mut LevelParams,
 ) -> Result<(), AkitaError> {
-    let (min_basis, max_basis) = Cfg::basis_range();
+    let min_basis = conservative_frozen_log_basis::<Cfg>()?;
+    let (_, max_basis) = Cfg::basis_range();
     if params.log_basis != min_basis {
         return Err(AkitaError::InvalidSetup(
             "conservative commit planner did not use the minimum configured log_basis".to_string(),

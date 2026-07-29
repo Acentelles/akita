@@ -3,18 +3,17 @@ use crate::api::commitment::validate_onehot_chunk_size_for_params;
 use crate::backend::RecursiveFoldSource;
 use crate::compute::{
     CommitmentComputeBackend, ComputeBackendSetup, DigitRowsComputeBackend,
-    DirectRootWitnessSource, LevelProveStacks, ProveStackFor, RootPolyMeta,
-    RuntimeOpeningProveBackendFor, RuntimeRingSwitchProveBackend, RuntimeRootProvePoly,
-    RuntimeTensorBackendFor, SuffixOpeningProveBackend, SuffixTensorProveBackend,
+    DirectRootWitnessSource, LevelProveStacks, ProveStackFor, RuntimeOpeningProveBackendFor,
+    RuntimeRingSwitchProveBackend, RuntimeRootProvePoly, RuntimeTensorBackendFor,
+    SuffixOpeningProveBackend, SuffixTensorProveBackend,
 };
 use crate::RootTensorProjectionPoly;
 use akita_config::{effective_batched_schedule, ensure_schedule_fits_setup, CommitmentConfig};
-use akita_types::{
-    dispatch_for_field, schedule_terminal_direct_witness_shape, should_reject_multi_group_root,
-    validate_schedule_ring_dims,
-};
 use akita_field::unreduced::ReduceTo;
 use akita_field::{AdditiveGroup, CanonicalField};
+use akita_types::{
+    dispatch_for_field, schedule_terminal_direct_witness_shape, validate_schedule_ring_dims,
+};
 
 /// Build a root-direct batched proof from flattened polynomial references and
 /// their commitment-group hints.
@@ -135,14 +134,6 @@ where
     opening_claims.validate(expanded.seed())?;
     let opening_batch = opening_claims.layout()?;
     let flat_polys = claims.flat_polys();
-    if let Some(message) = should_reject_multi_group_root(
-        &opening_batch,
-        flat_polys
-            .iter()
-            .any(|poly| poly.onehot_chunk_size().is_none()),
-    ) {
-        return Err(AkitaError::InvalidInput(message.to_string()));
-    }
     let schedule = effective_batched_schedule::<Cfg>(&opening_batch, claims.point())?;
     validate_schedule_ring_dims(&schedule, expanded.seed())?;
     ensure_schedule_fits_setup::<Cfg>(expanded.as_ref(), &schedule, &opening_batch)?;

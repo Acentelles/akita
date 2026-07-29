@@ -71,6 +71,90 @@ where
     Ok(input_claim)
 }
 
+/// Replayed extension-opening reduction outputs shared by the scalar and
+/// grouped root paths.
+pub(in crate::protocol::core) struct EorReductionReplay<E: FieldCore> {
+    /// Sumcheck challenge point of the reduction.
+    pub(in crate::protocol::core) rho: Vec<E>,
+    /// Final reduced claim at `rho`.
+    pub(in crate::protocol::core) final_claim: E,
+    /// Transparent tensor equality factor at `rho`.
+    pub(in crate::protocol::core) final_factor: E,
+}
+
+/// Replay the extension-opening reduction transcript segment: per-claim
+/// partial checks and absorbs, `eta` sampling, input-claim recomputation, and
+/// the reduction sumcheck. Shared by [`verify_fold_eor`] and the grouped root
+/// replay, which derives its per-group prepared points from `rho` itself.
+///
+/// # Errors
+///
+/// Returns [`AkitaError::InvalidProof`] if the reduction shape, any per-claim
+/// partial reconstruction, or the sumcheck replay fails.
+pub(in crate::protocol::core) fn replay_eor_reduction<F, E, T>(
+    reduction: &ExtensionOpeningReductionProof<E>,
+    challenge_point: &[E],
+    openings: &[E],
+    row_coefficients: &[E],
+    opening_batch: &OpeningClaimsLayout,
+    transcript: &mut T,
+) -> Result<EorReductionReplay<E>, AkitaError>
+where
+    F: FieldCore + CanonicalField,
+    E: FpExtEncoding<F> + ExtField<F> + FrobeniusExtField<F> + FromPrimitiveInt + AkitaSerialize,
+    T: Transcript<F>,
+{
+    if <E as ExtField<F>>::EXT_DEGREE == 1 {
+        return Err(AkitaError::InvalidProof);
+    }
+    let num_claims = opening_batch.num_total_polynomials();
+    if openings.len() != num_claims || row_coefficients.len() != num_claims {
+        return Err(AkitaError::InvalidProof);
+    }
+    let shape = eor_reduction_shape::<F, E>(
+        opening_batch.max_num_vars(),
+        reduction.partials.len(),
+        num_claims,
+    )?;
+    if challenge_point.len() > opening_batch.max_num_vars() {
+        return Err(AkitaError::InvalidProof);
+    }
+    let mut eor_point = challenge_point.to_vec();
+    eor_point.resize(opening_batch.max_num_vars(), E::zero());
+    for (claim_idx, opening) in openings.iter().copied().enumerate().take(num_claims) {
+        let partial_start = claim_idx * shape.width;
+        let partial_end = partial_start + shape.width;
+        let partials = &reduction.partials[partial_start..partial_end];
+        let expected =
+            derive_tensor_extension_opening_claim_from_partials::<F, E>(&eor_point, partials)?;
+        if expected != opening {
+            return Err(AkitaError::InvalidProof);
+        }
+        for partial in partials {
+            append_ext_field::<F, E, T>(transcript, ABSORB_EVALUATION_CLAIMS, partial);
+        }
+    }
+    let eta = (0..shape.split_bits)
+        .map(|_| sample_ext_challenge::<F, E, T>(transcript, CHALLENGE_SUMCHECK_BATCH))
+        .collect::<Vec<_>>();
+    let input_claim =
+        eor_input_claim_from_partials::<F, E>(&reduction.partials, shape, &eta, row_coefficients)?;
+    let (final_claim, rho) = verify_extension_opening_reduction_sumcheck::<F, T, E, _>(
+        input_claim,
+        shape.num_rounds,
+        &reduction.sumcheck,
+        transcript,
+        |tr| sample_ext_challenge::<F, E, T>(tr, CHALLENGE_SUMCHECK_ROUND),
+    )?;
+    let final_factor =
+        tensor_equality_factor_eval_at_point::<F, E>(&eor_point[shape.split_bits..], &eta, &rho)?;
+    Ok(EorReductionReplay {
+        rho,
+        final_claim,
+        final_factor,
+    })
+}
+
 #[allow(clippy::too_many_arguments)]
 pub(in crate::protocol::core) fn verify_fold_eor<F, E, T>(
     extension_opening_reduction: Option<&ExtensionOpeningReductionProof<E>>,
@@ -135,55 +219,16 @@ where
 
     let mut eor_trace_final: Option<(E, Vec<E>)> = None;
     let reduction_check = if let Some(reduction) = extension_opening_reduction {
-        if <E as ExtField<F>>::EXT_DEGREE == 1 {
-            return Err(AkitaError::InvalidProof);
-        }
-        let shape = eor_reduction_shape::<F, E>(
-            opening_batch.max_num_vars(),
-            reduction.partials.len(),
-            num_claims,
-        )?;
-        if challenge_point.len() > opening_batch.max_num_vars() {
-            return Err(AkitaError::InvalidProof);
-        }
-        let mut eor_point = challenge_point.to_vec();
-        eor_point.resize(opening_batch.max_num_vars(), E::zero());
-        for (claim_idx, opening) in openings.iter().copied().enumerate().take(num_claims) {
-            let partial_start = claim_idx * shape.width;
-            let partial_end = partial_start + shape.width;
-            let partials = &reduction.partials[partial_start..partial_end];
-            let expected =
-                derive_tensor_extension_opening_claim_from_partials::<F, E>(&eor_point, partials)?;
-            if expected != opening {
-                return Err(AkitaError::InvalidProof);
-            }
-            for partial in partials {
-                append_ext_field::<F, E, T>(transcript, ABSORB_EVALUATION_CLAIMS, partial);
-            }
-        }
-        let eta = (0..shape.split_bits)
-            .map(|_| sample_ext_challenge::<F, E, T>(transcript, CHALLENGE_SUMCHECK_BATCH))
-            .collect::<Vec<_>>();
-        let input_claim = eor_input_claim_from_partials::<F, E>(
-            &reduction.partials,
-            shape,
-            &eta,
+        let replay = replay_eor_reduction::<F, E, T>(
+            reduction,
+            challenge_point,
+            openings,
             row_coefficients,
-        )?;
-        let (final_claim, rho) = verify_extension_opening_reduction_sumcheck::<F, T, E, _>(
-            input_claim,
-            shape.num_rounds,
-            &reduction.sumcheck,
+            opening_batch,
             transcript,
-            |tr| sample_ext_challenge::<F, E, T>(tr, CHALLENGE_SUMCHECK_ROUND),
         )?;
-        let final_factor = tensor_equality_factor_eval_at_point::<F, E>(
-            &eor_point[shape.split_bits..],
-            &eta,
-            &rho,
-        )?;
-        eor_trace_final = Some((final_claim, vec![final_factor]));
-        Some(rho)
+        eor_trace_final = Some((replay.final_claim, vec![replay.final_factor]));
+        Some(replay.rho)
     } else if requires_reduction && <E as ExtField<F>>::EXT_DEGREE != 1 {
         return Err(AkitaError::InvalidProof);
     } else {

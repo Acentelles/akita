@@ -120,13 +120,17 @@ fn emit_key(key: PolynomialGroupLayout) -> String {
 
 fn emit_precommitted_group_key(layout: &PrecommittedGroupParams) -> String {
     format!(
-        "PrecommittedGroupParams {{ group: {}, m_vars: {}, r_vars: {}, log_basis: {}, n_a: {}, conservative_n_b: {} }}",
+        "PrecommittedGroupParams {{ group: {}, m_vars: {}, r_vars: {}, log_basis: {}, n_a: {}, conservative_n_b: {}, log_commit_bound: {}, onehot_chunk_size: {}, basis_range: ({}, {}) }}",
         emit_key(layout.group),
         layout.m_vars,
         layout.r_vars,
         layout.log_basis,
         layout.n_a,
         layout.conservative_n_b,
+        layout.log_commit_bound,
+        layout.onehot_chunk_size,
+        layout.basis_range.0,
+        layout.basis_range.1,
     )
 }
 

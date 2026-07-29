@@ -494,11 +494,9 @@ where
     F: FieldCore + CanonicalField + FromPrimitiveInt,
     E: FpExtEncoding<F> + ExtField<F> + FromPrimitiveInt,
 {
-    if E::EXT_DEGREE != 1 {
-        return Err(AkitaError::InvalidSetup(
-            "multi-group root trace table currently requires degree-one openings".to_string(),
-        ));
-    }
+    // The per-group closed-form terms are extension-degree generic:
+    // `eval_trace_terms_closed` folds `b_open` in the ring-subfield coordinate
+    // algebra and consumes the psi-packed inner point for any `K`.
     if prepared_points.len() != opening_batch.num_groups()
         || row_coefficients.len() != opening_batch.num_total_polynomials()
     {
@@ -706,8 +704,8 @@ where
 ///
 /// # Errors
 ///
-/// Returns an error for a non-degree-one opening field, mismatched group counts,
-/// or any segment-width arithmetic overflow.
+/// Returns an error for mismatched group counts or any segment-width
+/// arithmetic overflow.
 #[allow(clippy::too_many_arguments)]
 pub fn build_multi_group_root_stage2_trace_table<F, E>(
     ring_d: usize,
@@ -720,14 +718,9 @@ pub fn build_multi_group_root_stage2_trace_table<F, E>(
     live_x_cols: usize,
 ) -> Result<TraceTable<E>, AkitaError>
 where
-    F: FieldCore + CanonicalField + FromPrimitiveInt,
+    F: FieldCore + CanonicalField + FromPrimitiveInt + Invertible,
     E: FpExtEncoding<F> + ExtField<F> + FromPrimitiveInt,
 {
-    if E::EXT_DEGREE != 1 {
-        return Err(AkitaError::InvalidSetup(
-            "multi-group root trace table currently requires degree-one openings".to_string(),
-        ));
-    }
     if live_x_cols == 0 {
         return Err(AkitaError::InvalidProof);
     }
@@ -785,10 +778,13 @@ where
                     .ok_or_else(overflow)?;
             }
 
-            let table_len = live_x_cols.checked_mul(ring_len).ok_or_else(|| {
-                AkitaError::InvalidSetup("multi-group trace table length overflow".to_string())
-            })?;
-            let mut table = vec![E::zero(); table_len];
+            // Only the opening-digit (`e_hat`) columns of the stage-2 witness
+            // carry trace weight; every other column of the `live_x_cols x D`
+            // table is zero. Emit sparse columns (the `TraceTable` sparse and
+            // dense variants fold and read back identical field values), so
+            // the table costs O(sum_g k_g*nb_g*digits_g * D) instead of the
+            // full witness footprint `live_x_cols * D`.
+            let mut columns: Vec<crate::TraceSparseColumn<E>> = Vec::new();
             let mut claim_offset = 0usize;
             for group_index in 0..opening_batch.num_groups() {
                 let group_lp = lp.group_params(opening_batch, group_index)?;
@@ -796,6 +792,38 @@ where
                 let prepared = &prepared_points[group_index];
                 let inner = prepared.packed_inner_owned::<D>()?;
                 let inner_coeffs = inner.coefficients();
+                // Nontrivial claim extensions carry their block weights as
+                // psi-embedded ring multipliers (the base-field
+                // `ring_opening_point.b` is zeroed for extension points); the
+                // per-block trace-open rows are shared across the group's
+                // claims, mirroring the single-group ring-terms table.
+                let ext_block_rows: Option<Vec<Vec<E>>> = if E::EXT_DEGREE == 1 {
+                    None
+                } else {
+                    let block_rings = prepared
+                        .ring_multiplier_point
+                        .b_rings_trusted::<D>()?
+                        .ok_or_else(|| {
+                            AkitaError::InvalidInput(
+                                "extension trace opening point is missing ring block weights"
+                                    .to_string(),
+                            )
+                        })?;
+                    if block_rings.len() < group_lp.num_blocks() {
+                        return Err(AkitaError::InvalidProof);
+                    }
+                    let ring_bits = ring_len.trailing_zeros() as usize;
+                    Some(
+                        block_rings[..group_lp.num_blocks()]
+                            .iter()
+                            .map(|block_ring| {
+                                crate::field_reduction::trace_open_ring_row::<F, E, D>(
+                                    block_ring, &inner, ring_bits,
+                                )
+                            })
+                            .collect::<Result<Vec<_>, _>>()?,
+                    )
+                };
                 let group_block_cols = group_layout
                     .num_polynomials()
                     .checked_mul(group_lp.num_blocks())
@@ -815,13 +843,19 @@ where
                         .unwrap_or_else(E::one);
                     let coefficient = output_scale * row_coefficients[claim_idx] * scale;
                     for block in 0..group_lp.num_blocks() {
-                        let block_weight = prepared
-                            .ring_opening_point
-                            .b
-                            .get(block)
-                            .copied()
-                            .ok_or(AkitaError::InvalidProof)?;
-                        let block_weight = E::lift_base(block_weight);
+                        let ext_row = ext_block_rows.as_ref().map(|rows| rows[block].as_slice());
+                        let block_weight = if ext_row.is_some() {
+                            E::one()
+                        } else {
+                            E::lift_base(
+                                prepared
+                                    .ring_opening_point
+                                    .b
+                                    .get(block)
+                                    .copied()
+                                    .ok_or(AkitaError::InvalidProof)?,
+                            )
+                        };
                         for (plane, gadget_scalar) in gadget.iter().enumerate() {
                             let plane_offset =
                                 plane.checked_mul(group_block_cols).ok_or_else(|| {
@@ -848,29 +882,31 @@ where
                             if col >= live_x_cols {
                                 continue;
                             }
-                            let dst_base = col.checked_mul(ring_len).ok_or_else(|| {
-                                AkitaError::InvalidSetup(
-                                    "multi-group trace row offset overflow".to_string(),
-                                )
-                            })?;
-                            let dst_end = dst_base.checked_add(ring_len).ok_or_else(|| {
-                                AkitaError::InvalidSetup(
-                                    "multi-group trace row overflow".to_string(),
-                                )
-                            })?;
                             let factor = coefficient * block_weight * E::lift_base(*gadget_scalar);
-                            let dst_row = table
-                                .get_mut(dst_base..dst_end)
-                                .ok_or(AkitaError::InvalidProof)?;
-                            for (dst, coeff) in dst_row.iter_mut().zip(inner_coeffs.iter()) {
-                                *dst += factor * E::lift_base(*coeff);
+                            // Zero-initialized row plus one write per coordinate
+                            // reproduces the dense builder's `0 + factor*w`
+                            // exactly (field addition with zero is the identity).
+                            let mut values = vec![E::zero(); ring_len];
+                            match ext_row {
+                                Some(row) => {
+                                    for (dst, weight) in values.iter_mut().zip(row.iter()) {
+                                        *dst = factor * *weight;
+                                    }
+                                }
+                                None => {
+                                    for (dst, coeff) in values.iter_mut().zip(inner_coeffs.iter())
+                                    {
+                                        *dst = factor * E::lift_base(*coeff);
+                                    }
+                                }
                             }
+                            columns.push(crate::TraceSparseColumn { col, values });
                         }
                     }
                 }
                 claim_offset += group_layout.num_polynomials();
             }
-            Ok::<_, AkitaError>(TraceTable::ring_dense(table))
+            Ok::<_, AkitaError>(TraceTable::field_sparse(columns, live_x_cols, ring_len))
         }
     )
 }

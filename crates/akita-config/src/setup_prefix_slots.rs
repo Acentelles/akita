@@ -164,7 +164,11 @@ mod tests {
         let pre_params =
             crate::conservative_commitment::conservative_commit_params::<SetupCfg>(&pre)
                 .expect("precommit params");
-        let precommitted = PrecommittedGroupParams::from_params(pre, &pre_params);
+        let precommitted = PrecommittedGroupParams::from_params(
+            pre,
+            &pre_params,
+            crate::group_bound_policy_of::<SetupCfg>(),
+        );
         AkitaScheduleLookupKey {
             final_group: PolynomialGroupLayout::new(32, 2),
             precommitteds: vec![precommitted, precommitted],

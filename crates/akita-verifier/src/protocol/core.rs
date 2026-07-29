@@ -15,6 +15,10 @@ use crate::stages::stage1::{
 use crate::stages::stage2::{stage2_cleartext_oracle, AkitaStage2Verifier, Stage2WitnessOracle};
 use crate::stages::SetupSumcheckVerifier;
 use akita_field::AkitaError;
+use akita_field::{
+    CanonicalField, ExtField, FieldCore, FrobeniusExtField, FromPrimitiveInt, HalvingField,
+    MulBaseUnreduced, PseudoMersenneField, RandomSampling,
+};
 use akita_serialization::AkitaSerialize;
 use akita_sumcheck::SumcheckInstanceVerifierExt;
 use akita_transcript::labels::{
@@ -45,10 +49,6 @@ use akita_types::{
     tensor_opening_split, tensor_reduction_claim_from_rows, tensor_row_partials_from_columns,
 };
 use extension_opening_reduction::verify_extension_opening_reduction_sumcheck;
-use akita_field::{
-    CanonicalField, ExtField, FieldCore, FrobeniusExtField, FromPrimitiveInt, HalvingField,
-    MulBaseUnreduced, PseudoMersenneField, RandomSampling,
-};
 
 mod fold;
 mod root_fold;
@@ -61,7 +61,7 @@ pub(in crate::protocol::core) type SetupPrefixOpening<E> = (Vec<E>, E);
 pub(in crate::protocol::core) type FoldVerifyOutput<E> = (Vec<E>, Option<SetupPrefixOpening<E>>);
 
 pub(in crate::protocol::core) use fold::{
-    verify_fold, verify_fold_eor, FoldEorReplay, PreparedFoldReplay,
+    replay_eor_reduction, verify_fold, verify_fold_eor, FoldEorReplay, PreparedFoldReplay,
 };
 
 fn prepare_terminal_witness_replay<F, T>(

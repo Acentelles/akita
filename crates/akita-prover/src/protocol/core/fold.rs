@@ -102,6 +102,10 @@ where
     // the claim polynomials at this level's fold ring.
     let ring_d = level_params.role_dims().d_a();
     let (protocol_point, row_coefficients, reduction) = if needs_extension_reduction {
+        // Multi-group roots pass their real grouped layout so shorter groups
+        // are reduced at their own point prefix and lifted by constant
+        // extension; single-group batches keep the historical flat path.
+        let claim_layout = (opening_batch.num_groups() > 1).then_some(&opening_batch);
         let proved = dispatch_for_field!(
             ProtocolDispatchSlot::Role(RingRole::Inner),
             F,
@@ -112,6 +116,7 @@ where
                     Some(tensor.prepared()),
                     eor_polys,
                     eor_opening_batch,
+                    claim_layout,
                     pad_base_evals,
                     transcript,
                     if pad_base_evals { "recursive" } else { "root" },
@@ -937,7 +942,7 @@ where
         rs.col_bits,
         rs.ring_bits,
         relation_claim,
-        trace_compact.clone(),
+        trace_compact,
         trace_opening_claim,
     )
     .map_err(|err| {
@@ -1021,10 +1026,10 @@ where
 #[cfg(all(test, feature = "logging-transcript"))]
 mod transcript_schedule_tests {
     use super::*;
+    use akita_field::{Fp32, FpExt2, NegOneNr};
     use akita_transcript::{
         is_ext_limb_label, labels, AkitaTranscript, LoggingTranscript, Transcript, TranscriptEvent,
     };
-    use akita_field::{Fp32, FpExt2, NegOneNr};
 
     type F = Fp32<251>;
     type E = FpExt2<F, NegOneNr>;

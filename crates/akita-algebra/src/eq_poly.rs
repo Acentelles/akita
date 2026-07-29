@@ -25,7 +25,16 @@ use std::panic::Location;
 /// This is deliberately separate from serialization's generic sequence cap:
 /// equality tables may be larger than serialized proof vectors, but verifier-
 /// reachable code still needs an explicit allocation ceiling.
-pub const MAX_MATERIALIZED_EQ_TABLE_BYTES: usize = 1 << 30;
+///
+/// Load-bearing sizing: 16 GiB assumes the production prover host (M3 Max,
+/// 96 GB). Grouped extension-opening reductions no longer materialize
+/// full-tail factors (they use virtual tiling / lazy tensor factors), so in
+/// practice this cap is headroom for full-arity dense shapes at >= 2^30
+/// padded root variables (a 31-variable root's dense tail factor is 8 GiB),
+/// not a working-set requirement. It remains a guard against runaway
+/// allocations on verifier-reachable paths; do not treat values under it as
+/// cheap.
+pub const MAX_MATERIALIZED_EQ_TABLE_BYTES: usize = 1 << 34;
 
 /// Utilities for the equality polynomial `eq(x, y) = Πᵢ (xᵢ yᵢ + (1 − xᵢ)(1 − yᵢ))`.
 pub struct EqPolynomial<E: FieldCore>(PhantomData<E>);

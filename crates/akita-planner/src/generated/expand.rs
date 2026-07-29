@@ -76,6 +76,11 @@ impl GeneratedSetupPrefixGroup {
             .checked_add(r_vars)
             .and_then(|n| n.checked_add(d.trailing_zeros() as usize))
             .ok_or_else(|| AkitaError::InvalidSetup("setup-prefix num_vars overflow".into()))?;
+        // Setup-prefix groups are internal recursion children planned under
+        // the active policy; their frozen bound policy is the policy's own.
+        // Must stay byte-identical to the DP-side construction in
+        // `schedule_params::candidate` (both feed the descriptor via the
+        // setup-prefix slot id).
         let layout = PrecommittedGroupParams {
             group: PolynomialGroupLayout::singleton(prefix_num_vars),
             m_vars,
@@ -83,6 +88,9 @@ impl GeneratedSetupPrefixGroup {
             log_basis,
             n_a: self.n_a as usize,
             conservative_n_b: self.n_b as usize,
+            log_commit_bound: policy.decomposition.log_commit_bound,
+            onehot_chunk_size: policy.onehot_chunk_size,
+            basis_range: policy.basis_range,
         };
         let decomp = DecompositionParams {
             log_basis,

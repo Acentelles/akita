@@ -227,9 +227,26 @@ fn precommitted_groups_cmp(
         .unwrap_or(std::cmp::Ordering::Equal)
 }
 
+type PrecommittedGroupSortKey = (
+    usize,
+    usize,
+    usize,
+    usize,
+    u32,
+    usize,
+    usize,
+    u32,
+    usize,
+    (u32, u32),
+);
+
 fn precommitted_group_sort_key(
     key: &akita_types::PrecommittedGroupParams,
-) -> (usize, usize, usize, usize, u32, usize, usize) {
+) -> PrecommittedGroupSortKey {
+    // The frozen bound-policy fields sort *after* the layout fields so tables
+    // generated before per-group bounds existed keep their entry order; they
+    // still participate in lookup so a mixed-bound runtime key can never
+    // alias a same-shape entry frozen under a different bound policy.
     (
         key.group.num_vars(),
         key.group.num_polynomials(),
@@ -238,6 +255,9 @@ fn precommitted_group_sort_key(
         key.log_basis,
         key.n_a,
         key.conservative_n_b,
+        key.log_commit_bound,
+        key.onehot_chunk_size,
+        key.basis_range,
     )
 }
 
@@ -264,6 +284,9 @@ fn precommitted_group_key_eq(
         && generated.log_basis == layout.log_basis
         && generated.n_a == layout.n_a
         && generated.conservative_n_b == layout.conservative_n_b
+        && generated.log_commit_bound == layout.log_commit_bound
+        && generated.onehot_chunk_size == layout.onehot_chunk_size
+        && generated.basis_range == layout.basis_range
 }
 
 /// Returns an error when the generated key does not match the runtime key.

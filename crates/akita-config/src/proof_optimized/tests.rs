@@ -1,6 +1,8 @@
 use super::*;
 use akita_challenges::SparseChallengeConfig;
 #[cfg(feature = "schedules-default")]
+use akita_field::{CanonicalField, One};
+#[cfg(feature = "schedules-default")]
 use akita_planner::generated::GeneratedScheduleTable;
 #[cfg(feature = "schedules-default")]
 use akita_planner::schedule_from_entry;
@@ -15,8 +17,6 @@ use akita_schedules::{
 };
 #[cfg(feature = "schedules-default")]
 use akita_types::SisModulusFamily;
-#[cfg(feature = "schedules-default")]
-use akita_field::{CanonicalField, One};
 
 #[cfg(feature = "schedules-default")]
 const MAX_I8_LOG_BASIS: u32 = 6;
@@ -602,7 +602,16 @@ fn recursive_setup_envelope_counts_setup_prefix_d_segment() {
         successor.setup_prefix = Some(setup_prefix_slot_id(
             SETUP_OFFLOAD_D_SETUP,
             natural_len,
-            setup_prefix_precommitted_params(&root, n_prefix).expect("prefix params"),
+            setup_prefix_precommitted_params(
+                &root,
+                n_prefix,
+                akita_types::GroupBoundPolicy {
+                    log_commit_bound: 1,
+                    onehot_chunk_size: 1,
+                    basis_range: (1, 8),
+                },
+            )
+            .expect("prefix params"),
         ));
         add_setup_prefix_d_width(&mut successor);
 

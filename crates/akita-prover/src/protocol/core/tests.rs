@@ -1,12 +1,12 @@
 use super::*;
 use crate::RecursiveWitnessFlat;
 use akita_config::{proof_optimized::fp128::D64OneHot, CommitmentConfig};
+use akita_field::{Fp32, FpExt2, NegOneNr};
 use akita_transcript::AkitaTranscript;
 use akita_types::{
     OpeningClaims, OpeningClaimsLayout, PointVariableSelection, PolynomialGroupClaims,
     PolynomialGroupLayout,
 };
-use akita_field::{Fp32, FpExt2, NegOneNr};
 
 type F = Fp32<251>;
 type E = FpExt2<F, NegOneNr>;
@@ -38,6 +38,7 @@ fn recursive_extension_opening_reduction_pads_to_opening_cube() {
         None,
         &logical_polys,
         &opening_batch,
+        None,
         true,
         &mut transcript,
         "recursive",

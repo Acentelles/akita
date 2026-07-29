@@ -873,6 +873,287 @@ fn proof_claim(witness_evals: &[F], factor_evals: &[F]) -> F {
 }
 
 // ---------------------------------------------------------------------------
+// Virtual tiling (grouped roots): differential and large-domain probes.
+//
+// Grouped extension-opening reductions lift shorter groups into the joint
+// tail domain by constant extension. The virtual-tiling terms
+// (`new_tiled_dense` / `new_tiled_sparse`) must emit round messages, final
+// claims, and final `(witness, factor)` oracles identical to physically
+// materialized tiling (witness table repeated `copies` times against the
+// dense full-tail factor). Field elements are canonical residues, so
+// structural equality of the proofs below is byte equality of the emitted
+// proof stream.
+mod virtual_tiling {
+    use super::*;
+    use akita_prover::protocol::extension_opening_reduction::ExtensionOpeningReductionTerm as Term;
+
+    type B32 = Prime32Offset99;
+    type E32 = FpExt4<B32>;
+
+    fn e32(a: u64, b: u64, c: u64, d: u64) -> E32 {
+        E32::from_base_slice(&[
+            B32::from_u64(a),
+            B32::from_u64(b),
+            B32::from_u64(c),
+            B32::from_u64(d),
+        ])
+    }
+
+    fn tail_point(len: usize) -> Vec<E32> {
+        (0..len as u64)
+            .map(|i| e32(3 * i + 7, 5 * i + 11, 2 * i + 1, 7 * i + 3))
+            .collect()
+    }
+
+    fn eta() -> Vec<E32> {
+        vec![e32(17, 19, 4, 6), e32(8, 2, 13, 5)]
+    }
+
+    fn dense_group_witness(len: usize) -> Vec<E32> {
+        (0..len as u64)
+            .map(|i| e32(31 + 2 * i, 37 + 3 * i, 5 + i, 11 + 4 * i))
+            .collect()
+    }
+
+    fn sparse_group_witness(table_len: usize) -> SparseExtensionOpeningWitness<E32> {
+        let entries = [1usize, 2, 5, 11, 17, 29]
+            .into_iter()
+            .filter(|&idx| idx < table_len)
+            .enumerate()
+            .map(|(entry_idx, table_idx)| {
+                let i = entry_idx as u64;
+                (table_idx, e32(41 + 2 * i, 43 + 3 * i, 3 + i, 9 + 5 * i))
+            })
+            .collect::<Vec<_>>();
+        SparseExtensionOpeningWitness::new(table_len, entries).unwrap()
+    }
+
+    /// Physically tile a dense group table `copies` times end-to-end.
+    fn materialize_dense_tiling(group: &[E32], copies: usize) -> Vec<E32> {
+        let mut tiled = Vec::with_capacity(group.len() * copies);
+        for _ in 0..copies {
+            tiled.extend_from_slice(group);
+        }
+        tiled
+    }
+
+    /// Build the same four-term grouped batch either materialized or virtual.
+    ///
+    /// Shape (full tail: 8 variables, i.e. a 10-variable padded root at
+    /// `split_bits = 2`):
+    /// - dense group with a 4-variable tail (16 copies),
+    /// - sparse group with a 5-variable tail (8 copies, lazy inner factor),
+    /// - dense group with a 0-variable tail (fully replicated single value),
+    /// - a full-arity dense control term, identical on both sides.
+    fn build_terms(materialized: bool) -> Vec<Term<E32>> {
+        let tail = tail_point(8);
+        let eta = eta();
+        let coeffs = [e32(23, 29, 9, 15), e32(3, 1, 4, 1), e32(5, 9, 2, 6)];
+
+        let dense_group = dense_group_witness(16);
+        let sparse_group = sparse_group_witness(32);
+        let scalar_group = dense_group_witness(1);
+        let control_witness = dense_group_witness(256);
+        let control_factor = tensor_equality_factor_evals::<B32, E32>(&tail, &eta).unwrap();
+        let control =
+            Term::new(control_witness, control_factor.clone(), e32(7, 6, 5, 4)).unwrap();
+
+        if materialized {
+            vec![
+                Term::new(
+                    materialize_dense_tiling(&dense_group, 16),
+                    control_factor.clone(),
+                    coeffs[0],
+                )
+                .unwrap(),
+                Term::new_sparse(
+                    sparse_group.tiled(8).unwrap(),
+                    control_factor.clone(),
+                    coeffs[1],
+                )
+                .unwrap(),
+                Term::new(
+                    materialize_dense_tiling(&scalar_group, 256),
+                    control_factor,
+                    coeffs[2],
+                )
+                .unwrap(),
+                control,
+            ]
+        } else {
+            vec![
+                Term::new_tiled_dense::<B32>(dense_group, &tail, &eta, coeffs[0]).unwrap(),
+                // Lazy inner factor shallower than the group tail (3 < 5)
+                // exercises the in-group materialization boundary too.
+                Term::new_tiled_sparse::<B32>(sparse_group, &tail, &eta, coeffs[1], 3).unwrap(),
+                Term::new_tiled_dense::<B32>(scalar_group, &tail, &eta, coeffs[2]).unwrap(),
+                control,
+            ]
+        }
+    }
+
+    /// Round-by-round differential: every round univariate, the folded final
+    /// `(coeff, witness, factor)` triples, and the input claims must agree
+    /// exactly between materialized and virtual tiling.
+    #[test]
+    fn virtual_tiling_matches_materialized_rounds() {
+        let materialized_terms = build_terms(true);
+        let virtual_terms = build_terms(false);
+
+        let claim =
+            ExtensionOpeningReductionProver::input_claim_from_terms(&materialized_terms).unwrap();
+        assert_eq!(
+            ExtensionOpeningReductionProver::input_claim_from_terms(&virtual_terms).unwrap(),
+            claim,
+            "input claims diverge"
+        );
+
+        let mut materialized_prover =
+            ExtensionOpeningReductionProver::new(materialized_terms, claim).unwrap();
+        let mut virtual_prover =
+            ExtensionOpeningReductionProver::new(virtual_terms, claim).unwrap();
+        assert_eq!(materialized_prover.num_rounds(), 8);
+        assert_eq!(virtual_prover.num_rounds(), 8);
+
+        let mut claim = claim;
+        for round in 0..8 {
+            let materialized_round = materialized_prover.compute_round_univariate(round, claim);
+            let virtual_round = virtual_prover.compute_round_univariate(round, claim);
+            assert_eq!(
+                virtual_round, materialized_round,
+                "round {round} univariate diverged"
+            );
+
+            let challenge = e32(
+                83 + 2 * round as u64,
+                89 + 3 * round as u64,
+                5 + round as u64,
+                11 + round as u64,
+            );
+            claim = materialized_round.evaluate(&challenge);
+            materialized_prover.ingest_challenge(round, challenge);
+            virtual_prover.ingest_challenge(round, challenge);
+        }
+
+        assert_eq!(
+            virtual_prover.final_terms(),
+            materialized_prover.final_terms(),
+            "final (coeff, witness, factor) triples diverged"
+        );
+    }
+
+    /// Full transcript-driven differential: the emitted sumcheck proof, the
+    /// derived challenge point, and the final claim must be identical, so the
+    /// virtually tiled prover is byte-for-byte indistinguishable downstream.
+    #[test]
+    fn virtual_tiling_produces_identical_proofs() {
+        let run = |materialized: bool| {
+            let terms = build_terms(materialized);
+            let claim = ExtensionOpeningReductionProver::input_claim_from_terms(&terms).unwrap();
+            let mut prover = ExtensionOpeningReductionProver::new(terms, claim).unwrap();
+            let mut transcript = <AkitaTranscript<B32> as Transcript<B32>>::new(
+                tr_labels::DOMAIN_AKITA_PROTOCOL,
+            );
+            let (proof, challenges, final_claim) = prover
+                .prove::<B32, _, _>(&mut transcript, |tr| {
+                    akita_transcript::sample_ext_challenge::<B32, E32, _>(
+                        tr,
+                        tr_labels::CHALLENGE_SUMCHECK_ROUND,
+                    )
+                })
+                .unwrap();
+            (proof, challenges, final_claim, prover.final_terms().unwrap())
+        };
+
+        let materialized = run(true);
+        let virtual_run = run(false);
+        assert_eq!(virtual_run.0, materialized.0, "sumcheck proofs diverged");
+        assert_eq!(virtual_run.1, materialized.1, "challenge points diverged");
+        assert_eq!(virtual_run.2, materialized.2, "final claims diverged");
+        assert_eq!(virtual_run.3, materialized.3, "final terms diverged");
+    }
+
+    /// Probe a 30-variable padded root domain (28-variable tail at
+    /// `split_bits = 2`) with virtually tiled dense and sparse groups.
+    ///
+    /// Materialized tiling would need a dense full-tail factor of `2^28`
+    /// extension elements (4 GiB) plus a tiled dense witness of another
+    /// `2^28`. The virtual path must build the terms without any table over
+    /// the tail domain (group-sized allocations only, so the equality-table
+    /// budget check is never consulted for the tail), run all 28 rounds, and
+    /// open the original group tables at the challenge prefixes.
+    #[test]
+    fn virtual_tiling_handles_30_var_root_domain() {
+        let tail = tail_point(28);
+        let eta = eta();
+
+        let dense_group = dense_group_witness(1 << 10);
+        let sparse_group = sparse_group_witness(1 << 12);
+        let coeff_dense = e32(23, 29, 9, 15);
+        let coeff_sparse = e32(3, 1, 4, 1);
+
+        let terms = vec![
+            Term::new_tiled_dense::<B32>(dense_group.clone(), &tail, &eta, coeff_dense)
+                .expect("tiled dense term must not materialize the tail domain"),
+            Term::new_tiled_sparse::<B32>(
+                sparse_group.clone(),
+                &tail,
+                &eta,
+                coeff_sparse,
+                SPARSE_TENSOR_FACTOR_MAX_LAZY_ROUNDS,
+            )
+            .expect("tiled sparse term must not materialize the tail domain"),
+        ];
+        let claim = ExtensionOpeningReductionProver::input_claim_from_terms(&terms).unwrap();
+        let mut prover = ExtensionOpeningReductionProver::new(terms, claim).unwrap();
+        assert_eq!(prover.num_rounds(), 28);
+
+        let mut transcript =
+            <AkitaTranscript<B32> as Transcript<B32>>::new(tr_labels::DOMAIN_AKITA_PROTOCOL);
+        let (_proof, challenges, final_claim) = prover
+            .prove::<B32, _, _>(&mut transcript, |tr| {
+                akita_transcript::sample_ext_challenge::<B32, E32, _>(
+                    tr,
+                    tr_labels::CHALLENGE_SUMCHECK_ROUND,
+                )
+            })
+            .unwrap();
+        assert_eq!(challenges.len(), 28);
+
+        // The shared transparent factor at the challenge point.
+        let expected_factor =
+            tensor_equality_factor_eval_at_point::<B32, E32>(&tail, &eta, &challenges).unwrap();
+
+        // Constant extension semantics: the tiled MLE at the joint point
+        // equals the original group MLE at the low-variable prefix.
+        let expected_dense_witness =
+            akita_sumcheck::multilinear_eval(&dense_group, &challenges[..10]).unwrap();
+        let mut sparse_dense = vec![E32::zero(); sparse_group.table_len()];
+        for &(idx, value) in sparse_group.entries() {
+            sparse_dense[idx] = value;
+        }
+        let expected_sparse_witness =
+            akita_sumcheck::multilinear_eval(&sparse_dense, &challenges[..12]).unwrap();
+
+        let final_terms = prover.final_terms().unwrap();
+        assert_eq!(final_terms.len(), 2);
+        assert_eq!(
+            final_terms[0],
+            (coeff_dense, expected_dense_witness, expected_factor)
+        );
+        assert_eq!(
+            final_terms[1],
+            (coeff_sparse, expected_sparse_witness, expected_factor)
+        );
+        assert_eq!(
+            final_claim,
+            coeff_dense * expected_dense_witness * expected_factor
+                + coeff_sparse * expected_sparse_witness * expected_factor
+        );
+    }
+}
+
+// ---------------------------------------------------------------------------
 // Regression: EOR round messages must honor `DELAYED_PRODUCT_SUM_IS_EXACT`.
 //
 // `accumulate_dense_round`, `fused_fold_and_accumulate`, and the sparse

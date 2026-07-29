@@ -71,6 +71,51 @@ impl ExecutionSchedule {
     }
 }
 
+/// Commitment-bound policy a standalone group froze under.
+///
+/// These are config-declared statics of the *committing* preset (its
+/// `decomposition().log_commit_bound`, `onehot_chunk_size()`, and
+/// `basis_range()`), captured so a multi-group root can mix groups whose
+/// bounds differ from the proving preset's policy. They are always derived
+/// verifier-side from the config (never from prover bytes) and are bound into
+/// the transcript instance descriptor via
+/// [`PrecommittedGroupParams::append_descriptor_bytes`].
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+pub struct GroupBoundPolicy {
+    /// Bit-width of the largest committed coefficient of this group
+    /// (the committing preset's `decomposition().log_commit_bound`).
+    pub log_commit_bound: u32,
+    /// One-hot chunk-size hint of the committing preset
+    /// (`onehot_chunk_size()`); consulted only when `log_commit_bound == 1`.
+    pub onehot_chunk_size: usize,
+    /// Inclusive `(min, max)` log-basis range of the committing preset
+    /// (`basis_range()`). `min` pins the frozen root log-basis derivation;
+    /// `max` pins the conservative B-role norm basis the precommit widened to.
+    pub basis_range: (u32, u32),
+}
+
+impl GroupBoundPolicy {
+    /// Validate structural well-formedness of the frozen bound policy.
+    pub fn validate(&self) -> Result<(), AkitaError> {
+        if self.log_commit_bound == 0 {
+            return Err(AkitaError::InvalidSetup(
+                "frozen group bound policy requires nonzero log_commit_bound".to_string(),
+            ));
+        }
+        if self.onehot_chunk_size == 0 {
+            return Err(AkitaError::InvalidSetup(
+                "frozen group bound policy requires nonzero onehot_chunk_size".to_string(),
+            ));
+        }
+        if self.basis_range.0 == 0 || self.basis_range.1 < self.basis_range.0 {
+            return Err(AkitaError::InvalidSetup(
+                "frozen group bound policy requires a nonempty positive basis range".to_string(),
+            ));
+        }
+        Ok(())
+    }
+}
+
 /// Root layout metadata frozen when a standalone commitment group is created.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub struct PrecommittedGroupParams {
@@ -86,11 +131,25 @@ pub struct PrecommittedGroupParams {
     pub n_a: usize,
     /// Conservative B-role row count used by the standalone precommit.
     pub conservative_n_b: usize,
+    /// Commitment bound (bit-width) this group froze under; see
+    /// [`GroupBoundPolicy::log_commit_bound`].
+    pub log_commit_bound: u32,
+    /// One-hot chunk-size hint this group froze under; see
+    /// [`GroupBoundPolicy::onehot_chunk_size`].
+    pub onehot_chunk_size: usize,
+    /// Log-basis search range this group froze under; see
+    /// [`GroupBoundPolicy::basis_range`].
+    pub basis_range: (u32, u32),
 }
 
 impl PrecommittedGroupParams {
-    /// Build frozen group metadata from the concrete commit params.
-    pub fn from_params(group: PolynomialGroupLayout, params: &LevelParams) -> Self {
+    /// Build frozen group metadata from the concrete commit params plus the
+    /// committing preset's bound policy.
+    pub fn from_params(
+        group: PolynomialGroupLayout,
+        params: &LevelParams,
+        bound_policy: GroupBoundPolicy,
+    ) -> Self {
         Self {
             group,
             m_vars: params.m_vars,
@@ -98,6 +157,18 @@ impl PrecommittedGroupParams {
             log_basis: params.log_basis,
             n_a: params.a_key.row_len(),
             conservative_n_b: params.b_key.row_len(),
+            log_commit_bound: bound_policy.log_commit_bound,
+            onehot_chunk_size: bound_policy.onehot_chunk_size,
+            basis_range: bound_policy.basis_range,
+        }
+    }
+
+    /// The frozen commitment-bound policy of this group.
+    pub fn bound_policy(&self) -> GroupBoundPolicy {
+        GroupBoundPolicy {
+            log_commit_bound: self.log_commit_bound,
+            onehot_chunk_size: self.onehot_chunk_size,
+            basis_range: self.basis_range,
         }
     }
 
@@ -109,11 +180,20 @@ impl PrecommittedGroupParams {
         push_u32(bytes, self.log_basis);
         push_usize(bytes, self.n_a);
         push_usize(bytes, self.conservative_n_b);
+        // Per-group bound policy: binding these makes the transcript instance
+        // descriptor the arbiter of which bound/basis policy each precommitted
+        // group froze under. The verifier reconstructs these from its own
+        // config statics, so a prover cannot substitute a different policy.
+        push_u32(bytes, self.log_commit_bound);
+        push_usize(bytes, self.onehot_chunk_size);
+        push_u32(bytes, self.basis_range.0);
+        push_u32(bytes, self.basis_range.1);
     }
 
     /// Validate that this layout is a well-formed standalone commitment group.
     pub fn validate(&self) -> Result<(), AkitaError> {
         self.group.validate()?;
+        self.bound_policy().validate()?;
         if self.group.num_polynomials() != 1 {
             return Err(AkitaError::InvalidSetup(format!(
                 "precommitted groups must contain exactly one polynomial, got {}",

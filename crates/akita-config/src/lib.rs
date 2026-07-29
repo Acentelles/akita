@@ -10,6 +10,7 @@
 
 use akita_challenges::{SparseChallengeConfig, TensorChallengeShape};
 use akita_field::AkitaError;
+use akita_field::{CanonicalField, ExtField, FieldCore, MulBaseUnreduced};
 use akita_planner::PlannerPolicy;
 use akita_serialization::{AkitaDeserialize, AkitaSerialize, Valid};
 use akita_transcript::{append_ext_field, sample_ext_challenge, Transcript};
@@ -19,7 +20,6 @@ use akita_types::{
     AkitaScheduleInputs, AkitaScheduleLookupKey, ChunkedWitnessCfg, DecompositionParams,
     LevelParams, OpeningClaimsLayout, Schedule, SetupMatrixEnvelope, SisModulusFamily, Step,
 };
-use akita_field::{CanonicalField, ExtField, FieldCore, MulBaseUnreduced};
 
 /// Define a multi-chunk companion preset that delegates every layout-affecting
 /// parameter to a base `Cfg` and overrides only the multi-chunk witness config
@@ -99,6 +99,7 @@ macro_rules! impl_multi_chunk_companion {
 pub mod conservative_commitment;
 pub mod generated_families;
 mod matrix_envelope;
+pub mod mixed_precommit;
 pub mod proof_optimized;
 pub mod recursive_commitment;
 pub mod schedule_selection;
@@ -108,6 +109,7 @@ pub mod tensor_verifier;
 pub mod test_support;
 mod transcript_binding;
 pub use conservative_commitment::ConservativeCommitmentConfig;
+pub use mixed_precommit::MixedPrecommitConfig;
 pub use proof_optimized::{ensure_schedule_fits_setup, setup_level_params_from_schedule};
 pub use recursive_commitment::RecursiveCommitmentConfig;
 pub use schedule_selection::effective_batched_schedule;
@@ -122,6 +124,20 @@ pub use transcript_binding::bind_transcript_instance_descriptor;
 /// from the `Cfg` impl, so the `Cfg` impl stays the one source of truth for
 /// each preset's `(D, decomposition, sis_family, …)`. Never hand-write a
 /// `PlannerPolicy` literal per preset.
+/// The commitment-bound policy a preset freezes into standalone precommits:
+/// its `log_commit_bound`, one-hot chunk-size hint, and log-basis range.
+///
+/// These are config-declared statics; they are captured into
+/// [`akita_types::PrecommittedGroupParams`] at precommit time and bound into
+/// the transcript instance descriptor, never read from prover bytes.
+pub fn group_bound_policy_of<Cfg: CommitmentConfig>() -> akita_types::GroupBoundPolicy {
+    akita_types::GroupBoundPolicy {
+        log_commit_bound: Cfg::decomposition().log_commit_bound,
+        onehot_chunk_size: Cfg::onehot_chunk_size(),
+        basis_range: Cfg::basis_range(),
+    }
+}
+
 pub fn policy_of<Cfg: CommitmentConfig>() -> PlannerPolicy {
     PlannerPolicy {
         ring_dimension: Cfg::D,
@@ -304,6 +320,38 @@ pub trait CommitmentConfig: Clone + Send + Sync + 'static {
         true
     }
 
+    /// Frozen conservative precommit params for the multi-group precommitted
+    /// group at `group_index` (transcript order).
+    ///
+    /// This is the verifier-side reconstruction of each precommitted group's
+    /// frozen layout, so it must be a **config-declared static function of
+    /// `(group_index, group)`** — never derived from prover-supplied bytes.
+    /// The returned params (including the group's `log_commit_bound`,
+    /// `onehot_chunk_size`, and `basis_range`) enter the runtime schedule key
+    /// and, through it, the transcript instance descriptor; the descriptor is
+    /// the arbiter if a committing adapter and a proving preset ever
+    /// disagree, so a mismatch rejects at verify time rather than being
+    /// trusted from either side.
+    ///
+    /// Default: every precommitted group froze under **this** preset's
+    /// conservative-rank adapter (`ConservativeCommitmentConfig<Self>`), the
+    /// only behavior that existed before mixed-bound roots. Mixed-bound
+    /// proving configs (e.g.
+    /// [`crate::mixed_precommit::MixedPrecommitConfig`]) override this with a
+    /// static per-index preset map; the committing adapter for group `i` and
+    /// this hook must produce byte-identical frozen params.
+    ///
+    /// # Errors
+    ///
+    /// Propagates conservative precommit planning failures for `group`.
+    fn precommitted_group_params(
+        group_index: usize,
+        group: akita_types::PolynomialGroupLayout,
+    ) -> Result<akita_types::PrecommittedGroupParams, AkitaError> {
+        let _ = group_index;
+        crate::conservative_commitment::conservative_precommitted_group_params::<Self>(group)
+    }
+
     /// Build the runtime [`Schedule`] for `key`.
     ///
     /// Scalar openings use `AkitaScheduleLookupKey::single(group_key)` with an
@@ -378,10 +426,10 @@ pub trait CommitmentConfig: Clone + Send + Sync + 'static {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use akita_field::{Fp32, FpExt4};
     use akita_transcript::{
         append_ext_field, labels, sample_ext_challenge, AkitaTranscript, Transcript,
     };
-    use akita_field::{Fp32, FpExt4};
 
     type Base = Fp32<251>;
     type BaseExt = FpExt4<Base>;

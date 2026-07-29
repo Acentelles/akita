@@ -180,6 +180,49 @@ impl<E: FieldCore> SparseExtensionOpeningWitness<E> {
         self.table_len
     }
 
+    /// Tile this witness `copies` times into a larger table.
+    ///
+    /// This is the sparse constant extension in the high tail variables: the
+    /// dense table it represents is the original table repeated end-to-end, so
+    /// its MLE at a point equals the original MLE at the low-variable prefix.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if `copies` is not a nonzero power of two or the tiled
+    /// table length overflows.
+    pub fn tiled(&self, copies: usize) -> Result<Self, AkitaError> {
+        if copies == 0 || !copies.is_power_of_two() {
+            return Err(AkitaError::InvalidInput(
+                "sparse extension-opening witness tiling requires a power-of-two copy count"
+                    .to_string(),
+            ));
+        }
+        if copies == 1 {
+            return Ok(self.clone());
+        }
+        let table_len = self.table_len.checked_mul(copies).ok_or_else(|| {
+            AkitaError::InvalidInput(
+                "sparse extension-opening witness tiled length overflow".to_string(),
+            )
+        })?;
+        let mut entries =
+            Vec::with_capacity(self.entries.len().checked_mul(copies).ok_or_else(|| {
+                AkitaError::InvalidInput(
+                    "sparse extension-opening witness tiled entry count overflow".to_string(),
+                )
+            })?);
+        for copy in 0..copies {
+            let offset = copy * self.table_len;
+            entries.extend(
+                self.entries
+                    .iter()
+                    .map(|&(idx, value)| (idx + offset, value)),
+            );
+        }
+        // Entries stay strictly sorted, unique, and nonzero under tiling.
+        Self::from_sorted_unique_entries(table_len, entries)
+    }
+
     /// Nonzero sparse entries, sorted by table index.
     pub fn entries(&self) -> &[(usize, E)] {
         &self.entries

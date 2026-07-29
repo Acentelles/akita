@@ -6,6 +6,12 @@ use super::*;
 ///   EOR path.
 /// - [`Sparse`](Self::Sparse): sparse witness paired with a (dense or lazy
 ///   tensor) [`SparseFactor`]. The initial shape for onehot terms.
+/// - [`Tiled`](Self::Tiled): a group-domain inner table lifted to the joint
+///   tail domain by *virtual* constant extension. `inner` lives over the
+///   group's tail prefix paired with the truncated-tail factor; `tail` tracks
+///   the full-tail transparent factor state. Round messages equal the
+///   physically tiled table's messages element-for-element (see
+///   [`TiledTailFactor`]), without materializing the replication.
 #[derive(Debug, Clone)]
 pub(in crate::protocol::extension_opening_reduction) enum ExtensionOpeningTables<E: FieldCore> {
     Dense {
@@ -16,6 +22,10 @@ pub(in crate::protocol::extension_opening_reduction) enum ExtensionOpeningTables
         witness: SparseExtensionOpeningWitness<E>,
         factor: SparseFactor<E>,
     },
+    Tiled {
+        inner: Box<ExtensionOpeningTables<E>>,
+        tail: TiledTailFactor<E>,
+    },
 }
 
 impl<E: FieldCore> ExtensionOpeningTables<E> {
@@ -23,6 +33,7 @@ impl<E: FieldCore> ExtensionOpeningTables<E> {
         match self {
             Self::Dense { witness, .. } => witness.len(),
             Self::Sparse { witness, .. } => witness.table_len(),
+            Self::Tiled { tail, .. } => tail.remaining_len(),
         }
     }
 
@@ -41,6 +52,19 @@ impl<E: FieldCore> ExtensionOpeningTables<E> {
                     Ok(witness.claim_with_factor_fn(|idx| factor.factor_at_index(idx)))
                 }
             },
+            // The tiled claim over the joint domain regroups onto the group
+            // domain: `sum_{lo,hi} W(lo)·A(lo,hi) = sum_lo W(lo)·B(lo)` with
+            // `B` the truncated-tail factor the inner tables already hold.
+            Self::Tiled { inner, .. } => inner.claim(),
+        }
+    }
+
+    /// Fully folded witness value, ignoring the factor's representation.
+    pub(in crate::protocol::extension_opening_reduction) fn final_witness(&self) -> Option<E> {
+        match self {
+            Self::Dense { witness, .. } => (witness.len() == 1).then(|| witness[0]),
+            Self::Sparse { witness, .. } => witness.final_eval(),
+            Self::Tiled { inner, .. } => inner.final_witness(),
         }
     }
 
@@ -58,6 +82,9 @@ impl<E: FieldCore> ExtensionOpeningTables<E> {
                     .map(|witness| (witness, factor_evals[0])),
                 SparseFactor::Tensor(_) => None,
             },
+            Self::Tiled { inner, tail } => tail
+                .final_value()
+                .and_then(|factor| inner.final_witness().map(|witness| (witness, factor))),
         }
     }
 }
@@ -86,6 +113,26 @@ impl<E: FieldCore + HasUnreducedOps> ExtensionOpeningTables<E> {
                     });
                 }
             },
+            Self::Tiled { inner, tail } => {
+                if inner.len() > 1 {
+                    // Group rounds: the tiled round message regroups per high
+                    // assignment onto the group domain against the
+                    // truncated-tail factor, which is exactly the inner
+                    // accumulation. Equal to the materialized-table message
+                    // element-for-element.
+                    inner.accumulate_round(coeff, constant, quadratic);
+                } else {
+                    // Constant-extension plateau: every remaining entry of the
+                    // virtually tiled witness equals the fully folded group
+                    // value `w*`, so the odd/even witness difference vanishes
+                    // (the quadratic coefficient is exactly zero, matching the
+                    // materialized table) and the constant coefficient is
+                    // `w*` times the closed-form even-half factor sum.
+                    debug_assert_eq!(inner.len(), 1);
+                    let witness = inner.final_witness().unwrap_or_else(E::zero);
+                    *constant += coeff * (witness * tail.even_half_sum());
+                }
+            }
         }
     }
 }
@@ -118,6 +165,15 @@ impl<E: FieldCore + HasUnreducedOps + HasOptimizedFold> ExtensionOpeningTables<E
             Self::Sparse { witness, factor } => {
                 witness.fold_in_place(r_round);
                 factor.fold_in_place(r_round);
+            }
+            Self::Tiled { inner, tail } => {
+                // The transparent tail state folds every round; the inner
+                // group tables only fold while the group has unbound
+                // variables (afterwards they hold the single value `w*`).
+                if inner.len() > 1 {
+                    inner.fold_in_place(r_round);
+                }
+                tail.fold_in_place(r_round);
             }
         }
     }

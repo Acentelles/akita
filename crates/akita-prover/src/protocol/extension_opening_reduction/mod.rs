@@ -11,8 +11,8 @@ use akita_field::AkitaError;
 use akita_sumcheck::SumcheckInstanceProver;
 use akita_types::{
     checked_table_len, extension_opening_reduction_claim, num_rounds_from_table_len,
-    project_tensor_factor_value, tensor_opening_split, validate_reduction_tables,
-    EXTENSION_OPENING_REDUCTION_DEGREE,
+    project_tensor_factor_value, tensor_equality_factor_evals, tensor_opening_split,
+    validate_reduction_tables, EXTENSION_OPENING_REDUCTION_DEGREE,
 };
 use akita_field::unreduced::{HasOptimizedFold, HasUnreducedOps};
 use akita_field::{ExtField, FieldCore, Zero};
@@ -141,9 +141,12 @@ impl<E: FieldCore + HasUnreducedOps> Deg2RoundAccum<E> for DirectDeg2<E> {
 mod dense;
 mod prover;
 mod sparse;
+mod tiled;
 
 pub use prover::ExtensionOpeningReductionProver;
 pub use sparse::{ExtensionOpeningReductionTerm, SparseExtensionOpeningWitness};
+
+pub(in crate::protocol::extension_opening_reduction) use tiled::TiledTailFactor;
 
 pub(crate) use dense::{
     accumulate_dense_round, fold_dense_reduction_tables_in_place, fused_fold_and_accumulate,

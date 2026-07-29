@@ -25,6 +25,9 @@ pub struct TraceSparseColumn<E: FieldCore> {
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct TraceSparseTable<E: FieldCore> {
     columns: Vec<TraceSparseColumn<E>>,
+    /// Direct `col -> columns` index (`u32::MAX` = absent) so `get` is O(1)
+    /// instead of a binary search per access; rebuilt on `fold_x`.
+    col_lookup: Vec<u32>,
     live_x_cols: usize,
     y_len: usize,
 }
@@ -48,8 +51,15 @@ impl<E: FieldCore> TraceSparseTable<E> {
             merged.push(column);
         }
 
+        let mut col_lookup = vec![u32::MAX; live_x_cols];
+        for (idx, column) in merged.iter().enumerate() {
+            col_lookup[column.col] =
+                u32::try_from(idx).expect("sparse trace column count exceeds u32");
+        }
+
         Self {
             columns: merged,
+            col_lookup,
             live_x_cols,
             y_len,
         }
@@ -57,14 +67,17 @@ impl<E: FieldCore> TraceSparseTable<E> {
 
     #[inline]
     fn get(&self, x: usize, y: usize) -> E {
-        match self.columns.binary_search_by_key(&x, |column| column.col) {
-            Ok(idx) => self.columns[idx]
-                .values
-                .get(y)
-                .copied()
-                .unwrap_or_else(E::zero),
-            Err(_) => E::zero(),
+        let Some(&idx) = self.col_lookup.get(x) else {
+            return E::zero();
+        };
+        if idx == u32::MAX {
+            return E::zero();
         }
+        self.columns[idx as usize]
+            .values
+            .get(y)
+            .copied()
+            .unwrap_or_else(E::zero)
     }
 
     fn fold_y(&mut self, r: E) {

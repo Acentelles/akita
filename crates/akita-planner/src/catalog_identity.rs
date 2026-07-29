@@ -444,6 +444,13 @@ fn write_generated_precommitted_group_key(h: &mut Fnv64, key: &PrecommittedGroup
     h.write_u64(u64::from(key.log_basis));
     h.write_u64(key.n_a as u64);
     h.write_u64(key.conservative_n_b as u64);
+    // The per-group frozen bound policy (`log_commit_bound`,
+    // `onehot_chunk_size`, `basis_range`) is deliberately NOT hashed here:
+    // this digest is a wiring guard (not a security primitive) and adding the
+    // fields would invalidate the baked identities of every shipped grouped
+    // catalog. The fields still gate lookup (entry/key equality compares
+    // them) and are transcript-bound through the instance descriptor, which
+    // is the security arbiter for per-group bound policies.
 }
 
 pub fn ring_challenge_config_digest(
@@ -554,6 +561,9 @@ mod tests {
             log_basis: 2,
             n_a: 1,
             conservative_n_b: 1,
+            log_commit_bound: 1,
+            onehot_chunk_size: 1,
+            basis_range: (3, 4),
         }];
         GeneratedScheduleTableEntry {
             final_group: PolynomialGroupLayout::new(16, 1),

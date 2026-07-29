@@ -370,6 +370,8 @@ fn derive_setup_prefix_group(
             FoldWitnessNorms::new(log_basis, d, 1, false),
             &fold_linf_cap_config,
         )?;
+        // Frozen bound policy: the active policy's own (see the matching
+        // construction in `generated::expand`; both must stay byte-identical).
         let layout = PrecommittedGroupParams {
             group: PolynomialGroupLayout::singleton(prefix_num_vars),
             m_vars,
@@ -377,6 +379,9 @@ fn derive_setup_prefix_group(
             log_basis,
             n_a: a_key.row_len(),
             conservative_n_b: b_key.row_len(),
+            log_commit_bound: policy.decomposition.log_commit_bound,
+            onehot_chunk_size: policy.onehot_chunk_size,
+            basis_range: policy.basis_range,
         };
         let params = PrecommittedLevelParams {
             layout,
@@ -871,6 +876,11 @@ mod tests {
             layout: PrecommittedGroupParams::from_params(
                 PolynomialGroupLayout::new(6, 1),
                 &precommitted,
+                akita_types::GroupBoundPolicy {
+                    log_commit_bound: 2,
+                    onehot_chunk_size: 1,
+                    basis_range: (2, 2),
+                },
             ),
             a_key: precommitted.a_key.clone(),
             b_key: precommitted.b_key.clone(),

@@ -76,7 +76,11 @@ fn generated_recursive_profile_key() -> (AkitaScheduleLookupKey, Vec<PolynomialG
         &OpeningClaimsLayout::new(PRE_NV, PRE_GROUP_SIZE).expect("precommit batch"),
     )
     .expect("conservative precommit params");
-    let pre_frozen = PrecommittedGroupParams::from_params(pre_key, &pre_params);
+    let pre_frozen = PrecommittedGroupParams::from_params(
+        pre_key,
+        &pre_params,
+        akita_config::group_bound_policy_of::<ConservativeOneHotCfg>(),
+    );
     let precommitteds = vec![pre_frozen, pre_frozen];
     let pre_keys = vec![pre_key; PRE_GROUPS];
     let key = AkitaScheduleLookupKey {
