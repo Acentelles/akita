@@ -208,6 +208,9 @@ impl<E: FieldCore + FromPrimitiveInt + HasUnreducedOps> AkitaStage2Prover<E> {
             relation_matrix_col_evals_compact.len(),
             self.current_x_len()
         );
+        // R7 deferral window: at most `block_size` products per unreduced lane
+        // before the per-block reduction.
+        debug_assert!(block_size <= E::PRODUCT_ACCUM_MAX_TERMS);
 
         if self.can_skip_norm_linear_coeff() {
             let (virt_coeffs, rel_coeffs) = cfg_fold_reduce!(
@@ -229,7 +232,7 @@ impl<E: FieldCore + FromPrimitiveInt + HasUnreducedOps> AkitaStage2Prover<E> {
                             block_size,
                             current_y_half,
                         );
-                        let mut inner_virt = [E::zero(); 2];
+                        let mut inner_virt = ProductLanes::<E, 2>::zero();
 
                         for pair_y in blk..blk_end {
                             let j_low = (j_base + pair_y) & (num_first - 1);
@@ -239,8 +242,8 @@ impl<E: FieldCore + FromPrimitiveInt + HasUnreducedOps> AkitaStage2Prover<E> {
                             let w1 = column[left + 1];
                             let dw = w1 - w0;
 
-                            inner_virt[0] += e_in * (w0 * (w0 + E::one()));
-                            inner_virt[1] += e_in * (dw * dw);
+                            inner_virt.add_product(0, e_in, w0 * (w0 + E::one()));
+                            inner_virt.add_product(1, e_in, dw * dw);
 
                             let p0 = alpha_compact[left] * m;
                             let p1 = alpha_compact[left + 1] * m;
@@ -256,8 +259,9 @@ impl<E: FieldCore + FromPrimitiveInt + HasUnreducedOps> AkitaStage2Prover<E> {
                         }
 
                         let e_out = e_second[j_high];
-                        virt[0] += e_out * inner_virt[0];
-                        virt[1] += e_out * inner_virt[1];
+                        let reduced_inner = inner_virt.finish();
+                        virt[0] += e_out * reduced_inner[0];
+                        virt[1] += e_out * reduced_inner[1];
                         blk = blk_end;
                     }
 
@@ -294,7 +298,7 @@ impl<E: FieldCore + FromPrimitiveInt + HasUnreducedOps> AkitaStage2Prover<E> {
                             block_size,
                             current_y_half,
                         );
-                        let mut inner_virt = [E::zero(); 3];
+                        let mut inner_virt = ProductLanes::<E, 3>::zero();
 
                         for pair_y in blk..blk_end {
                             let j_low = (j_base + pair_y) & (num_first - 1);
@@ -305,9 +309,9 @@ impl<E: FieldCore + FromPrimitiveInt + HasUnreducedOps> AkitaStage2Prover<E> {
                             let dw = w1 - w0;
                             let two_w0_plus_one = w0 + w0 + E::one();
 
-                            inner_virt[0] += e_in * (w0 * (w0 + E::one()));
-                            inner_virt[1] += e_in * (dw * two_w0_plus_one);
-                            inner_virt[2] += e_in * (dw * dw);
+                            inner_virt.add_product(0, e_in, w0 * (w0 + E::one()));
+                            inner_virt.add_product(1, e_in, dw * two_w0_plus_one);
+                            inner_virt.add_product(2, e_in, dw * dw);
 
                             let p0 = alpha_compact[left] * m;
                             let p1 = alpha_compact[left + 1] * m;
@@ -323,9 +327,10 @@ impl<E: FieldCore + FromPrimitiveInt + HasUnreducedOps> AkitaStage2Prover<E> {
                         }
 
                         let e_out = e_second[j_high];
-                        virt[0] += e_out * inner_virt[0];
-                        virt[1] += e_out * inner_virt[1];
-                        virt[2] += e_out * inner_virt[2];
+                        let reduced_inner = inner_virt.finish();
+                        virt[0] += e_out * reduced_inner[0];
+                        virt[1] += e_out * reduced_inner[1];
+                        virt[2] += e_out * reduced_inner[2];
                         blk = blk_end;
                     }
 

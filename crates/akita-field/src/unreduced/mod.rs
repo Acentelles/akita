@@ -631,6 +631,17 @@ pub trait HasUnreducedOps: FieldCore {
     /// path, so callers that must stay byte-identical to `Mul` are unaffected.
     const DELAYED_PRODUCT_SUM_IS_EXACT: bool = false;
 
+    /// Maximum number of `mul_to_product_accum` terms that may be summed into
+    /// a single `ProductAccum` window while `reduce_product_accum` stays exact
+    /// (no accumulator wrap). Deferred-accumulation call sites must bound their
+    /// window length by this constant and `debug_assert!` it.
+    ///
+    /// Only meaningful when [`Self::DELAYED_PRODUCT_SUM_IS_EXACT`] is `true`;
+    /// per-term-reduction fields and identity accumulators keep the unbounded
+    /// default. Implementations that opt into delayed reduction must override
+    /// this with their exact headroom arithmetic.
+    const PRODUCT_ACCUM_MAX_TERMS: usize = usize::MAX;
+
     /// Widening `self × small` with no reduction.
     fn mul_u64_unreduced(self, small: u64) -> Self::MulU64Accum;
     /// Widening `self × other` with no reduction.

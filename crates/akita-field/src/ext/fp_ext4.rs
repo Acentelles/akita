@@ -571,6 +571,22 @@ impl<const P: u32> HasUnreducedOps for FpExt4<Fp32<P>> {
     // by `fp_ext4_fp32_accum_summation`.
     const DELAYED_PRODUCT_SUM_IS_EXACT: bool = true;
 
+    // Exact headroom: one `fp_ext4_mul_to_accum_fp32` adds at most
+    // `7·(P-1)²` to a lane (lane 0: `1 + 2·3` products; the offset lanes stay
+    // smaller: lane 2 ≤ `5(P-1)² + P²`, lane 3 ≤ `4(P-1)² + 2P²`, both below
+    // `7(P-1)²` for P ≥ 7). A window of `k` terms therefore needs
+    // `k · 7(P-1)² ≤ u128::MAX`.
+    const PRODUCT_ACCUM_MAX_TERMS: usize = {
+        let p = P as u128;
+        let max_addend = 7 * (p - 1) * (p - 1);
+        let cap = u128::MAX / max_addend;
+        if cap > usize::MAX as u128 {
+            usize::MAX
+        } else {
+            cap as usize
+        }
+    };
+
     #[inline]
     fn mul_u64_unreduced(self, small: u64) -> Self::MulU64Accum {
         let small = Fp32::<P>::from_u64(small);

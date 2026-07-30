@@ -402,3 +402,61 @@ fn stage1_sparse_x_y_fusion_matches_two_pass_reference() {
         assert_eq!(prover.cached_round_poly.as_ref(), Some(&expected_round3));
     }
 }
+
+/// R3 differential: the quartic evaluation-grid kernel must produce the exact
+/// serialized round message of the affine-coefficient kernel, for arbitrary
+/// (not merely honest) full-table values, across sizes and both accumulator
+/// families (identity accum via `Prime128Offset275`, delayed `ProductAccum`
+/// via `FpExt4<Prime32Offset99>`).
+mod grid4_differential {
+    use super::*;
+    use akita_field::{FpExt4, Prime32Offset99, RandomSampling};
+    use rand::rngs::StdRng;
+    use rand::SeedableRng;
+
+    fn check_for_field<E>(seed: u64)
+    where
+        E: FieldCore
+            + FromPrimitiveInt
+            + HasUnreducedOps
+            + RandomSampling
+            + std::fmt::Debug
+            + Send
+            + Sync,
+    {
+        let mut rng = StdRng::seed_from_u64(seed);
+        let rp = RangeAffineFromSPrecomp::<E>::new(8);
+        let roots = rp.grid_roots.expect("b = 8 has quartic grid roots");
+        for num_vars in 1..=7usize {
+            let tau: Vec<E> = (0..num_vars).map(|_| E::random(&mut rng)).collect();
+            let split_eq = GruenSplitEq::new(&tau).unwrap();
+            let s_full: Vec<E> = (0..(1usize << num_vars))
+                .map(|_| E::random(&mut rng))
+                .collect();
+            let s_pair = |j: usize| (s_full[2 * j], s_full[2 * j + 1]);
+            let expected = compute_norm_round_eq_poly_from_s_affine(&split_eq, &rp, s_pair);
+            let actual = compute_norm_round_eq_poly_from_s_grid4(&split_eq, roots, s_pair);
+            assert_eq!(
+                expected, actual,
+                "grid4 kernel diverged at num_vars={num_vars}"
+            );
+            // The public dispatcher must select the grid kernel for b = 8.
+            let dispatched = compute_norm_round_eq_poly_from_s(&split_eq, &rp, s_pair);
+            assert_eq!(expected, dispatched);
+        }
+    }
+
+    #[test]
+    fn stage1_grid4_round_matches_affine_reference() {
+        check_for_field::<F>(0x5eed_0001);
+        check_for_field::<FpExt4<Prime32Offset99>>(0x5eed_0002);
+    }
+
+    /// Non-quartic bases must keep the affine path (no grid roots).
+    #[test]
+    fn stage1_grid4_only_engages_for_quartic_q() {
+        assert!(RangeAffineFromSPrecomp::<F>::new(4).grid_roots.is_none());
+        assert!(RangeAffineFromSPrecomp::<F>::new(16).grid_roots.is_none());
+        assert!(RangeAffineFromSPrecomp::<F>::new(8).grid_roots.is_some());
+    }
+}

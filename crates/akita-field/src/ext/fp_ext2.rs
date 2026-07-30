@@ -537,6 +537,13 @@ impl<const P: u64, C: FpExt2Config<Fp64<P>>> HasUnreducedOps for FpExt2<Fp64<P>,
     // `sparse_tensor_factor_matches_dense_factor_rounds`.
     const DELAYED_PRODUCT_SUM_IS_EXACT: bool = true;
 
+    // Exact headroom: each addend stores base-2^64 limbs, so a lo limb adds
+    // `< 2^64` and a hi (carry) limb adds `≤ 3` per term. The binding slot is
+    // the lo limb: `k · (2^64 - 1) ≤ u128::MAX` holds for every
+    // `k ≤ usize::MAX` on 64-bit targets, so the default stands but is
+    // recorded here with its derivation.
+    const PRODUCT_ACCUM_MAX_TERMS: usize = usize::MAX;
+
     #[inline]
     fn mul_u64_unreduced(self, small: u64) -> Self::MulU64Accum {
         AccumPair(

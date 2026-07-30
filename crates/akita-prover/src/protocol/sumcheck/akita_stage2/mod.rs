@@ -63,6 +63,8 @@
 //! the virtual, relation, and EvaluationTrace terms around the same local `w0` /
 //! `dw` scan so the witness-side work is shared.
 
+pub(crate) use super::ProductLanes;
+
 use super::fold_full_prefix_pair;
 use super::two_round_prefix::{
     build_stage2_bivariate_skip_proof_from_m_compact, can_use_stage2_two_round_prefix,
@@ -171,6 +173,87 @@ fn stage2_eq_block(
     let blk_end = (blk + block_size.min(bucket_remaining)).min(live_pairs);
     (j_high, blk_end)
 }
+
+/// One eq-aligned block of pair indices inside one prefix-x row.
+///
+/// Flattening the `(row, block)` structure into a task list widens the
+/// parallel axis of the prefix-x rounds from the row count alone (the ring
+/// width, 128 in production) to `rows × blocks-per-row`. Within a block the
+/// iteration order is unchanged; across blocks only the grouping of the outer
+/// merges changes, which is value-preserving because the outer accumulations
+/// are exact (field adds, and unreduced integer lanes within headroom).
+#[derive(Clone, Copy)]
+struct PrefixXBlockTask {
+    row: usize,
+    blk: usize,
+    blk_end: usize,
+    j_high: usize,
+}
+
+/// Enumerate the eq-aligned blocks of every row for a prefix-x round, in the
+/// exact order the row-major `while` loops visit them.
+fn prefix_x_block_tasks(
+    rows: usize,
+    row_j_stride: usize,
+    num_first: usize,
+    first_bits: usize,
+    block_size: usize,
+    live_pairs: usize,
+) -> Vec<PrefixXBlockTask> {
+    let blocks_per_row_hint = live_pairs.div_ceil(block_size.max(1)).max(1);
+    let mut tasks = Vec::with_capacity(rows * (blocks_per_row_hint + 1));
+    for row in 0..rows {
+        let j_base = row * row_j_stride;
+        let mut blk = 0usize;
+        while blk < live_pairs {
+            let (j_high, blk_end) =
+                stage2_eq_block(j_base, blk, num_first, first_bits, block_size, live_pairs);
+            tasks.push(PrefixXBlockTask {
+                row,
+                blk,
+                blk_end,
+                j_high,
+            });
+            blk = blk_end;
+        }
+    }
+    tasks
+}
+
+/// Raw-pointer handle for disjoint parallel writes into one output table.
+///
+/// Used by the fused prefix-x kernels, where each flattened block task owns a
+/// distinct column range of its row: task `(row, blk, blk_end)` writes exactly
+/// `row·next_cols + [2·blk, min(2·blk_end, next_cols))`, and the tasks
+/// partition that index space, so no two tasks alias.
+#[cfg(feature = "parallel")]
+#[derive(Clone, Copy)]
+struct DisjointWrites<E>(*mut E);
+
+#[cfg(feature = "parallel")]
+impl<E> DisjointWrites<E> {
+    /// Write `value` at `idx`.
+    ///
+    /// Accessed through a method (not the raw field) so closures capture the
+    /// whole wrapper and its `Send`/`Sync` impls apply under edition-2021
+    /// disjoint field capture.
+    ///
+    /// # Safety
+    ///
+    /// The caller must own index `idx` exclusively for the duration of the
+    /// parallel section, and `idx` must be in bounds of the allocation.
+    #[inline]
+    unsafe fn write(&self, idx: usize, value: E) {
+        unsafe {
+            *self.0.add(idx) = value;
+        }
+    }
+}
+
+#[cfg(feature = "parallel")]
+unsafe impl<E: Send> Send for DisjointWrites<E> {}
+#[cfg(feature = "parallel")]
+unsafe impl<E: Sync> Sync for DisjointWrites<E> {}
 
 #[inline]
 pub(crate) fn accumulate_relation_coeffs<E: FieldCore>(

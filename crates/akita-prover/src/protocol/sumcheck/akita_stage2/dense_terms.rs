@@ -193,13 +193,16 @@ impl<E: FieldCore + FromPrimitiveInt + HasUnreducedOps> AkitaStage2Prover<E> {
         let alpha_compact = &self.alpha_compact;
         let relation_matrix_col_evals_compact = &self.relation_matrix_col_evals_compact;
         debug_assert_eq!(w_full.len() / 2, num_first * num_second);
+        // R7 deferral window: `num_first` products per unreduced lane before
+        // the per-block reduction.
+        debug_assert!(num_first <= E::PRODUCT_ACCUM_MAX_TERMS);
 
         if self.can_skip_norm_linear_coeff() {
             let (virt_coeffs, rel_coeffs) = cfg_fold_reduce!(
                 0..num_second,
                 || ([E::zero(); 2], [E::zero(); 3]),
                 |(mut virt, mut rel), j_high| {
-                    let mut inner_virt = [E::zero(); 2];
+                    let mut inner_virt = ProductLanes::<E, 2>::zero();
                     let base = j_high * num_first;
 
                     for (j_low, &e_in) in e_first.iter().enumerate() {
@@ -208,8 +211,8 @@ impl<E: FieldCore + FromPrimitiveInt + HasUnreducedOps> AkitaStage2Prover<E> {
                         let w1 = w_full[2 * j + 1];
                         let dw = w1 - w0;
 
-                        inner_virt[0] += e_in * (w0 * (w0 + E::one()));
-                        inner_virt[1] += e_in * (dw * dw);
+                        inner_virt.add_product(0, e_in, w0 * (w0 + E::one()));
+                        inner_virt.add_product(1, e_in, dw * dw);
 
                         let (a0, a1, m0, m1) = if folding_y_round {
                             (
@@ -240,8 +243,9 @@ impl<E: FieldCore + FromPrimitiveInt + HasUnreducedOps> AkitaStage2Prover<E> {
                     }
 
                     let e_out = e_second[j_high];
-                    virt[0] += e_out * inner_virt[0];
-                    virt[1] += e_out * inner_virt[1];
+                    let reduced_inner = inner_virt.finish();
+                    virt[0] += e_out * reduced_inner[0];
+                    virt[1] += e_out * reduced_inner[1];
 
                     (virt, rel)
                 },
@@ -261,7 +265,7 @@ impl<E: FieldCore + FromPrimitiveInt + HasUnreducedOps> AkitaStage2Prover<E> {
                 0..num_second,
                 || ([E::zero(); 3], [E::zero(); 3]),
                 |(mut virt, mut rel), j_high| {
-                    let mut inner_virt = [E::zero(); 3];
+                    let mut inner_virt = ProductLanes::<E, 3>::zero();
                     let base = j_high * num_first;
 
                     for (j_low, &e_in) in e_first.iter().enumerate() {
@@ -271,9 +275,9 @@ impl<E: FieldCore + FromPrimitiveInt + HasUnreducedOps> AkitaStage2Prover<E> {
                         let dw = w1 - w0;
                         let two_w0_plus_one = w0 + w0 + E::one();
 
-                        inner_virt[0] += e_in * (w0 * (w0 + E::one()));
-                        inner_virt[1] += e_in * (dw * two_w0_plus_one);
-                        inner_virt[2] += e_in * (dw * dw);
+                        inner_virt.add_product(0, e_in, w0 * (w0 + E::one()));
+                        inner_virt.add_product(1, e_in, dw * two_w0_plus_one);
+                        inner_virt.add_product(2, e_in, dw * dw);
 
                         let (a0, a1, m0, m1) = if folding_y_round {
                             (
@@ -304,9 +308,10 @@ impl<E: FieldCore + FromPrimitiveInt + HasUnreducedOps> AkitaStage2Prover<E> {
                     }
 
                     let e_out = e_second[j_high];
-                    virt[0] += e_out * inner_virt[0];
-                    virt[1] += e_out * inner_virt[1];
-                    virt[2] += e_out * inner_virt[2];
+                    let reduced_inner = inner_virt.finish();
+                    virt[0] += e_out * reduced_inner[0];
+                    virt[1] += e_out * reduced_inner[1];
+                    virt[2] += e_out * reduced_inner[2];
 
                     (virt, rel)
                 },

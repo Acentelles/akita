@@ -88,6 +88,11 @@ struct RangeAffineFromSPrecomp<E: FieldCore> {
     s_to_compact: Vec<u8>,
     num_valid_s: usize,
     min_s: i16,
+    /// The roots of `Q` as field elements when `Q` is exactly quartic
+    /// (`b = 8`), enabling the evaluation-grid round kernel that computes
+    /// `Q(s)` in product form (3 mults) instead of the affine coefficient
+    /// expansion. `None` for every other degree.
+    grid_roots: Option<[E; 4]>,
 }
 
 impl<E: FieldCore + FromPrimitiveInt> RangeAffineFromSPrecomp<E> {
@@ -196,6 +201,15 @@ impl<E: FieldCore + FromPrimitiveInt> RangeAffineFromSPrecomp<E> {
             None
         };
 
+        let grid_roots = (degree_q == 4).then(|| {
+            [
+                E::from_i128(pair_offsets[0]),
+                E::from_i128(pair_offsets[1]),
+                E::from_i128(pair_offsets[2]),
+                E::from_i128(pair_offsets[3]),
+            ]
+        });
+
         Self {
             dense_coeffs,
             dense_row_offsets,
@@ -206,6 +220,7 @@ impl<E: FieldCore + FromPrimitiveInt> RangeAffineFromSPrecomp<E> {
             s_to_compact,
             num_valid_s,
             min_s,
+            grid_roots,
         }
     }
 }
@@ -379,13 +394,128 @@ fn compute_entry_coeffs_from_s_x4<E: FieldCore + HasUnreducedOps>(
     }
 }
 
+/// Evaluation-grid round kernel for exactly-quartic `Q` (`b = 8`).
+///
+/// Instead of expanding the affine coefficients of `Q(s0 + a·X)` per index
+/// (Horner over the shifted-coefficient rows plus the `a`-power ladder), this
+/// evaluates the round polynomial `q(X) = Σ_j eq_j · Q(s0_j + a_j·X)` on the
+/// grid `{0, 1, 2, 3, ∞}`:
+///
+/// - each finite lane costs 3 mults via the fixed-roots product form
+///   `Q(s) = (s − r0)(s − r1)(s − r2)(s − r3)` (the grid points themselves are
+///   reached by repeated addition of the slope `a`),
+/// - the `∞` lane is the leading coefficient `a⁴` (2 squarings), the product
+///   of slopes of the monic quartic,
+/// - all five lanes accumulate through unreduced `ProductAccum` windows of
+///   `e_first.len()` terms, reduced once per outer block.
+///
+/// The exact coefficient representation is recovered from the grid at the end
+/// of the sum (constant cost per round). The linear coefficient `q1` is never
+/// recovered: [`EqFactoredUniPoly`] does not carry it (the verifier
+/// reconstructs it from the running claim), so the serialized round message —
+/// `[q0, q2, q3, q4]` — is bit-identical to the affine-coefficient path. Both
+/// paths compute the same polynomial with exact field arithmetic; the
+/// `stage1_grid4_round_matches_affine_reference` differential test pins this.
+fn compute_norm_round_eq_poly_from_s_grid4<E: FieldCore + FromPrimitiveInt + HasUnreducedOps>(
+    split_eq: &GruenSplitEq<E>,
+    roots: [E; 4],
+    s_pair: impl Fn(usize) -> (E, E) + Sync,
+) -> EqFactoredUniPoly<E> {
+    let (e_first, e_second) = split_eq.remaining_eq_tables();
+    let num_first = e_first.len();
+    // Window headroom: `num_first` products are summed per unreduced lane
+    // before the per-block reduction (see `PRODUCT_ACCUM_MAX_TERMS`).
+    debug_assert!(num_first <= E::PRODUCT_ACCUM_MAX_TERMS);
+    let [r0, r1, r2, r3] = roots;
+    let q_at = |s: E| ((s - r0) * (s - r1)) * ((s - r2) * (s - r3));
+
+    let accum = cfg_fold_reduce!(
+        0..e_second.len(),
+        || [E::ProductAccum::zero(); 5],
+        |mut outer, j_high| {
+            let mut inner = [E::ProductAccum::zero(); 5];
+            let base = j_high * num_first;
+            for (j_low, &e_in) in e_first.iter().enumerate() {
+                let (s_0, s_1) = s_pair(base + j_low);
+                let a = s_1 - s_0;
+                let s_2 = s_1 + a;
+                let s_3 = s_2 + a;
+                let a_sq = a * a;
+                inner[0] += e_in.mul_to_product_accum(q_at(s_0));
+                inner[1] += e_in.mul_to_product_accum(q_at(s_1));
+                inner[2] += e_in.mul_to_product_accum(q_at(s_2));
+                inner[3] += e_in.mul_to_product_accum(q_at(s_3));
+                inner[4] += e_in.mul_to_product_accum(a_sq * a_sq);
+            }
+            let e_out = e_second[j_high];
+            for (out, lane) in outer.iter_mut().zip(inner) {
+                *out += e_out.mul_to_product_accum(E::reduce_product_accum(lane));
+            }
+            outer
+        },
+        |mut a, b: [E::ProductAccum; 5]| {
+            for (ai, bi) in a.iter_mut().zip(b) {
+                *ai += bi;
+            }
+            a
+        }
+    );
+    let v: Vec<E> = accum.into_iter().map(E::reduce_product_accum).collect();
+
+    // Exact interpolation on `{0, 1, 2, 3, ∞}`, skipping `q1`:
+    //   b_t = v_t − q0 − t⁴·q4 = t·q1 + t²·q2 + t³·q3   for t = 1, 2, 3
+    //   c1 = b2 − 2·b1 = 2·q2 + 6·q3
+    //   c2 = b3 − 3·b1 = 6·q2 + 24·q3
+    //   q3 = (c2 − 3·c1) / 6,  q2 = c1/2 − 3·q3
+    let q0 = v[0];
+    let q4 = v[4];
+    let sixteen = E::from_u64(16);
+    let eighty_one = E::from_u64(81);
+    let inv2 = E::from_u64(2)
+        .inverse()
+        .expect("2 is invertible in a sumcheck challenge field");
+    let inv6 = E::from_u64(6)
+        .inverse()
+        .expect("6 is invertible in a sumcheck challenge field");
+    let b1 = v[1] - q0 - q4;
+    let b2 = v[2] - q0 - sixteen * q4;
+    let b3 = v[3] - q0 - eighty_one * q4;
+    let two_b1 = b1 + b1;
+    let c1 = b2 - two_b1;
+    let c2 = b3 - two_b1 - b1;
+    let three_c1 = c1 + c1 + c1;
+    let q3 = (c2 - three_c1) * inv6;
+    let three_q3 = q3 + q3 + q3;
+    let q2 = c1 * inv2 - three_q3;
+
+    EqFactoredUniPoly {
+        coeffs_except_linear_term: vec![q0, q2, q3, q4],
+    }
+}
+
 fn compute_norm_round_eq_poly_from_s<E: FieldCore + FromPrimitiveInt + HasUnreducedOps>(
+    split_eq: &GruenSplitEq<E>,
+    range_precomp: &RangeAffineFromSPrecomp<E>,
+    s_pair: impl Fn(usize) -> (E, E) + Sync,
+) -> EqFactoredUniPoly<E> {
+    if let Some(roots) = range_precomp.grid_roots {
+        return compute_norm_round_eq_poly_from_s_grid4(split_eq, roots, s_pair);
+    }
+    compute_norm_round_eq_poly_from_s_affine(split_eq, range_precomp, s_pair)
+}
+
+/// Affine-coefficient round kernel: the generic-degree path (any `b`), and the
+/// exact reference the quartic grid kernel is differential-tested against.
+fn compute_norm_round_eq_poly_from_s_affine<E: FieldCore + FromPrimitiveInt + HasUnreducedOps>(
     split_eq: &GruenSplitEq<E>,
     range_precomp: &RangeAffineFromSPrecomp<E>,
     s_pair: impl Fn(usize) -> (E, E) + Sync,
 ) -> EqFactoredUniPoly<E> {
     let (e_first, e_second) = split_eq.remaining_eq_tables();
     let num_first = e_first.len();
+    // Deferral window: `num_first` products per unreduced lane before the
+    // per-block reduction (see `PRODUCT_ACCUM_MAX_TERMS`).
+    debug_assert!(num_first <= E::PRODUCT_ACCUM_MAX_TERMS);
     let rp = range_precomp;
     let full_num_coeffs_q = rp.degree_q + 1;
     let num_coeffs_q = full_num_coeffs_q;

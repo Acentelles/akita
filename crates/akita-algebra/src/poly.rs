@@ -208,15 +208,36 @@ pub fn fold_evals_in_place<E: HasOptimizedFold>(evals: &mut Vec<E>, r: E) {
     // input `evals[2*i']` another task still needs). For large tables we instead
     // build a fresh buffer in parallel; small/late rounds stay in-place serial
     // to avoid rayon fork-join overhead.
+    //
+    // Scheduling: one contiguous chunk per thread (`len.div_ceil(threads)`),
+    // rather than rayon's adaptive index splitting, keeps the dispatch
+    // overhead flat and lets the gate sit lower without losing the late
+    // (small) rounds to fork-join cost. Output is a pure per-index map, so
+    // chunking cannot change any produced value.
     #[cfg(feature = "parallel")]
     {
         const PAR_FOLD_THRESHOLD: usize = 1 << 12;
         if half >= PAR_FOLD_THRESHOLD {
             let src: &[E] = evals;
-            let folded: Vec<E> = (0..half)
-                .into_par_iter()
-                .map(|i| E::fold_one(&ctx, src[2 * i], src[2 * i + 1]))
-                .collect();
+            let chunk = half.div_ceil(rayon::current_num_threads()).max(1);
+            let mut folded: Vec<E> = Vec::with_capacity(half);
+            // SAFETY: `folded` is allocated with capacity `half` and every slot
+            // is written exactly once by the disjoint `par_chunks_mut` below
+            // before the vector is read. `E: FieldCore` is `Copy` with a
+            // trivial drop, so overwriting the uninitialized slots is sound.
+            unsafe {
+                folded.set_len(half);
+            }
+            folded
+                .par_chunks_mut(chunk)
+                .enumerate()
+                .for_each(|(chunk_idx, out)| {
+                    let base = chunk_idx * chunk;
+                    for (offset, slot) in out.iter_mut().enumerate() {
+                        let i = base + offset;
+                        *slot = E::fold_one(&ctx, src[2 * i], src[2 * i + 1]);
+                    }
+                });
             *evals = folded;
             return;
         }

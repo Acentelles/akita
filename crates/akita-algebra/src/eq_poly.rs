@@ -128,7 +128,7 @@ impl<E: FieldCore> EqPolynomial<E> {
     pub fn evals_with_scaling(r: &[E], scaling_factor: Option<E>) -> Result<Vec<E>, AkitaError> {
         #[cfg(feature = "parallel")]
         {
-            const PARALLEL_THRESHOLD: usize = 16;
+            const PARALLEL_THRESHOLD: usize = 13;
             if r.len() > PARALLEL_THRESHOLD {
                 return Self::evals_parallel(r, scaling_factor);
             }

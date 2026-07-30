@@ -72,6 +72,9 @@ impl<E: FieldCore + FromPrimitiveInt + HasUnreducedOps> AkitaStage2Prover<E> {
         let next_current_x_half = 1usize << (self.current_x_width() - 2);
         let live_pairs = next_live_x_cols.div_ceil(2);
         let block_size = num_first.min(live_pairs);
+        // R7 deferral window: at most `block_size` products per unreduced lane
+        // before the per-block reduction.
+        debug_assert!(block_size <= E::PRODUCT_ACCUM_MAX_TERMS);
         let alpha_compact = &self.alpha_compact;
         let next_relation_matrix_col_evals_compact =
             Self::fold_m_prefix(&self.relation_matrix_col_evals_compact, r);
@@ -79,81 +82,100 @@ impl<E: FieldCore + FromPrimitiveInt + HasUnreducedOps> AkitaStage2Prover<E> {
         let trace_table = self.trace_table.as_ref();
 
         if self.can_skip_norm_linear_coeff() {
+            // Widened parallel axis: flattened `(row, eq-block)` tasks instead
+            // of rows alone; each task writes a disjoint column range of its
+            // row (see `DisjointWrites`), and the outer merges are exact, so
+            // the produced table and coefficients are unchanged.
             #[cfg(feature = "parallel")]
-            let (virt_coeffs, rel_coeffs) = out
-                .par_chunks_mut(next_live_x_cols)
-                .enumerate()
-                .map(|(y, row_out)| {
-                    let row = &w_full[y * old_live_x_cols..(y + 1) * old_live_x_cols];
-                    let alpha = alpha_compact[y];
-                    let j_base = y * next_current_x_half;
-                    let mut virt = [E::zero(); 2];
-                    let mut rel = [E::zero(); 3];
-
-                    let mut blk = 0usize;
-                    while blk < live_pairs {
-                        let (j_high, blk_end) = stage2_eq_block(
-                            j_base, blk, num_first, first_bits, block_size, live_pairs,
-                        );
-                        let mut inner_virt = [E::zero(); 2];
-
-                        for pair_x in blk..blk_end {
-                            let left_next = 2 * pair_x;
-                            let left_old = 4 * pair_x;
-                            let w0 = fold_full_prefix_pair(row, left_old, r);
-                            row_out[left_next] = w0;
-                            let w1 = if left_next + 1 < next_live_x_cols {
-                                let w1 = fold_full_prefix_pair(row, left_old + 2, r);
-                                row_out[left_next + 1] = w1;
-                                w1
-                            } else {
-                                E::zero()
-                            };
-                            let dw = w1 - w0;
-
-                            let j_low = (j_base + pair_x) & (num_first - 1);
-                            let e_in = e_first[j_low];
-                            inner_virt[0] += e_in * (w0 * (w0 + E::one()));
-                            inner_virt[1] += e_in * (dw * dw);
-
-                            let m0 = next_relation_matrix_col_evals_compact[left_next];
-                            let m1 = next_relation_matrix_col_evals_compact[left_next + 1];
-                            let p0 = alpha * m0;
-                            let p1 = alpha * m1;
-                            accumulate_fused_prefix_x_relation(
-                                trace_table,
-                                y_len,
-                                &mut rel,
-                                w0,
-                                dw,
-                                p0,
-                                p1,
-                                y,
-                                left_next,
-                                next_live_x_cols,
-                            );
-                        }
-
-                        let e_out = e_second[j_high];
-                        virt[0] += e_out * inner_virt[0];
-                        virt[1] += e_out * inner_virt[1];
-                        blk = blk_end;
-                    }
-
-                    (virt, rel)
-                })
-                .reduce(
-                    || ([E::zero(); 2], [E::zero(); 3]),
-                    |(mut va, mut ra), (vb, rb)| {
-                        for (ai, bi) in va.iter_mut().zip(vb.iter()) {
-                            *ai += *bi;
-                        }
-                        for (ai, bi) in ra.iter_mut().zip(rb.iter()) {
-                            *ai += *bi;
-                        }
-                        (va, ra)
-                    },
+            let (virt_coeffs, rel_coeffs) = {
+                let tasks = prefix_x_block_tasks(
+                    y_len,
+                    next_current_x_half,
+                    num_first,
+                    first_bits,
+                    block_size,
+                    live_pairs,
                 );
+                let out_writes = DisjointWrites(out.as_mut_ptr());
+                tasks
+                    .par_iter()
+                    .fold(
+                        || ([E::zero(); 2], [E::zero(); 3]),
+                        |(mut virt, mut rel), task| {
+                            let y = task.row;
+                            let row = &w_full[y * old_live_x_cols..(y + 1) * old_live_x_cols];
+                            let alpha = alpha_compact[y];
+                            let j_base = y * next_current_x_half;
+                            let out_row_base = y * next_live_x_cols;
+                            let mut inner_virt = ProductLanes::<E, 2>::zero();
+
+                            for pair_x in task.blk..task.blk_end {
+                                let left_next = 2 * pair_x;
+                                let left_old = 4 * pair_x;
+                                let w0 = fold_full_prefix_pair(row, left_old, r);
+                                // SAFETY: this task exclusively owns columns
+                                // `[2·blk, 2·blk_end)` of row `y` (tasks
+                                // partition the output index space).
+                                unsafe {
+                                    out_writes.write(out_row_base + left_next, w0);
+                                }
+                                let w1 = if left_next + 1 < next_live_x_cols {
+                                    let w1 = fold_full_prefix_pair(row, left_old + 2, r);
+                                    // SAFETY: as above; `left_next + 1` is in
+                                    // this task's owned column range.
+                                    unsafe {
+                                        out_writes.write(out_row_base + left_next + 1, w1);
+                                    }
+                                    w1
+                                } else {
+                                    E::zero()
+                                };
+                                let dw = w1 - w0;
+
+                                let j_low = (j_base + pair_x) & (num_first - 1);
+                                let e_in = e_first[j_low];
+                                inner_virt.add_product(0, e_in, w0 * (w0 + E::one()));
+                                inner_virt.add_product(1, e_in, dw * dw);
+
+                                let m0 = next_relation_matrix_col_evals_compact[left_next];
+                                let m1 = next_relation_matrix_col_evals_compact[left_next + 1];
+                                let p0 = alpha * m0;
+                                let p1 = alpha * m1;
+                                accumulate_fused_prefix_x_relation(
+                                    trace_table,
+                                    y_len,
+                                    &mut rel,
+                                    w0,
+                                    dw,
+                                    p0,
+                                    p1,
+                                    y,
+                                    left_next,
+                                    next_live_x_cols,
+                                );
+                            }
+
+                            let e_out = e_second[task.j_high];
+                            let reduced_inner = inner_virt.finish();
+                            virt[0] += e_out * reduced_inner[0];
+                            virt[1] += e_out * reduced_inner[1];
+
+                            (virt, rel)
+                        },
+                    )
+                    .reduce(
+                        || ([E::zero(); 2], [E::zero(); 3]),
+                        |(mut va, mut ra), (vb, rb)| {
+                            for (ai, bi) in va.iter_mut().zip(vb.iter()) {
+                                *ai += *bi;
+                            }
+                            for (ai, bi) in ra.iter_mut().zip(rb.iter()) {
+                                *ai += *bi;
+                            }
+                            (va, ra)
+                        },
+                    )
+            };
 
             #[cfg(not(feature = "parallel"))]
             let (virt_coeffs, rel_coeffs) = {
@@ -168,7 +190,7 @@ impl<E: FieldCore + FromPrimitiveInt + HasUnreducedOps> AkitaStage2Prover<E> {
                         let (j_high, blk_end) = stage2_eq_block(
                             j_base, blk, num_first, first_bits, block_size, live_pairs,
                         );
-                        let mut inner_virt = [E::zero(); 2];
+                        let mut inner_virt = ProductLanes::<E, 2>::zero();
 
                         for pair_x in blk..blk_end {
                             let left_next = 2 * pair_x;
@@ -186,8 +208,8 @@ impl<E: FieldCore + FromPrimitiveInt + HasUnreducedOps> AkitaStage2Prover<E> {
 
                             let j_low = (j_base + pair_x) & (num_first - 1);
                             let e_in = e_first[j_low];
-                            inner_virt[0] += e_in * (w0 * (w0 + E::one()));
-                            inner_virt[1] += e_in * (dw * dw);
+                            inner_virt.add_product(0, e_in, w0 * (w0 + E::one()));
+                            inner_virt.add_product(1, e_in, dw * dw);
 
                             let m0 = next_relation_matrix_col_evals_compact[left_next];
                             let m1 = next_relation_matrix_col_evals_compact[left_next + 1];
@@ -208,8 +230,9 @@ impl<E: FieldCore + FromPrimitiveInt + HasUnreducedOps> AkitaStage2Prover<E> {
                         }
 
                         let e_out = e_second[j_high];
-                        virt[0] += e_out * inner_virt[0];
-                        virt[1] += e_out * inner_virt[1];
+                        let reduced_inner = inner_virt.finish();
+                        virt[0] += e_out * reduced_inner[0];
+                        virt[1] += e_out * reduced_inner[1];
                         blk = blk_end;
                     }
                 }
@@ -223,84 +246,102 @@ impl<E: FieldCore + FromPrimitiveInt + HasUnreducedOps> AkitaStage2Prover<E> {
                 rel_coeffs,
             )
         } else {
+            // Widened parallel axis: flattened `(row, eq-block)` tasks; see
+            // the skip-linear branch above for the aliasing and exactness
+            // argument.
             #[cfg(feature = "parallel")]
-            let (virt_coeffs, rel_coeffs) = out
-                .par_chunks_mut(next_live_x_cols)
-                .enumerate()
-                .map(|(y, row_out)| {
-                    let row = &w_full[y * old_live_x_cols..(y + 1) * old_live_x_cols];
-                    let alpha = alpha_compact[y];
-                    let j_base = y * next_current_x_half;
-                    let mut virt = [E::zero(); 3];
-                    let mut rel = [E::zero(); 3];
-
-                    let mut blk = 0usize;
-                    while blk < live_pairs {
-                        let (j_high, blk_end) = stage2_eq_block(
-                            j_base, blk, num_first, first_bits, block_size, live_pairs,
-                        );
-                        let mut inner_virt = [E::zero(); 3];
-
-                        for pair_x in blk..blk_end {
-                            let left_next = 2 * pair_x;
-                            let left_old = 4 * pair_x;
-                            let w0 = fold_full_prefix_pair(row, left_old, r);
-                            row_out[left_next] = w0;
-                            let w1 = if left_next + 1 < next_live_x_cols {
-                                let w1 = fold_full_prefix_pair(row, left_old + 2, r);
-                                row_out[left_next + 1] = w1;
-                                w1
-                            } else {
-                                E::zero()
-                            };
-                            let dw = w1 - w0;
-                            let two_w0_plus_one = w0 + w0 + E::one();
-
-                            let j_low = (j_base + pair_x) & (num_first - 1);
-                            let e_in = e_first[j_low];
-                            inner_virt[0] += e_in * (w0 * (w0 + E::one()));
-                            inner_virt[1] += e_in * (dw * two_w0_plus_one);
-                            inner_virt[2] += e_in * (dw * dw);
-
-                            let m0 = next_relation_matrix_col_evals_compact[left_next];
-                            let m1 = next_relation_matrix_col_evals_compact[left_next + 1];
-                            let p0 = alpha * m0;
-                            let p1 = alpha * m1;
-                            accumulate_fused_prefix_x_relation(
-                                trace_table,
-                                y_len,
-                                &mut rel,
-                                w0,
-                                dw,
-                                p0,
-                                p1,
-                                y,
-                                left_next,
-                                next_live_x_cols,
-                            );
-                        }
-
-                        let e_out = e_second[j_high];
-                        virt[0] += e_out * inner_virt[0];
-                        virt[1] += e_out * inner_virt[1];
-                        virt[2] += e_out * inner_virt[2];
-                        blk = blk_end;
-                    }
-
-                    (virt, rel)
-                })
-                .reduce(
-                    || ([E::zero(); 3], [E::zero(); 3]),
-                    |(mut va, mut ra), (vb, rb)| {
-                        for (ai, bi) in va.iter_mut().zip(vb.iter()) {
-                            *ai += *bi;
-                        }
-                        for (ai, bi) in ra.iter_mut().zip(rb.iter()) {
-                            *ai += *bi;
-                        }
-                        (va, ra)
-                    },
+            let (virt_coeffs, rel_coeffs) = {
+                let tasks = prefix_x_block_tasks(
+                    y_len,
+                    next_current_x_half,
+                    num_first,
+                    first_bits,
+                    block_size,
+                    live_pairs,
                 );
+                let out_writes = DisjointWrites(out.as_mut_ptr());
+                tasks
+                    .par_iter()
+                    .fold(
+                        || ([E::zero(); 3], [E::zero(); 3]),
+                        |(mut virt, mut rel), task| {
+                            let y = task.row;
+                            let row = &w_full[y * old_live_x_cols..(y + 1) * old_live_x_cols];
+                            let alpha = alpha_compact[y];
+                            let j_base = y * next_current_x_half;
+                            let out_row_base = y * next_live_x_cols;
+                            let mut inner_virt = ProductLanes::<E, 3>::zero();
+
+                            for pair_x in task.blk..task.blk_end {
+                                let left_next = 2 * pair_x;
+                                let left_old = 4 * pair_x;
+                                let w0 = fold_full_prefix_pair(row, left_old, r);
+                                // SAFETY: this task exclusively owns columns
+                                // `[2·blk, 2·blk_end)` of row `y` (tasks
+                                // partition the output index space).
+                                unsafe {
+                                    out_writes.write(out_row_base + left_next, w0);
+                                }
+                                let w1 = if left_next + 1 < next_live_x_cols {
+                                    let w1 = fold_full_prefix_pair(row, left_old + 2, r);
+                                    // SAFETY: as above; `left_next + 1` is in
+                                    // this task's owned column range.
+                                    unsafe {
+                                        out_writes.write(out_row_base + left_next + 1, w1);
+                                    }
+                                    w1
+                                } else {
+                                    E::zero()
+                                };
+                                let dw = w1 - w0;
+                                let two_w0_plus_one = w0 + w0 + E::one();
+
+                                let j_low = (j_base + pair_x) & (num_first - 1);
+                                let e_in = e_first[j_low];
+                                inner_virt.add_product(0, e_in, w0 * (w0 + E::one()));
+                                inner_virt.add_product(1, e_in, dw * two_w0_plus_one);
+                                inner_virt.add_product(2, e_in, dw * dw);
+
+                                let m0 = next_relation_matrix_col_evals_compact[left_next];
+                                let m1 = next_relation_matrix_col_evals_compact[left_next + 1];
+                                let p0 = alpha * m0;
+                                let p1 = alpha * m1;
+                                accumulate_fused_prefix_x_relation(
+                                    trace_table,
+                                    y_len,
+                                    &mut rel,
+                                    w0,
+                                    dw,
+                                    p0,
+                                    p1,
+                                    y,
+                                    left_next,
+                                    next_live_x_cols,
+                                );
+                            }
+
+                            let e_out = e_second[task.j_high];
+                            let reduced_inner = inner_virt.finish();
+                            virt[0] += e_out * reduced_inner[0];
+                            virt[1] += e_out * reduced_inner[1];
+                            virt[2] += e_out * reduced_inner[2];
+
+                            (virt, rel)
+                        },
+                    )
+                    .reduce(
+                        || ([E::zero(); 3], [E::zero(); 3]),
+                        |(mut va, mut ra), (vb, rb)| {
+                            for (ai, bi) in va.iter_mut().zip(vb.iter()) {
+                                *ai += *bi;
+                            }
+                            for (ai, bi) in ra.iter_mut().zip(rb.iter()) {
+                                *ai += *bi;
+                            }
+                            (va, ra)
+                        },
+                    )
+            };
 
             #[cfg(not(feature = "parallel"))]
             let (virt_coeffs, rel_coeffs) = {
@@ -315,7 +356,7 @@ impl<E: FieldCore + FromPrimitiveInt + HasUnreducedOps> AkitaStage2Prover<E> {
                         let (j_high, blk_end) = stage2_eq_block(
                             j_base, blk, num_first, first_bits, block_size, live_pairs,
                         );
-                        let mut inner_virt = [E::zero(); 3];
+                        let mut inner_virt = ProductLanes::<E, 3>::zero();
 
                         for pair_x in blk..blk_end {
                             let left_next = 2 * pair_x;
@@ -334,9 +375,9 @@ impl<E: FieldCore + FromPrimitiveInt + HasUnreducedOps> AkitaStage2Prover<E> {
 
                             let j_low = (j_base + pair_x) & (num_first - 1);
                             let e_in = e_first[j_low];
-                            inner_virt[0] += e_in * (w0 * (w0 + E::one()));
-                            inner_virt[1] += e_in * (dw * two_w0_plus_one);
-                            inner_virt[2] += e_in * (dw * dw);
+                            inner_virt.add_product(0, e_in, w0 * (w0 + E::one()));
+                            inner_virt.add_product(1, e_in, dw * two_w0_plus_one);
+                            inner_virt.add_product(2, e_in, dw * dw);
 
                             let m0 = next_relation_matrix_col_evals_compact[left_next];
                             let m1 = next_relation_matrix_col_evals_compact[left_next + 1];
@@ -357,9 +398,10 @@ impl<E: FieldCore + FromPrimitiveInt + HasUnreducedOps> AkitaStage2Prover<E> {
                         }
 
                         let e_out = e_second[j_high];
-                        virt[0] += e_out * inner_virt[0];
-                        virt[1] += e_out * inner_virt[1];
-                        virt[2] += e_out * inner_virt[2];
+                        let reduced_inner = inner_virt.finish();
+                        virt[0] += e_out * reduced_inner[0];
+                        virt[1] += e_out * reduced_inner[1];
+                        virt[2] += e_out * reduced_inner[2];
                         blk = blk_end;
                     }
                 }
@@ -402,24 +444,33 @@ impl<E: FieldCore + FromPrimitiveInt + HasUnreducedOps> AkitaStage2Prover<E> {
             self.current_x_len()
         );
 
+        // Widened parallel axis: flattened `(row, eq-block)` tasks; outer
+        // merges are exact, so coefficients are unchanged.
+        let tasks = prefix_x_block_tasks(
+            alpha_compact.len(),
+            current_x_half,
+            num_first,
+            first_bits,
+            block_size,
+            live_pairs,
+        );
+
         if self.can_skip_norm_linear_coeff() {
             let (virt_coeffs, rel_accum) = cfg_fold_reduce!(
-                0..alpha_compact.len(),
+                tasks.clone(),
                 || ([E::zero(); 2], [E::MulU64Accum::zero(); 6]),
-                |(mut virt, mut rel), y| {
+                |(mut virt, mut rel), task| {
+                    let y = task.row;
                     let row_start = y * self.live_x_cols;
                     let row = &w_compact[row_start..row_start + self.live_x_cols];
                     let alpha = alpha_compact[y];
                     let j_base = y * current_x_half;
 
-                    let mut blk = 0usize;
-                    while blk < live_pairs {
-                        let (j_high, blk_end) = stage2_eq_block(
-                            j_base, blk, num_first, first_bits, block_size, live_pairs,
-                        );
+                    {
+                        let (j_high, blk_end) = (task.j_high, task.blk_end);
                         let mut inner_virt = [E::MulU64Accum::zero(); 2];
 
-                        for pair_x in blk..blk_end {
+                        for pair_x in task.blk..blk_end {
                             let j_low = (j_base + pair_x) & (num_first - 1);
                             let e_in = e_first[j_low];
                             let left = 2 * pair_x;
@@ -465,7 +516,6 @@ impl<E: FieldCore + FromPrimitiveInt + HasUnreducedOps> AkitaStage2Prover<E> {
                         virt[0] += e_out * reduced_inner[0];
                         virt[1] += e_out * reduced_inner[1];
 
-                        blk = blk_end;
                     }
                     (virt, rel)
                 },
@@ -486,22 +536,20 @@ impl<E: FieldCore + FromPrimitiveInt + HasUnreducedOps> AkitaStage2Prover<E> {
             )
         } else {
             let (virt_coeffs, rel_accum) = cfg_fold_reduce!(
-                0..alpha_compact.len(),
+                tasks.clone(),
                 || ([E::zero(); 3], [E::MulU64Accum::zero(); 6]),
-                |(mut virt, mut rel), y| {
+                |(mut virt, mut rel), task| {
+                    let y = task.row;
                     let row_start = y * self.live_x_cols;
                     let row = &w_compact[row_start..row_start + self.live_x_cols];
                     let alpha = alpha_compact[y];
                     let j_base = y * current_x_half;
 
-                    let mut blk = 0usize;
-                    while blk < live_pairs {
-                        let (j_high, blk_end) = stage2_eq_block(
-                            j_base, blk, num_first, first_bits, block_size, live_pairs,
-                        );
+                    {
+                        let (j_high, blk_end) = (task.j_high, task.blk_end);
                         let mut inner_virt = [E::MulU64Accum::zero(); 4];
 
-                        for pair_x in blk..blk_end {
+                        for pair_x in task.blk..blk_end {
                             let j_low = (j_base + pair_x) & (num_first - 1);
                             let e_in = e_first[j_low];
                             let left = 2 * pair_x;
@@ -550,7 +598,6 @@ impl<E: FieldCore + FromPrimitiveInt + HasUnreducedOps> AkitaStage2Prover<E> {
                         virt[1] += e_out * reduced_inner[1];
                         virt[2] += e_out * reduced_inner[2];
 
-                        blk = blk_end;
                     }
                     (virt, rel)
                 },
@@ -590,6 +637,9 @@ impl<E: FieldCore + FromPrimitiveInt + HasUnreducedOps> AkitaStage2Prover<E> {
         let current_x_half = 1usize << (self.current_x_width() - 1);
         let live_pairs = self.live_x_cols.div_ceil(2);
         let block_size = num_first.min(live_pairs);
+        // R7 deferral window: at most `block_size` products per unreduced lane
+        // before the per-block reduction.
+        debug_assert!(block_size <= E::PRODUCT_ACCUM_MAX_TERMS);
         let alpha_compact = &self.alpha_compact;
         let relation_matrix_col_evals_compact = &self.relation_matrix_col_evals_compact;
         let trace_table = self.trace_table.as_ref();
@@ -599,24 +649,33 @@ impl<E: FieldCore + FromPrimitiveInt + HasUnreducedOps> AkitaStage2Prover<E> {
             self.current_x_len()
         );
 
+        // Widened parallel axis: flattened `(row, eq-block)` tasks; outer
+        // merges are exact, so coefficients are unchanged.
+        let tasks = prefix_x_block_tasks(
+            alpha_compact.len(),
+            current_x_half,
+            num_first,
+            first_bits,
+            block_size,
+            live_pairs,
+        );
+
         if self.can_skip_norm_linear_coeff() {
             let (virt_coeffs, rel_coeffs) = cfg_fold_reduce!(
-                0..alpha_compact.len(),
+                tasks.clone(),
                 || ([E::zero(); 2], [E::zero(); 3]),
-                |(mut virt, mut rel), y| {
+                |(mut virt, mut rel), task| {
+                    let y = task.row;
                     let row_start = y * self.live_x_cols;
                     let row = &w_full[row_start..row_start + self.live_x_cols];
                     let alpha = alpha_compact[y];
                     let j_base = y * current_x_half;
 
-                    let mut blk = 0usize;
-                    while blk < live_pairs {
-                        let (j_high, blk_end) = stage2_eq_block(
-                            j_base, blk, num_first, first_bits, block_size, live_pairs,
-                        );
-                        let mut inner_virt = [E::zero(); 2];
+                    {
+                        let (j_high, blk_end) = (task.j_high, task.blk_end);
+                        let mut inner_virt = ProductLanes::<E, 2>::zero();
 
-                        for pair_x in blk..blk_end {
+                        for pair_x in task.blk..blk_end {
                             let j_low = (j_base + pair_x) & (num_first - 1);
                             let e_in = e_first[j_low];
                             let left = 2 * pair_x;
@@ -628,8 +687,8 @@ impl<E: FieldCore + FromPrimitiveInt + HasUnreducedOps> AkitaStage2Prover<E> {
                             };
                             let dw = w1 - w0;
 
-                            inner_virt[0] += e_in * (w0 * (w0 + E::one()));
-                            inner_virt[1] += e_in * (dw * dw);
+                            inner_virt.add_product(0, e_in, w0 * (w0 + E::one()));
+                            inner_virt.add_product(1, e_in, dw * dw);
 
                             let m0 = relation_matrix_col_evals_compact[left];
                             let m1 = relation_matrix_col_evals_compact[left + 1];
@@ -650,10 +709,10 @@ impl<E: FieldCore + FromPrimitiveInt + HasUnreducedOps> AkitaStage2Prover<E> {
                         }
 
                         let e_out = e_second[j_high];
-                        virt[0] += e_out * inner_virt[0];
-                        virt[1] += e_out * inner_virt[1];
+                        let reduced_inner = inner_virt.finish();
+                        virt[0] += e_out * reduced_inner[0];
+                        virt[1] += e_out * reduced_inner[1];
 
-                        blk = blk_end;
                     }
                     (virt, rel)
                 },
@@ -670,22 +729,20 @@ impl<E: FieldCore + FromPrimitiveInt + HasUnreducedOps> AkitaStage2Prover<E> {
             (NormRoundTerms::SkipLinear(virt_coeffs), rel_coeffs)
         } else {
             let (virt_coeffs, rel_coeffs) = cfg_fold_reduce!(
-                0..alpha_compact.len(),
+                tasks.clone(),
                 || ([E::zero(); 3], [E::zero(); 3]),
-                |(mut virt, mut rel), y| {
+                |(mut virt, mut rel), task| {
+                    let y = task.row;
                     let row_start = y * self.live_x_cols;
                     let row = &w_full[row_start..row_start + self.live_x_cols];
                     let alpha = alpha_compact[y];
                     let j_base = y * current_x_half;
 
-                    let mut blk = 0usize;
-                    while blk < live_pairs {
-                        let (j_high, blk_end) = stage2_eq_block(
-                            j_base, blk, num_first, first_bits, block_size, live_pairs,
-                        );
-                        let mut inner_virt = [E::zero(); 3];
+                    {
+                        let (j_high, blk_end) = (task.j_high, task.blk_end);
+                        let mut inner_virt = ProductLanes::<E, 3>::zero();
 
-                        for pair_x in blk..blk_end {
+                        for pair_x in task.blk..blk_end {
                             let j_low = (j_base + pair_x) & (num_first - 1);
                             let e_in = e_first[j_low];
                             let left = 2 * pair_x;
@@ -698,9 +755,9 @@ impl<E: FieldCore + FromPrimitiveInt + HasUnreducedOps> AkitaStage2Prover<E> {
                             let dw = w1 - w0;
                             let two_w0_plus_one = w0 + w0 + E::one();
 
-                            inner_virt[0] += e_in * (w0 * (w0 + E::one()));
-                            inner_virt[1] += e_in * (dw * two_w0_plus_one);
-                            inner_virt[2] += e_in * (dw * dw);
+                            inner_virt.add_product(0, e_in, w0 * (w0 + E::one()));
+                            inner_virt.add_product(1, e_in, dw * two_w0_plus_one);
+                            inner_virt.add_product(2, e_in, dw * dw);
 
                             let m0 = relation_matrix_col_evals_compact[left];
                             let m1 = relation_matrix_col_evals_compact[left + 1];
@@ -721,11 +778,11 @@ impl<E: FieldCore + FromPrimitiveInt + HasUnreducedOps> AkitaStage2Prover<E> {
                         }
 
                         let e_out = e_second[j_high];
-                        virt[0] += e_out * inner_virt[0];
-                        virt[1] += e_out * inner_virt[1];
-                        virt[2] += e_out * inner_virt[2];
+                        let reduced_inner = inner_virt.finish();
+                        virt[0] += e_out * reduced_inner[0];
+                        virt[1] += e_out * reduced_inner[1];
+                        virt[2] += e_out * reduced_inner[2];
 
-                        blk = blk_end;
                     }
                     (virt, rel)
                 },

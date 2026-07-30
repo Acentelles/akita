@@ -1,7 +1,13 @@
 use super::*;
 
+// A/B-measured split (2026-07-30, interleaved medians): the pure
+// accumulation reduction loses when parallelized below 2^14 pairs (0.53x at
+// 2^12-2^13 pairs), while the fused fold+accumulate wins from 2^12 pairs
+// (2.9-3.5x at the newly parallel sizes), so the two paths gate separately.
 #[cfg(feature = "parallel")]
 const DENSE_PARALLEL_PAIR_THRESHOLD: usize = 1 << 14;
+#[cfg(feature = "parallel")]
+const DENSE_PARALLEL_FUSED_THRESHOLD: usize = 1 << 12;
 
 pub(crate) fn accumulate_dense_round<E: FieldCore + HasUnreducedOps>(
     witness_evals: &[E],
@@ -123,7 +129,7 @@ where
 
     #[cfg(feature = "parallel")]
     {
-        if quarter >= DENSE_PARALLEL_PAIR_THRESHOLD {
+        if quarter >= DENSE_PARALLEL_FUSED_THRESHOLD {
             let mut folded_w = Vec::<E>::with_capacity(half);
             let mut folded_f = Vec::<E>::with_capacity(half);
             // SAFETY: both vectors are allocated with capacity `half`. `half` is
