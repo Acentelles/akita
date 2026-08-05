@@ -31,6 +31,21 @@ logging-transcript = []
 # for the crate to compile with default-features disabled.
 transcript-blake2b = ["spongefish/blake2", "spongefish/sha3"]
 transcript-keccak = ["spongefish/keccak", "spongefish/sha3"]
+# UNAUDITED RESEARCH CRYPTOGRAPHY - NOT FOR PRODUCTION.
+#
+# Algebraic (arithmetization-friendly) Poseidon2 duplex over p* = 2^64 - 59,
+# t = 12, rate 8 / capacity 4. Exists so a wrapped verifier can recompute the
+# Fiat-Shamir transcript hash in-circuit over the same field. This is a NEW
+# Poseidon2 instance at a prime with no third-party cryptanalysis at full
+# parameters; do not deploy it. Never default. Selection priority is
+# Blake2b > Keccak > Poseidon2, so enabling this feature alongside the others
+# (for example under `--all-features`) leaves the Blake2b transcript in place;
+# select it with `--no-default-features --features transcript-poseidon2`.
+transcript-poseidon2 = ["spongefish/sha3"]
+# Switch the Poseidon2 backend from the alpha = 3 instance (R_F = 8, R_P = 42)
+# to the alpha = 7 instance (R_F = 8, R_P = 22). No effect without
+# `transcript-poseidon2`.
+transcript-poseidon2-alpha7 = ["transcript-poseidon2"]
 
 [lints]
 workspace = true

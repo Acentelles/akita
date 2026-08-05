@@ -7,12 +7,12 @@ use akita_algebra::ntt::tables::{
     Q64_NUM_PRIMES, Q64_PRIMES,
 };
 use akita_algebra::ring::{CrtNttParamSet, CyclotomicCrtNtt};
-use akita_field::AkitaError;
-use akita_types::ntt_ring_degree_supported_for_field;
 #[allow(unused_imports)]
 use akita_field::parallel::*;
+use akita_field::AkitaError;
 use akita_field::{cfg_iter, CanonicalField, FieldCore, PseudoMersenneField};
 use akita_field::{Prime128Offset159, Prime128Offset2355, Prime128OffsetA7F7};
+use akita_types::ntt_ring_degree_supported_for_field;
 
 use akita_types::{NttCacheKey, RingMatrixView};
 
@@ -382,8 +382,8 @@ mod tests {
 mod ntt_slot_cache_any {
     use super::*;
     use akita_field::AkitaError;
-    use akita_types::FlatMatrix;
     use akita_field::{Prime128OffsetA7F7, Prime32Offset99};
+    use akita_types::FlatMatrix;
 
     fn sample_cache<F: FieldCore + CanonicalField, const D: usize>() -> NttSlotCache<D> {
         let ring = akita_algebra::CyclotomicRing::<F, D>::zero();

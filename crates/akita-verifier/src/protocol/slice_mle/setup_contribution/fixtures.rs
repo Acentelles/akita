@@ -5,12 +5,12 @@
 use akita_algebra::eq_poly::EqPolynomial;
 use akita_algebra::ring::{eval_ring_at_pows, scalar_powers};
 use akita_algebra::CyclotomicRing;
+use akita_field::{CanonicalField, Prime128OffsetA7F7};
 use akita_types::{
     gadget_row_scalars, AkitaExpandedSetup, AkitaSetupSeed, CommitmentRingDims, FlatMatrix,
     RelationMatrixRowLayout, SetupContributionPlan, SetupContributionPlanInputs,
     WitnessChunkLayout, WitnessChunkLengths, WitnessLayout,
 };
-use akita_field::{CanonicalField, Prime128OffsetA7F7};
 
 use super::evaluate_setup_contribution_direct;
 use crate::protocol::ring_switch::{
@@ -20,6 +20,10 @@ use crate::protocol::ring_switch::{
 
 pub(crate) type TestField = Prime128OffsetA7F7;
 pub(crate) const TEST_RING_DIM: usize = 64;
+/// Second supported setup-offload dimension (`specs/mixed-d-setup-delegation.md`):
+/// the mixed-D equivalence fixtures pin materialized-vs-direct agreement at the
+/// Aerie preset dimension as well.
+pub(crate) const TEST_RING_DIM_128: usize = 128;
 
 pub(crate) fn test_scalar(value: u128) -> TestField {
     TestField::from_canonical_u128_reduced(value)
@@ -124,6 +128,12 @@ impl SetupContributionShape {
 
 impl SetupContributionFixture {
     pub fn from_shape(shape: &SetupContributionShape) -> Self {
+        Self::from_shape_at::<TEST_RING_DIM>(shape)
+    }
+
+    /// Build the fixture with all ring axes at `RING_DIM` (uniform role
+    /// dimensions, generation dimension, and alpha-power table length).
+    pub fn from_shape_at<const RING_DIM: usize>(shape: &SetupContributionShape) -> Self {
         let num_points = shape.num_polys_per_group.len();
         let num_t_vectors = shape.num_polys_per_group.iter().sum();
         let total_blocks = shape.num_blocks * shape.num_claims;
@@ -151,10 +161,10 @@ impl SetupContributionFixture {
             .max(shape.n_a * inner_width)
             .max(shape.n_b * n_cols_t);
 
-        let matrix_entries: Vec<CyclotomicRing<TestField, TEST_RING_DIM>> = (0..max_setup_len)
+        let matrix_entries: Vec<CyclotomicRing<TestField, RING_DIM>> = (0..max_setup_len)
             .map(|idx| {
                 CyclotomicRing::from_coefficients(std::array::from_fn(|coeff| {
-                    test_scalar(1_000 + (idx * TEST_RING_DIM + coeff) as u128)
+                    test_scalar(1_000 + (idx * RING_DIM + coeff) as u128)
                 }))
             })
             .collect();
@@ -162,11 +172,11 @@ impl SetupContributionFixture {
             AkitaSetupSeed {
                 max_num_vars: 32,
                 max_num_batched_polys: shape.num_polys_per_group.iter().sum(),
-                gen_ring_dim: TEST_RING_DIM,
+                gen_ring_dim: RING_DIM,
                 max_setup_len,
                 public_matrix_seed: [7u8; 32],
             },
-            FlatMatrix::from_ring_slice::<TEST_RING_DIM>(&matrix_entries),
+            FlatMatrix::from_ring_slice::<RING_DIM>(&matrix_entries),
         );
 
         let setup_contribution_inputs = SetupContributionPlanInputs {
@@ -244,7 +254,7 @@ impl SetupContributionFixture {
         )
         .unwrap();
         let relation_matrix_evaluator = RelationMatrixEvaluator {
-            role_dims: CommitmentRingDims::uniform(TEST_RING_DIM),
+            role_dims: CommitmentRingDims::uniform(RING_DIM),
             groups,
             log_basis: shape.log_basis,
             chunk_layout,
@@ -257,7 +267,7 @@ impl SetupContributionFixture {
             .map(|idx| test_scalar(101 + idx as u128))
             .collect();
         let alpha = test_scalar(19);
-        let alpha_pows = scalar_powers(alpha, TEST_RING_DIM);
+        let alpha_pows = scalar_powers(alpha, RING_DIM);
         let fold_gadget = gadget_row_scalars::<TestField>(shape.depth_fold, shape.log_basis);
         let block_bits = shape.num_blocks.trailing_zeros() as usize;
         let eq_low = EqPolynomial::evals(&full_vec_randomness[..block_bits]).unwrap();
@@ -279,8 +289,13 @@ impl SetupContributionFixture {
         }
     }
 
-    pub fn compute_contribution(&self) -> TestField {
-        evaluate_setup_contribution_direct::<TestField, TestField, TEST_RING_DIM>(
+    pub fn compute_contribution_at<const RING_DIM: usize>(&self) -> TestField {
+        assert_eq!(
+            self.relation_matrix_evaluator.role_dims.d_a(),
+            RING_DIM,
+            "fixture ring dimension must match the requested const dimension"
+        );
+        evaluate_setup_contribution_direct::<TestField, TestField, RING_DIM>(
             &self.relation_matrix_evaluator,
             &self.full_vec_randomness,
             Some(&self.eq_low),
@@ -294,7 +309,7 @@ impl SetupContributionFixture {
         .unwrap()
     }
 
-    pub fn materialized_contribution(&self) -> TestField {
+    pub fn materialized_contribution_at<const RING_DIM: usize>(&self) -> TestField {
         let plan = SetupContributionPlan::finish_plan::<TestField>(
             &self.relation_matrix_evaluator.setup_contribution_static,
             &self.full_vec_randomness,
@@ -308,7 +323,7 @@ impl SetupContributionFixture {
         let setup_len = self
             .setup
             .shared_matrix()
-            .total_ring_elements_at::<TEST_RING_DIM>()
+            .total_ring_elements_at::<RING_DIM>()
             .unwrap();
         assert!(
             setup_len >= setup_index_weight.len(),
@@ -317,7 +332,7 @@ impl SetupContributionFixture {
         let setup_view = self
             .setup
             .shared_matrix()
-            .ring_view::<TEST_RING_DIM>(1, setup_len)
+            .ring_view::<RING_DIM>(1, setup_len)
             .unwrap();
         setup_view
             .as_slice()
@@ -328,8 +343,12 @@ impl SetupContributionFixture {
     }
 
     pub fn assert_direct_matches_materialized(&self) {
-        let got = self.compute_contribution();
-        let expected = self.materialized_contribution();
+        self.assert_direct_matches_materialized_at::<TEST_RING_DIM>();
+    }
+
+    pub fn assert_direct_matches_materialized_at<const RING_DIM: usize>(&self) {
+        let got = self.compute_contribution_at::<RING_DIM>();
+        let expected = self.materialized_contribution_at::<RING_DIM>();
         assert_eq!(
             got, expected,
             "packed setup contribution must equal materialized setup contribution"

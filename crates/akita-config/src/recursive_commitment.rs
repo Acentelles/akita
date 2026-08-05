@@ -5,7 +5,7 @@ use akita_challenges::{SparseChallengeConfig, TensorChallengeShape};
 use akita_field::AkitaError;
 use akita_types::{
     AkitaScheduleInputs, AkitaScheduleLookupKey, ChunkedWitnessCfg, DecompositionParams,
-    OpeningClaimsLayout, Schedule, SetupMatrixEnvelope, SisModulusFamily, SETUP_OFFLOAD_D_SETUP,
+    OpeningClaimsLayout, Schedule, SetupMatrixEnvelope, SisModulusFamily,
 };
 #[cfg(feature = "schedules-fp128-d64-onehot-recursive")]
 use std::any::TypeId;
@@ -80,10 +80,13 @@ impl<Cfg: CommitmentConfig> CommitmentConfig for RecursiveCommitmentConfig<Cfg> 
     fn runtime_schedule(
         key: akita_types::AkitaScheduleLookupKey,
     ) -> Result<akita_types::Schedule, AkitaError> {
-        if Cfg::D != SETUP_OFFLOAD_D_SETUP {
-            return Err(AkitaError::InvalidSetup(
-                "recursive setup planning requires D64".to_string(),
-            ));
+        if !akita_types::setup_offload_ring_dim_supported(Cfg::D) {
+            return Err(AkitaError::InvalidSetup(format!(
+                "recursive setup planning requires a supported offload ring dimension \
+                 ({:?}), got D={}",
+                akita_types::SETUP_OFFLOAD_SUPPORTED_RING_DIMS,
+                Cfg::D
+            )));
         }
         if Cfg::chunked_witness_cfg().uses_multi_chunk() {
             return Err(AkitaError::InvalidSetup(

@@ -60,6 +60,10 @@ pub(in crate::protocol::core) struct PreparedFold<F: FieldCore, E: FieldCore> {
 pub(in crate::protocol::core) fn prepare_fold_inner<'a, F, E, T, P, V, C, O, TS, R>(
     stack: &ProverComputeStack<'_, F, C, O, TS, R>,
     needs_extension_reduction: bool,
+    // Grouped EOR batches embed each group at a contiguous suffix of the
+    // shared point (recursive carried-claim batches) instead of the
+    // grouped-root prefix embedding.
+    eor_suffix_aligned: bool,
     fold_claims: ProverOpeningData<'a, E, P, F>,
     eor_polys: &[&P],
     eor_opening_batch: &OpeningClaims<'_, E>,
@@ -101,42 +105,79 @@ where
     // A-role fold dimension: the EOR sumcheck and tensor projection operate on
     // the claim polynomials at this level's fold ring.
     let ring_d = level_params.role_dims().d_a();
-    let (protocol_point, row_coefficients, reduction) = if needs_extension_reduction {
-        // Multi-group roots pass their real grouped layout so shorter groups
-        // are reduced at their own point prefix and lifted by constant
-        // extension; single-group batches keep the historical flat path.
-        let claim_layout = (opening_batch.num_groups() > 1).then_some(&opening_batch);
-        let proved = dispatch_for_field!(
-            ProtocolDispatchSlot::Role(RingRole::Inner),
-            F,
-            ring_d,
-            |D| {
-                prove_extension_opening_reduction::<F, E, T, P, TS, D>(
-                    tensor.backend(),
-                    Some(tensor.prepared()),
-                    eor_polys,
-                    eor_opening_batch,
-                    claim_layout,
-                    pad_base_evals,
-                    transcript,
-                    if pad_base_evals { "recursive" } else { "root" },
-                )
-            }
-        )?;
-        (
-            proved.protocol_point,
-            Some(proved.row_coefficients),
-            Some(proved.reduction),
-        )
-    } else {
-        validate_non_eor()?;
-        let row_coefficients = if pad_base_evals {
-            Some(vec![E::one(); opening_batch.num_total_polynomials()])
+    let (protocol_point, row_coefficients, reduction, per_group_protocol_points) =
+        if needs_extension_reduction {
+            // Multi-group batches pass their real grouped layout so shorter
+            // groups are reduced at their own point slice and lifted by
+            // constant extension (prefix-embedded for grouped roots,
+            // suffix-embedded for recursive carried-claim batches);
+            // single-group batches keep the historical flat path.
+            let alignment = if opening_batch.num_groups() > 1 {
+                if eor_suffix_aligned {
+                    EorClaimAlignment::Suffix(&opening_batch)
+                } else {
+                    EorClaimAlignment::Prefix(&opening_batch)
+                }
+            } else {
+                EorClaimAlignment::Flat
+            };
+            let (proved, per_group_points) = dispatch_for_field!(
+                ProtocolDispatchSlot::Role(RingRole::Inner),
+                F,
+                ring_d,
+                |D| {
+                    let proved = prove_extension_opening_reduction::<F, E, T, P, TS, D>(
+                        tensor.backend(),
+                        Some(tensor.prepared()),
+                        eor_polys,
+                        eor_opening_batch,
+                        alignment,
+                        pad_base_evals,
+                        transcript,
+                        if pad_base_evals { "recursive" } else { "root" },
+                    )?;
+                    let per_group_points = if eor_suffix_aligned && opening_batch.num_groups() > 1 {
+                        let mut points = Vec::with_capacity(opening_batch.num_groups());
+                        for group_index in 0..opening_batch.num_groups() {
+                            let point_vars =
+                                fold_claims.opening_claims().group_point_vars(group_index)?;
+                            points.push(akita_types::suffix_aligned_group_packed_point::<F, E, D>(
+                                &proved.rho,
+                                point_vars,
+                            )?);
+                        }
+                        Some(points)
+                    } else {
+                        None
+                    };
+                    Ok::<_, AkitaError>((proved, per_group_points))
+                }
+            )
+            .map_err(|err| {
+                AkitaError::InvalidInput(format!("extension-opening reduction failed: {err:?}"))
+            })?;
+            (
+                proved.protocol_point,
+                Some(proved.row_coefficients),
+                Some(proved.reduction),
+                per_group_points,
+            )
         } else {
-            None
+            validate_non_eor()?;
+            // `None` means "absorb the claimed values and squeeze the batching
+            // coefficients in `compute_trace_target`". Only a single-claim
+            // recursive-suffix batch may skip that: there the sum has one term
+            // so `rho_0 = 1` is lossless and the historical bytes are kept. A
+            // multi-claim batch at `k = 1` (the two-group carried-claim suffix)
+            // is the `EXT_DEGREE == 1` half of Defect 1 in
+            // `aerie/_docs/ABSORPTION-AUDIT.md` and must be rho-weighted.
+            let row_coefficients = if pad_base_evals && opening_batch.num_total_polynomials() == 1 {
+                Some(vec![E::one(); opening_batch.num_total_polynomials()])
+            } else {
+                None
+            };
+            (non_eor_protocol_point, row_coefficients, None, None)
         };
-        (non_eor_protocol_point, row_coefficients, None)
-    };
 
     if needs_extension_reduction {
         if pad_base_evals {
@@ -144,6 +185,7 @@ where
                 stack,
                 fold_claims,
                 protocol_point: &protocol_point,
+                per_group_protocol_points,
                 reduction,
                 row_coefficients,
                 trace_opening_batch: &opening_batch,
@@ -185,6 +227,7 @@ where
                     stack,
                     fold_claims: transformed_fold_claims,
                     protocol_point: &protocol_point,
+                    per_group_protocol_points: None,
                     reduction,
                     row_coefficients,
                     trace_opening_batch: &opening_batch,
@@ -204,6 +247,7 @@ where
             stack,
             fold_claims,
             protocol_point: &protocol_point,
+            per_group_protocol_points: None,
             reduction,
             row_coefficients,
             trace_opening_batch: &opening_batch,
@@ -232,6 +276,10 @@ where
     stack: &'a ProverComputeStack<'a, F, C, O, TS, R>,
     fold_claims: ProverOpeningData<'a, E, Q, F>,
     protocol_point: &'a [E],
+    /// Per-group protocol points for suffix-aligned grouped EOR batches; when
+    /// present, each group's opening point is taken directly instead of being
+    /// routed out of `protocol_point`.
+    per_group_protocol_points: Option<Vec<Vec<E>>>,
     reduction: Option<ExtensionOpeningReduction<E>>,
     row_coefficients: Option<Vec<E>>,
     trace_opening_batch: &'a OpeningClaimsLayout,
@@ -282,6 +330,7 @@ where
         stack,
         fold_claims,
         protocol_point,
+        per_group_protocol_points,
         reduction,
         row_coefficients,
         trace_opening_batch,
@@ -310,6 +359,7 @@ where
             ring_d,
             |D| {
                 let mut prepared_points = Vec::with_capacity(opening_batch.num_groups());
+                let mut group_inner_points = Vec::with_capacity(opening_batch.num_groups());
                 let mut folded_rings = Vec::with_capacity(opening_batch.num_total_polynomials());
                 let mut e_folded_by_claim =
                     Vec::with_capacity(opening_batch.num_total_polynomials());
@@ -330,16 +380,24 @@ where
                             actual: point_vars.num_vars(),
                         });
                     }
-                    let group_protocol_point = point_vars
-                        .indices()
-                        .iter()
-                        .map(|&idx| {
-                            protocol_point
-                                .get(idx)
-                                .copied()
-                                .ok_or(AkitaError::InvalidProof)
-                        })
-                        .collect::<Result<Vec<_>, _>>()?;
+                    // Suffix-aligned grouped EOR batches carry their per-group
+                    // packed points directly; every other path routes the
+                    // group's point out of the shared protocol point.
+                    let group_protocol_point = match &per_group_protocol_points {
+                        Some(points) => points.get(group_index).cloned().ok_or_else(|| {
+                            AkitaError::InvalidInput("missing per-group protocol point".to_string())
+                        })?,
+                        None => point_vars
+                            .indices()
+                            .iter()
+                            .map(|&idx| {
+                                protocol_point
+                                    .get(idx)
+                                    .copied()
+                                    .ok_or(AkitaError::InvalidProof)
+                            })
+                            .collect::<Result<Vec<_>, _>>()?,
+                    };
                     let prepared_point = prepare_opening_point::<F, E, D>(
                         &group_protocol_point,
                         basis,
@@ -356,10 +414,16 @@ where
                             group_polys,
                             &prepared_point,
                             group_lp.block_len(),
-                        )?;
+                        )
+                        .map_err(|err| {
+                            AkitaError::InvalidInput(format!(
+                                "group {group_index} claim evaluation failed: {err:?}"
+                            ))
+                        })?;
                     for pt in &prepared_point.padded_point {
                         append_ext_field::<F, E, T>(transcript, ABSORB_EVALUATION_CLAIMS, pt);
                     }
+                    group_inner_points.push(group_protocol_point);
                     e_folded_by_claim.extend(
                         group_e_folded_by_claim
                             .iter()
@@ -369,17 +433,57 @@ where
                     prepared_points.push(prepared_point);
                 }
 
+                // ---- Defect-1 regression injection (feature `attack-probe`)
+                // Safe at the root, unlike the EOR-side probe: this reads
+                // `fold_claims.opening_claims()`, which carries the real
+                // claimed values everywhere, whereas the root's *EOR* batch is
+                // only a shape carrier (`OpeningClaims::with_padded_point`)
+                // whose evaluations are placeholders.
+                // `k = 1` half of the forgery: there is no extension-opening
+                // reduction, so the batching coefficients are drawn here. The
+                // strongest attacker absorbs the FALSE carried claims (what
+                // the verifier holds) rather than the true fold openings, so
+                // its transcript stays in lockstep and only the batching can
+                // catch it. See `aerie/_docs/ABSORPTION-AUDIT.md`, Defect 1.
+                #[cfg(feature = "attack-probe")]
+                let row_coefficients = if crate::attack_probe::is_armed()
+                    && row_coefficients.is_none()
+                    && opening_batch.num_total_polynomials() > 1
+                {
+                    let mut claimed = Vec::with_capacity(opening_batch.num_total_polynomials());
+                    for group_index in 0..opening_batch.num_groups() {
+                        claimed.extend_from_slice(
+                            fold_claims
+                                .opening_claims()
+                                .group_evaluations(group_index)?,
+                        );
+                    }
+                    crate::attack_probe::note(
+                        "k=1 suffix: absorbed the carried claim values as shipped".to_string(),
+                    );
+                    append_claim_values_to_transcript::<F, E, T>(&claimed, transcript);
+                    Some(sample_public_row_coefficients::<F, E, T>(
+                        trace_opening_batch,
+                        transcript,
+                    )?)
+                } else {
+                    row_coefficients
+                };
+                // ---- end Defect-1 regression injection ---------------------
                 let (trace_target, row_coefficients) = compute_trace_target::<F, E, T, D>(
                     &reduction,
                     &folded_rings,
                     &prepared_points,
-                    protocol_point,
+                    &group_inner_points,
                     alpha_bits,
                     basis,
                     trace_opening_batch,
                     row_coefficients,
                     transcript,
-                )?;
+                )
+                .map_err(|err| {
+                    AkitaError::InvalidInput(format!("trace target derivation failed: {err:?}"))
+                })?;
                 let row_coefficient_rings = row_coefficient_rings::<F, E, D>(&row_coefficients)?;
                 Ok::<_, AkitaError>((
                     prepared_points,
@@ -409,7 +513,10 @@ where
         row_coefficient_rings,
         relation_matrix_row_layout,
         terminal_tail_t_vectors,
-    )?;
+    )
+    .map_err(|err| {
+        AkitaError::InvalidInput(format!("ring relation construction failed: {err:?}"))
+    })?;
     let extension_opening_reduction = reduction.map(|reduction| reduction.proof);
     // §6 invariant (#239 HIGH) — suffix `PreparedFold` trace-table layout vs
     // `pad_base_evals`. `row_coefficients` and `trace_claim_scales` MUST be
@@ -983,8 +1090,14 @@ where
 {
     match setup_contribution_mode {
         SetupContributionMode::Recursive => {
-            let eta = sample_ext_challenge::<F, E, T>(transcript, CHALLENGE_SUMCHECK_BATCH);
-            let mut stage3_prover = AkitaStage3Prover::new::<F, T>(
+            // Fiat-Shamir hygiene: build the setup-product term first (which
+            // absorbs the setup-prefix slot id), then bind its claim `sigma`,
+            // and only then squeeze `eta`. Squeezing `eta` first would let a
+            // prover -- which computes `eta` itself -- choose `sigma`
+            // adaptively, since `sigma` otherwise reaches the transcript only
+            // inside the combined `sigma + eta * w2`. See the upstream
+            // attribution section of `aerie/_docs/ABSORPTION-AUDIT.md`.
+            let setup_term = AkitaStage3Prover::prepare_setup_term::<F, T>(
                 expanded,
                 prefix_slots,
                 lp,
@@ -993,6 +1106,17 @@ where
                 tau1,
                 alpha,
                 sumcheck_challenges,
+                ring_bits,
+                transcript,
+            )?;
+            let eta = akita_types::bind_setup_product_claim_and_sample_eta::<F, E, T>(
+                &setup_term.claim(),
+                transcript,
+            );
+            let mut stage3_prover = AkitaStage3Prover::new::<F, T>(
+                setup_term,
+                next_level_params,
+                sumcheck_challenges,
                 stage2_next_w_eval,
                 logical_w,
                 live_x_cols,
@@ -1000,12 +1124,23 @@ where
                 ring_bits,
                 level,
                 eta,
-                transcript,
             )?;
             let output = stage3_prover.prove::<F, T, _>(transcript, |tr| {
                 sample_ext_challenge::<F, E, T>(tr, CHALLENGE_SUMCHECK_ROUND)
             })?;
             transcript.append_serde(ABSORB_STAGE3_NEXT_W_EVAL, &output.next_w_eval);
+            // Both halves of the carried pair are transcript-bound, not just
+            // the witness half. `setup_prefix_eval` used to be absorbed
+            // nowhere (Risk 3 of `aerie/_docs/ABSORPTION-AUDIT.md`), which
+            // left it a free post-challenge parameter whenever its stage-3
+            // coefficient `setup_scale * setup_index_weight * alpha_val`
+            // vanished. Absorbed only when the next level actually carries a
+            // setup-prefix claim, so levels without one keep their bytes.
+            // (Label reuse is deliberate: `akita-transcript` labels are
+            // diagnostics, the production sponge is positional.)
+            if next_level_params.setup_prefix.is_some() {
+                transcript.append_serde(ABSORB_EVALUATION_CLAIMS, &output.setup_prefix_eval);
+            }
             Ok(Some(Stage3ProveOutput {
                 proof: SetupSumcheckProof {
                     claim: output.setup_product_claim,

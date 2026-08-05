@@ -14,8 +14,8 @@
 //! D-free wrapper that exists only to give the recursive next-level commitment a
 //! named place to carry its hint.
 
-use akita_types::AkitaCommitmentHint;
 use akita_field::FieldCore;
+use akita_types::AkitaCommitmentHint;
 
 /// D-erased prover cache for a recursive commitment hint.
 #[derive(Debug, Clone, PartialEq, Eq)]

@@ -22,7 +22,7 @@ use akita_types::{
     w_ring_element_count_for_chunks, AkitaScheduleInputs, ChunkedWitnessCfg, CleartextWitnessShape,
     CommitmentRingDims, DecompositionParams, DirectStep, FoldStep, LevelParams,
     OpeningClaimsLayout, PolynomialGroupLayout, PrecommittedGroupParams, PrecommittedLevelParams,
-    RelationMatrixRowLayout, Schedule, SetupContributionMode, Step, SETUP_OFFLOAD_D_SETUP,
+    RelationMatrixRowLayout, Schedule, SetupContributionMode, Step,
 };
 
 use crate::PlannerPolicy;

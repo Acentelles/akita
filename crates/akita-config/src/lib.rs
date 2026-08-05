@@ -110,7 +110,10 @@ pub mod test_support;
 mod transcript_binding;
 pub use conservative_commitment::ConservativeCommitmentConfig;
 pub use mixed_precommit::MixedPrecommitConfig;
-pub use proof_optimized::{ensure_schedule_fits_setup, setup_level_params_from_schedule};
+pub use proof_optimized::{
+    ensure_schedule_fits_setup, ensure_schedule_fits_verifier_setup,
+    setup_level_params_from_schedule,
+};
 pub use recursive_commitment::RecursiveCommitmentConfig;
 pub use schedule_selection::effective_batched_schedule;
 pub use setup_prefix_slots::setup_prefix_slot_ids_for_capacity;
@@ -170,6 +173,7 @@ pub trait CommitmentConfig: Clone + Send + Sync + 'static {
 
     /// Field used by public openings and all proof scalars.
     type ExtField: ExtField<Self::Field>
+        + akita_types::FpExtEncoding<Self::Field>
         + MulBaseUnreduced<Self::Field>
         + AkitaSerialize
         + AkitaDeserialize<Context = ()>

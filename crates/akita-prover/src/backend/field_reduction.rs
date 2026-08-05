@@ -1,10 +1,10 @@
 //! Tensor extension-opening packing helpers.
 
-use akita_field::AkitaError;
-use akita_types::{pack_tensor_base_lift_i8_digits, CleartextWitnessProof, FpExtEncoding};
 use akita_field::unreduced::{HasWide, ReduceTo};
+use akita_field::AkitaError;
 use akita_field::{AdditiveGroup, CanonicalField, FromPrimitiveInt, MulBaseUnreduced};
 use akita_field::{ExtField, FieldCore};
+use akita_types::{pack_tensor_base_lift_i8_digits, CleartextWitnessProof, FpExtEncoding};
 use std::sync::Arc;
 
 use super::dense::{DenseBatchView, DenseView};

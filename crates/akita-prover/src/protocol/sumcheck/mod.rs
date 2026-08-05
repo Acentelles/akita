@@ -117,6 +117,9 @@ mod product_lanes_tests {
 
     /// The exact-headroom window bound must accommodate every production
     /// block size (blocks are at most `e_first.len()`, far below 2^32).
+    // Deliberate compile-time-constant assertion (a regression guard on the
+    // associated const); allowed under clippy 1.95's `assertions_on_constants`.
+    #[allow(clippy::assertions_on_constants)]
     #[test]
     fn product_accum_window_covers_production_blocks() {
         assert!(FpExt4::<Prime32Offset99>::PRODUCT_ACCUM_MAX_TERMS > 1 << 32);

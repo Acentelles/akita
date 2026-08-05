@@ -4,15 +4,17 @@
 //! [`akita_types`] SIS primitives and generated schedule tables.
 
 use super::CommitmentConfig;
-use crate::matrix_envelope::accumulate_matrix_envelope_for_level;
+use crate::matrix_envelope::{
+    accumulate_matrix_envelope_for_level, accumulate_verifier_matrix_envelope_for_level,
+};
 use akita_field::AkitaError;
 use akita_field::{Ext2, FpExt4, Prime128OffsetA7F7, Prime32Offset99, Prime64Offset59};
 use akita_types::{
-    AkitaExpandedSetup, AkitaScheduleLookupKey, LevelParams, OpeningClaimsLayout,
-    PolynomialGroupLayout, Schedule, SetupMatrixEnvelope,
+    AkitaExpandedSetup, AkitaScheduleLookupKey, AkitaVerifierSetup, LevelParams,
+    OpeningClaimsLayout, PolynomialGroupLayout, Schedule, SetupMatrixEnvelope,
 };
 use std::any::TypeId;
-use std::collections::HashMap;
+use std::collections::BTreeMap;
 use std::sync::{LazyLock, Mutex};
 
 /// Minimum proof-optimized log-basis.
@@ -78,11 +80,14 @@ pub(crate) fn proof_optimized_schedule_key<Cfg: CommitmentConfig>(
 ///
 /// Planned role footprints are not monotone across shapes, so scan all
 /// supported sub-shapes and keep the largest packed setup length.
+// BTreeMap, not HashMap: this cache is also exercised inside the Jolt zeroos
+// guest (profile/akita-recursion), where std's RandomState hasher aborts for
+// lack of OS randomness. The key tuple is Ord; behavior is unchanged.
 type SetupMatrixEnvelopeCache =
-    LazyLock<Mutex<HashMap<(TypeId, usize, usize), SetupMatrixEnvelope>>>;
+    LazyLock<Mutex<BTreeMap<(TypeId, usize, usize), SetupMatrixEnvelope>>>;
 
 static SETUP_MATRIX_ENVELOPE_CACHE: SetupMatrixEnvelopeCache =
-    LazyLock::new(|| Mutex::new(HashMap::new()));
+    LazyLock::new(|| Mutex::new(BTreeMap::new()));
 
 pub(crate) fn proof_optimized_max_setup_matrix_size<Cfg: CommitmentConfig>(
     max_num_vars: usize,
@@ -122,17 +127,36 @@ fn proof_optimized_max_setup_matrix_size_uncached<Cfg: CommitmentConfig>(
     let layouts = setup_envelope_scan_layouts::<Cfg>(max_num_vars, max_num_batched_polys)?;
     let mut saw_supported_shape = false;
     let mut envelope = SetupMatrixEnvelope { max_setup_len: 1 };
+    let mut first_shape_error: Option<AkitaError> = None;
     for layout in &layouts {
-        if let Ok(Some(entry_envelope)) = setup_matrix_envelope_for_shape::<Cfg>(layout) {
-            saw_supported_shape = true;
-            envelope.max_setup_len = envelope.max_setup_len.max(entry_envelope.max_setup_len);
+        match setup_matrix_envelope_for_shape::<Cfg>(layout) {
+            Ok(Some(entry_envelope)) => {
+                saw_supported_shape = true;
+                envelope.max_setup_len = envelope.max_setup_len.max(entry_envelope.max_setup_len);
+            }
+            Ok(None) => {}
+            // Per-shape envelope construction errors are skipped like
+            // infeasible shapes, but the first one is preserved so a fully
+            // infeasible scan reports its true cause instead of the masking
+            // "no generated schedules" message.
+            Err(err) => {
+                if first_shape_error.is_none() {
+                    first_shape_error = Some(err);
+                }
+            }
         }
     }
 
     if !saw_supported_shape {
-        return Err(AkitaError::InvalidSetup(format!(
-            "setup matrix sizing found no generated schedules for max_num_vars={max_num_vars}"
-        )));
+        return Err(AkitaError::InvalidSetup(match first_shape_error {
+            Some(err) => format!(
+                "setup matrix sizing found no generated schedules for \
+                 max_num_vars={max_num_vars}; first per-shape error: {err}"
+            ),
+            None => format!(
+                "setup matrix sizing found no generated schedules for max_num_vars={max_num_vars}"
+            ),
+        }));
     }
 
     Ok(envelope)
@@ -172,15 +196,13 @@ fn setup_matrix_envelope_for_shape<Cfg: CommitmentConfig>(
     // serves the shipped table on a hit and regenerates via the planner DP on
     // a miss; a shape the planner cannot schedule (infeasible — e.g. a witness
     // too large for this preset's SIS floor) can never be committed, so it
-    // needs no setup capacity. Skip it (returning `Ok(None)`) and let the
-    // caller's `saw_supported_shape` guard error only if *no* shape is
-    // feasible. Go through `get_params_for_prove` so recursive configs build
-    // their recursive schedule keys instead of the direct proof-optimized key.
-    // Genuine bugs in opening_batch-key or envelope construction still
-    // propagate via `?`.
-    let Ok(schedule) = Cfg::get_params_for_prove(layout) else {
-        return Ok(None);
-    };
+    // needs no setup capacity. Propagate the error and let the caller skip the
+    // shape while recording the first error, so a fully infeasible scan reports
+    // its true cause; the `saw_supported_shape` guard errors only if *no*
+    // shape is feasible. Go through `get_params_for_prove` so recursive
+    // configs build their recursive schedule keys instead of the direct
+    // proof-optimized key.
+    let schedule = Cfg::get_params_for_prove(layout)?;
 
     let mut envelope = SetupMatrixEnvelope { max_setup_len: 1 };
     for params in setup_level_params_from_schedule(&schedule) {
@@ -241,6 +263,85 @@ where
             available_setup_len,
             root_params.ring_dimension,
         )?;
+    }
+    Ok(())
+}
+
+/// Verifier-side counterpart of [`ensure_schedule_fits_setup`], sized to what
+/// the verifier actually **reads** rather than to the prover's layout
+/// capacity.
+///
+/// The prover's envelope counts the A/B/D commitment matrices of every fold
+/// level. Those are prover-side: `compute_relation_matrix_col_evals` (the only
+/// consumer that views them) has no verifier caller, so requiring them of a
+/// verifier over-states its needs by a wide margin. Measured at fp64
+/// `D128FullBound18` `nv = 23` recursive, the prover-shaped precheck demanded
+/// 2,162,688 ring elements (dominated by the root's B matrix) against a true
+/// read high-water mark of 270,336 - an 8x over-estimate that made the
+/// recursion blob unshippable for no real reason.
+///
+/// This function therefore counts only verifier-read footprints:
+///
+/// * a consumed setup-prefix slot's A/B (read at the consuming level), plus
+/// * that slot's storage rows when its public commitment is **absent** from
+///   the registry, i.e. when the prefix has to be scanned rather than opened
+///   through `C_S` (fail-closed), plus
+/// * the root direct-commitment footprint, but only for a **direct
+///   (zero-fold) root**, since direct-witness recommitment is the only path
+///   that views the root A/B and a folded root never takes it.
+///
+/// This is defense-in-depth, not the load-bearing guard: every shared-matrix
+/// read remains bounds-checked at its own call site
+/// (`FlatMatrix::ring_view` / `ring_view_dyn`, the setup-contribution scan,
+/// the stage-3 setup MLE), each returning a role-specific
+/// [`AkitaError::InvalidSetup`]. Loosening this precheck therefore cannot
+/// admit an out-of-bounds read; it only moves some rejections later and makes
+/// them more specific.
+///
+/// # Errors
+///
+/// Returns [`AkitaError::InvalidSetup`] when a level's verifier-read
+/// footprint exceeds the shipped shared-matrix prefix.
+pub fn ensure_schedule_fits_verifier_setup<Cfg>(
+    setup: &AkitaVerifierSetup<Cfg::Field>,
+    schedule: &Schedule,
+    layout: &OpeningClaimsLayout,
+) -> Result<(), AkitaError>
+where
+    Cfg: CommitmentConfig,
+{
+    for params in setup_level_params_from_schedule(schedule) {
+        let mut required_setup_len = 1;
+        accumulate_verifier_matrix_envelope_for_level(&params, &mut required_setup_len, |slot| {
+            setup.prefix_slots.get(slot).is_none()
+        })?;
+        let available_setup_len = setup
+            .expanded
+            .shared_matrix
+            .total_ring_elements_at_dyn(params.ring_dimension)?;
+        ensure_required_setup_len(
+            required_setup_len,
+            available_setup_len,
+            params.ring_dimension,
+        )?;
+    }
+
+    // Only a direct (zero-fold) root recommits witnesses against the shared
+    // matrix; a folded root never views its own A/B.
+    if matches!(schedule.steps.first(), Some(akita_types::Step::Direct(_))) {
+        if let Some(root_params) = root_commit_params_from_schedule(schedule)? {
+            let required_setup_len =
+                root_runtime_matrix_len_for_opening_batch(&root_params, layout)?;
+            let available_setup_len = setup
+                .expanded
+                .shared_matrix
+                .total_ring_elements_at_dyn(root_params.ring_dimension)?;
+            ensure_required_setup_len(
+                required_setup_len,
+                available_setup_len,
+                root_params.ring_dimension,
+            )?;
+        }
     }
     Ok(())
 }

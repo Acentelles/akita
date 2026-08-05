@@ -515,7 +515,6 @@ impl<E: FieldCore + FromPrimitiveInt + HasUnreducedOps> AkitaStage2Prover<E> {
                         let e_out = e_second[j_high];
                         virt[0] += e_out * reduced_inner[0];
                         virt[1] += e_out * reduced_inner[1];
-
                     }
                     (virt, rel)
                 },
@@ -597,7 +596,6 @@ impl<E: FieldCore + FromPrimitiveInt + HasUnreducedOps> AkitaStage2Prover<E> {
                         virt[0] += e_out * reduced_inner[0];
                         virt[1] += e_out * reduced_inner[1];
                         virt[2] += e_out * reduced_inner[2];
-
                     }
                     (virt, rel)
                 },
@@ -712,7 +710,6 @@ impl<E: FieldCore + FromPrimitiveInt + HasUnreducedOps> AkitaStage2Prover<E> {
                         let reduced_inner = inner_virt.finish();
                         virt[0] += e_out * reduced_inner[0];
                         virt[1] += e_out * reduced_inner[1];
-
                     }
                     (virt, rel)
                 },
@@ -782,7 +779,6 @@ impl<E: FieldCore + FromPrimitiveInt + HasUnreducedOps> AkitaStage2Prover<E> {
                         virt[0] += e_out * reduced_inner[0];
                         virt[1] += e_out * reduced_inner[1];
                         virt[2] += e_out * reduced_inner[2];
-
                     }
                     (virt, rel)
                 },

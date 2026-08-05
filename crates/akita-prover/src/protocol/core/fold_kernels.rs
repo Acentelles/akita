@@ -97,7 +97,7 @@ pub(in crate::protocol::core) fn compute_trace_target<F, E, T, const D: usize>(
     reduction: &Option<ExtensionOpeningReduction<E>>,
     folded_rings: &[CyclotomicRing<F, D>],
     prepared_points: &[PreparedOpeningPoint<F, E>],
-    protocol_point: &[E],
+    group_points: &[Vec<E>],
     alpha_bits: usize,
     basis: BasisMode,
     opening_batch: &OpeningClaimsLayout,
@@ -121,10 +121,17 @@ where
             actual: folded_rings.len(),
         });
     }
-    let inner_claim_point = &protocol_point[..protocol_point.len().min(alpha_bits)];
+    if group_points.len() != opening_batch.num_groups() {
+        return Err(AkitaError::InvalidSize {
+            expected: opening_batch.num_groups(),
+            actual: group_points.len(),
+        });
+    }
     let mut openings = Vec::with_capacity(opening_batch.num_total_polynomials());
     let mut claim_offset = 0usize;
     for (group_index, prepared_point) in prepared_points.iter().enumerate() {
+        let group_point = &group_points[group_index];
+        let inner_claim_point = &group_point[..group_point.len().min(alpha_bits)];
         let group_layout = opening_batch.group_layout(group_index)?;
         let end = claim_offset
             .checked_add(group_layout.num_polynomials())

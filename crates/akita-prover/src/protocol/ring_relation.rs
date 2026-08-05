@@ -12,7 +12,10 @@ use crate::{DecomposeFoldWitness, DigitRowsComputeBackend, ProverOpeningData};
 use akita_algebra::ring::cyclotomic::BalancedDecomposePow2I8Params;
 use akita_algebra::CyclotomicRing;
 use akita_challenges::{Challenges, SparseChallenge};
+use akita_field::parallel::*;
+use akita_field::unreduced::{HasWide, ReduceTo};
 use akita_field::AkitaError;
+use akita_field::{CanonicalField, FieldCore, FromPrimitiveInt, HalvingField};
 use akita_transcript::labels::{ABSORB_PROVER_V, ABSORB_TERMINAL_E_HAT};
 use akita_transcript::Transcript;
 use akita_types::dispatch_for_field;
@@ -20,9 +23,6 @@ use akita_types::{assemble_relation_rhs, relation_rhs_layout_for, RingVec, RingV
 use akita_types::{gadget_row_scalars, AkitaCommitmentHint, DigitBlocks, RelationMatrixRowLayout};
 use akita_types::{LevelParams, LevelParamsLike, RingRelationInstance};
 use akita_types::{RingMultiplierOpeningPoint, RingOpeningPoint};
-use akita_field::parallel::*;
-use akita_field::unreduced::{HasWide, ReduceTo};
-use akita_field::{CanonicalField, FieldCore, FromPrimitiveInt, HalvingField};
 
 use super::fold_grind::{self, ProverTranscriptGrind};
 use super::ring_relation_witness::{RingRelationGroupWitness, RingRelationWitness};
@@ -335,7 +335,9 @@ where
 {
     let rows = backend.digit_rows::<D>(prepared, row_len, e_hat.typed_planes::<D>()?, log_basis)?;
     if rows.len() != row_len {
-        return Err(AkitaError::InvalidProof);
+        return Err(AkitaError::InvalidInput(
+            "digit-row kernel returned an unexpected row count".to_string(),
+        ));
     }
     Ok(rows)
 }
@@ -735,7 +737,9 @@ impl RingRelationProver {
             group_challenges.push(challenges);
             group_z.push((z_folded_rings, z_folded_centered_per_chunk));
         }
-        let fold_grind_nonce = accepted_nonce.ok_or(AkitaError::InvalidProof)?;
+        let fold_grind_nonce = accepted_nonce.ok_or_else(|| {
+            AkitaError::InvalidInput("fold witness grind exhausted its nonce budget".to_string())
+        })?;
 
         // Relation rhs spans roles (consistency | [A | B | B_inner]* | D).
         // Terminal levels drop the D-block from M entirely, so `n_d` is zero

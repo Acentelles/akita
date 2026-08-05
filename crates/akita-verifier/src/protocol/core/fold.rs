@@ -91,12 +91,17 @@ pub(in crate::protocol::core) struct EorReductionReplay<E: FieldCore> {
 ///
 /// Returns [`AkitaError::InvalidProof`] if the reduction shape, any per-claim
 /// partial reconstruction, or the sumcheck replay fails.
+#[tracing::instrument(skip_all, name = "eor_replay")]
 pub(in crate::protocol::core) fn replay_eor_reduction<F, E, T>(
     reduction: &ExtensionOpeningReductionProof<E>,
     challenge_point: &[E],
     openings: &[E],
     row_coefficients: &[E],
     opening_batch: &OpeningClaimsLayout,
+    // First shared-point coordinate of each claim's own point (`0` for
+    // prefix-aligned batches; the group's suffix offset for the recursive
+    // carried-claim batch). `None` keeps the historical all-zeros routing.
+    claim_offsets: Option<&[usize]>,
     transcript: &mut T,
 ) -> Result<EorReductionReplay<E>, AkitaError>
 where
@@ -119,14 +124,26 @@ where
     if challenge_point.len() > opening_batch.max_num_vars() {
         return Err(AkitaError::InvalidProof);
     }
+    if let Some(offsets) = claim_offsets {
+        if offsets.len() != num_claims {
+            return Err(AkitaError::InvalidProof);
+        }
+    }
     let mut eor_point = challenge_point.to_vec();
     eor_point.resize(opening_batch.max_num_vars(), E::zero());
     for (claim_idx, opening) in openings.iter().copied().enumerate().take(num_claims) {
         let partial_start = claim_idx * shape.width;
         let partial_end = partial_start + shape.width;
         let partials = &reduction.partials[partial_start..partial_end];
+        // Each claim is checked at its OWN point (its slice of the shared
+        // point); prefix-aligned claims share the head, so offset 0 keeps the
+        // historical bytes.
+        let claim_offset = claim_offsets.map_or(0, |offsets| offsets[claim_idx]);
+        let claim_point = eor_point
+            .get(claim_offset..)
+            .ok_or(AkitaError::InvalidProof)?;
         let expected =
-            derive_tensor_extension_opening_claim_from_partials::<F, E>(&eor_point, partials)?;
+            derive_tensor_extension_opening_claim_from_partials::<F, E>(claim_point, partials)?;
         if expected != opening {
             return Err(AkitaError::InvalidProof);
         }
@@ -225,6 +242,7 @@ where
             openings,
             row_coefficients,
             opening_batch,
+            None,
             transcript,
         )?;
         eor_trace_final = Some((replay.final_claim, vec![replay.final_factor]));
@@ -609,7 +627,6 @@ where
         let setup_x_challenges = sumcheck_challenges
             .get(rs.ring_bits..)
             .ok_or(AkitaError::InvalidProof)?;
-        let eta = sample_ext_challenge::<F, E, T>(transcript, CHALLENGE_SUMCHECK_BATCH);
         let (rho_w, rho_setup) = dispatch_for_field!(
             ProtocolDispatchSlot::Role(RingRole::Inner),
             F,
@@ -621,6 +638,22 @@ where
                     &rs.tau1,
                     rs.alpha,
                 )?;
+                // Mirror of the prover's `prove_stage3`: absorb the
+                // setup-prefix slot id, then bind the setup-product claim
+                // `sigma`, and only then squeeze `eta`. Absorbing `sigma`
+                // after `eta` would bind nothing the prover has not already
+                // seen. See the upstream attribution section of
+                // `aerie/_docs/ABSORPTION-AUDIT.md`.
+                let setup_eval_len = verifier.bind_setup_eval_len::<F, T>(
+                    setup,
+                    next_fold_level_params,
+                    role_d_a,
+                    transcript,
+                )?;
+                let eta = akita_types::bind_setup_product_claim_and_sample_eta::<F, E, T>(
+                    &proof.claim,
+                    transcript,
+                );
                 let rho = verifier.verify_batched_stage3::<F, T>(
                     setup,
                     next_fold_level_params,
@@ -629,10 +662,22 @@ where
                     stage2_next_w_eval,
                     sumcheck_challenges,
                     witness_rounds,
+                    setup_eval_len,
                     eta,
                     transcript,
                 )?;
                 transcript.absorb_and_record_serde(ABSORB_STAGE3_NEXT_W_EVAL, &proof.next_w_eval);
+                // Mirror of the prover's `prove_stage3`: bind the carried
+                // setup-prefix half of the pair too (Risk 3 of
+                // `aerie/_docs/ABSORPTION-AUDIT.md`). Conditional on the next
+                // level actually carrying a setup-prefix claim, so levels
+                // without one are byte-identical.
+                if next_fold_level_params.setup_prefix.is_some() {
+                    transcript.absorb_and_record_serde(
+                        ABSORB_EVALUATION_CLAIMS,
+                        &proof.setup_prefix_eval,
+                    );
+                }
                 Ok(rho)
             }
         )?;

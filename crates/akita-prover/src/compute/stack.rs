@@ -18,8 +18,8 @@
 
 use crate::compute::backend::ComputeBackendSetup;
 use akita_field::AkitaError;
-use akita_types::{AkitaExpandedSetup, NttCacheKey};
 use akita_field::{CanonicalField, FieldCore};
+use akita_types::{AkitaExpandedSetup, NttCacheKey};
 use std::marker::PhantomData;
 
 /// A single operation context: a backend plus its validated prepared setup.
@@ -404,8 +404,8 @@ mod tests {
     use crate::AkitaProverSetup;
     use crate::CpuBackend;
     use akita_field::AkitaError;
-    use akita_types::SetupMatrixEnvelope;
     use akita_field::Fp64;
+    use akita_types::SetupMatrixEnvelope;
 
     type F = Fp64<4294967197>;
     const D: usize = 64;

@@ -1,12 +1,11 @@
-use std::collections::{BTreeMap, HashMap};
+use std::collections::BTreeMap;
 
 use akita_field::AkitaError;
 use akita_types::{
     active_setup_field_len, direct_witness_bytes, extension_opening_reduction_level_bytes,
     level_proof_bytes, padded_setup_prefix_len, segment_typed_witness_shape_from_groups,
     DirectStep, FoldStep, LevelParams, OpeningClaimsLayout, PolynomialGroupLayout,
-    RelationMatrixRowLayout, SetupContributionMode, Step, SETUP_OFFLOAD_D_SETUP,
-    SETUP_OFFLOAD_MIN_PREFIX_FIELD_LEN,
+    RelationMatrixRowLayout, SetupContributionMode, Step, SETUP_OFFLOAD_MIN_PREFIX_FIELD_LEN,
 };
 
 use crate::PlannerPolicy;
@@ -149,7 +148,10 @@ pub(crate) fn terminal_direct_suffix_cost(
     Ok((direct, direct_bytes))
 }
 
-pub(crate) type ScheduleMemo = HashMap<(usize, usize, usize, u32, usize), SuffixResult>;
+// BTreeMap, not HashMap: the memo is also exercised inside the Jolt zeroos
+// guest (profile/akita-recursion), where std's RandomState hasher aborts for
+// lack of OS randomness. The key tuple is Ord; behavior is unchanged.
+pub(crate) type ScheduleMemo = BTreeMap<(usize, usize, usize, u32, usize), SuffixResult>;
 
 /// DP-invariant inputs for the suffix search.
 ///
@@ -296,7 +298,7 @@ pub(crate) fn derive_optimal_suffix_schedule(
         let natural_len = active_setup_field_len(
             &candidate_params,
             &current_opening_layout,
-            SETUP_OFFLOAD_D_SETUP,
+            policy.ring_dimension,
         )?;
         let n_prefix = padded_setup_prefix_len(natural_len);
         let recursion_threshold_met = policy.recursive_setup_planning

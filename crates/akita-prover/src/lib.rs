@@ -5,6 +5,10 @@
 //! provers. Config and schedule policy live in `akita-config`.
 
 pub mod api;
+/// Adversarial prover injections for the carried-claim forgery regression
+/// tests. Feature-gated; absent from every default build.
+#[cfg(feature = "attack-probe")]
+pub mod attack_probe;
 pub mod backend;
 pub mod compute;
 pub mod kernels;
@@ -14,8 +18,8 @@ mod validation;
 
 use akita_algebra::CyclotomicRing;
 use akita_field::AkitaError;
-use akita_types::{DigitBlocks, RingVec};
 use akita_field::FieldCore;
+use akita_types::{DigitBlocks, RingVec};
 
 pub use api::{
     batched_commit, batched_commit_with_params, commit, commit_final_group, commit_group,

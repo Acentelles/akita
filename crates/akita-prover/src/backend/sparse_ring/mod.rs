@@ -7,11 +7,11 @@
 use akita_algebra::ring::cyclotomic::WideCyclotomicRing;
 use akita_algebra::CyclotomicRing;
 use akita_challenges::{SparseChallenge, TensorChallenges as TensorChallengeSet};
-use akita_field::AkitaError;
-use akita_types::embed_ring_subfield_vector;
 use akita_field::parallel::*;
 use akita_field::unreduced::{HasWide, ReduceTo};
+use akita_field::AkitaError;
 use akita_field::{AdditiveGroup, CanonicalField, FieldCore, FromPrimitiveInt};
+use akita_types::embed_ring_subfield_vector;
 use std::collections::HashMap;
 use std::sync::{Arc, Mutex};
 
@@ -1210,8 +1210,7 @@ mod tests {
         let a_rows: Vec<&[CyclotomicRing<SF, D>]> =
             a_rows_owned.iter().map(Vec::as_slice).collect();
         let blocks_owned = random_signed_blocks::<D>(num_blocks, block_len, density, seed);
-        let blocks: Vec<&[SparseRingBlockEntry]> =
-            blocks_owned.iter().map(Vec::as_slice).collect();
+        let blocks: Vec<&[SparseRingBlockEntry]> = blocks_owned.iter().map(Vec::as_slice).collect();
 
         let got = column_sweep_sparse::<SF, D>(
             &a_rows,
@@ -1222,8 +1221,13 @@ mod tests {
             log_basis,
         )
         .expect("segmented sweep");
-        let expected =
-            reference_sparse_commit_rows::<SF, D>(&a_rows, &blocks, n_a, num_digits_commit, log_basis);
+        let expected = reference_sparse_commit_rows::<SF, D>(
+            &a_rows,
+            &blocks,
+            n_a,
+            num_digits_commit,
+            log_basis,
+        );
         assert_eq!(got, expected, "sweep diverged from reference kernel");
     }
 
@@ -1332,8 +1336,7 @@ mod tests {
             // element packs D/onehot_k = 4 chunks and the psi projection
             // emits one or two signed coefficients per hot cell.
             let mean_entries_per_pos = 4.0 * 0.58 * 1.75;
-            let a_rows_owned =
-                random_a_rows::<SF, D>(n_a, block_len * num_digits_commit, 0xbe0);
+            let a_rows_owned = random_a_rows::<SF, D>(n_a, block_len * num_digits_commit, 0xbe0);
             let a_rows: Vec<&[CyclotomicRing<SF, D>]> =
                 a_rows_owned.iter().map(Vec::as_slice).collect();
             let blocks_owned =

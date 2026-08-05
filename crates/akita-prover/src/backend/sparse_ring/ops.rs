@@ -1,11 +1,11 @@
 //! Source-typed views and `CpuBackend` kernels for [`super::SparseRingPoly`].
 
-use akita_field::AkitaError;
-use akita_types::{CleartextWitnessProof, FpExtEncoding, RingVec};
 use akita_field::unreduced::{HasWide, ReduceTo};
+use akita_field::AkitaError;
 use akita_field::{
     AdditiveGroup, CanonicalField, ExtField, FieldCore, FromPrimitiveInt, MulBaseUnreduced,
 };
+use akita_types::{CleartextWitnessProof, FpExtEncoding, RingVec};
 
 use super::SparseRingPoly;
 use crate::backend::RootTensorProjectionPoly;

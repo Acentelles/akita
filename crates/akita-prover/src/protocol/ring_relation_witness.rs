@@ -3,8 +3,8 @@
 use crate::DecomposeFoldWitness;
 use akita_algebra::CyclotomicRing;
 use akita_field::AkitaError;
-use akita_types::{AkitaCommitmentHint, CommitmentRingDims, DigitBlocks, RingRole, RingVec};
 use akita_field::FieldCore;
+use akita_types::{AkitaCommitmentHint, CommitmentRingDims, DigitBlocks, RingRole, RingVec};
 
 /// Per-group secret witness for the ring relation at one fold level.
 pub struct RingRelationGroupWitness<F: FieldCore> {

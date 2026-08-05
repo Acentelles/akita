@@ -20,29 +20,72 @@ pub(in crate::protocol::core) struct ProvedExtensionOpeningReduction<E: FieldCor
     pub(in crate::protocol::core) reduction: ExtensionOpeningReduction<E>,
     pub(in crate::protocol::core) row_coefficients: Vec<E>,
     pub(in crate::protocol::core) protocol_point: Vec<E>,
+    /// Raw reduction sumcheck point over the joint tail; suffix-aligned
+    /// grouped callers derive per-group packed points from its slices.
+    pub(in crate::protocol::core) rho: Vec<E>,
 }
 
-/// Contiguous per-group claim spans `(start, end, num_vars)` in flat claim
-/// order for the extension-opening reduction.
+/// How grouped claims embed into the joint extension-opening reduction domain.
+#[derive(Clone, Copy)]
+pub(in crate::protocol::core) enum EorClaimAlignment<'a> {
+    /// Historical single-span batch at the shared padded arity.
+    Flat,
+    /// Groups at nested prefixes of the shared point (grouped roots): shorter
+    /// groups lift by constant extension in the missing HIGH tail variables
+    /// (virtual tiling).
+    Prefix(&'a OpeningClaimsLayout),
+    /// Groups as contiguous suffixes of the shared point (recursive suffix
+    /// carried-claim batches): shorter groups lift by constant extension in
+    /// the missing LOW variables (strided expansion). At most one group is
+    /// shorter than the padded arity.
+    Suffix(&'a OpeningClaimsLayout),
+}
+
+/// One contiguous per-group claim span in flat claim order.
+#[derive(Clone, Copy)]
+pub(in crate::protocol::core) struct EorClaimSpan {
+    start: usize,
+    end: usize,
+    /// The span's own arity (number of point variables it claims).
+    num_vars: usize,
+    /// First coordinate of the span's own point inside the shared padded
+    /// point: `0` for prefix-aligned spans, `padded - num_vars` for
+    /// suffix-aligned spans. Full-arity spans have offset `0` either way.
+    offset: usize,
+}
+
+/// Contiguous per-group claim spans in flat claim order for the
+/// extension-opening reduction.
 ///
 /// A single-group (or padded/homogeneous) batch collapses to one span covering
 /// every claim at the shared padded arity, which keeps the historical
-/// byte-identical reduction path. Multi-group roots pass their real layout so
-/// each group is reduced at its own prefix of the shared point and lifted into
-/// the joint sumcheck domain by constant extension (table tiling): a group
-/// claim at a point prefix equals the claim of the constant-extended
-/// polynomial at the full padded point.
+/// byte-identical reduction path. Grouped batches pass their real layout so
+/// each group is reduced at its own slice of the shared point and lifted into
+/// the joint sumcheck domain by constant extension: prefix-aligned groups tile
+/// in the missing HIGH variables, suffix-aligned groups expand in the missing
+/// LOW variables. Either way a group claim at its point slice equals the claim
+/// of the constant-extended polynomial at the full padded point (partition of
+/// unity of the equality kernel in the replicated coordinates).
 fn eor_claim_spans<F, E>(
-    claim_layout: Option<&OpeningClaimsLayout>,
+    alignment: EorClaimAlignment<'_>,
     num_claims: usize,
     num_vars: usize,
-) -> Result<Vec<(usize, usize, usize)>, AkitaError>
+) -> Result<Vec<EorClaimSpan>, AkitaError>
 where
     F: FieldCore,
     E: ExtField<F>,
 {
-    let Some(layout) = claim_layout else {
-        return Ok(vec![(0, num_claims, num_vars)]);
+    let (layout, suffix_aligned) = match alignment {
+        EorClaimAlignment::Flat => {
+            return Ok(vec![EorClaimSpan {
+                start: 0,
+                end: num_claims,
+                num_vars,
+                offset: 0,
+            }]);
+        }
+        EorClaimAlignment::Prefix(layout) => (layout, false),
+        EorClaimAlignment::Suffix(layout) => (layout, true),
     };
     if layout.num_total_polynomials() != num_claims || layout.max_num_vars() != num_vars {
         return Err(AkitaError::InvalidInput(
@@ -63,7 +106,16 @@ where
         let end = start
             .checked_add(group.num_polynomials())
             .ok_or_else(|| AkitaError::InvalidInput("EOR claim span overflow".to_string()))?;
-        spans.push((start, end, group_num_vars));
+        spans.push(EorClaimSpan {
+            start,
+            end,
+            num_vars: group_num_vars,
+            offset: if suffix_aligned {
+                num_vars - group_num_vars
+            } else {
+                0
+            },
+        });
         start = end;
     }
     if start != num_claims {
@@ -112,7 +164,7 @@ pub(in crate::protocol::core) fn build_extension_opening_reduction_terms<
     row_coefficients: &[E],
     tail_point: &[E],
     eta: &[E],
-    claim_spans: &[(usize, usize, usize)],
+    claim_spans: &[EorClaimSpan],
 ) -> Result<Vec<ExtensionOpeningReductionTerm<E>>, AkitaError>
 where
     F: FieldCore + CanonicalField + AkitaSerialize,
@@ -132,7 +184,13 @@ where
     }
     let (split_bits, _) = tensor_opening_split::<F, E>()?;
     let mut terms = Vec::with_capacity(claim_spans.len());
-    for &(start, end, group_num_vars) in claim_spans {
+    for &EorClaimSpan {
+        start,
+        end,
+        num_vars: group_num_vars,
+        offset,
+    } in claim_spans
+    {
         let group_tail_vars = group_num_vars.checked_sub(split_bits).ok_or_else(|| {
             AkitaError::InvalidInput("EOR group arity below the tensor split".to_string())
         })?;
@@ -142,7 +200,37 @@ where
                 actual: group_tail_vars,
             });
         }
-        let tiled = group_tail_vars < tail_point.len();
+        let lifted = group_tail_vars < tail_point.len();
+
+        if offset > 0 && lifted {
+            // Suffix-aligned shorter span: strided (LOW-variable constant
+            // extension) lifting; each packed table is materialized densely
+            // over the joint tail against the full-tail transparent factor.
+            let _dense_span = tracing::info_span!(
+                "extension_opening_strided_witnesses",
+                num_terms = end - start,
+                group_tail_vars,
+                offset
+            )
+            .entered();
+            for (poly, coeff) in polys[start..end]
+                .iter()
+                .zip(row_coefficients[start..end].iter().copied())
+            {
+                let witness = {
+                    let _s = tracing::info_span!("eor_packed_witness").entered();
+                    TensorProjectionKernel::packed_witness(backend, prepared, poly.tensor_view()?)?
+                };
+                terms.push(strided_term_from_packed_witness::<F, E>(
+                    witness,
+                    tail_point,
+                    group_tail_vars,
+                    eta,
+                    coeff,
+                )?);
+            }
+            continue;
+        }
 
         let span_witness = {
             let _span = tracing::info_span!(
@@ -164,7 +252,7 @@ where
                 tail_point,
                 group_tail_vars,
                 eta,
-                tiled,
+                lifted,
             )?);
             continue;
         }
@@ -184,7 +272,7 @@ where
                 let _s = tracing::info_span!("eor_packed_witness").entered();
                 TensorProjectionKernel::packed_witness(backend, prepared, poly.tensor_view()?)?
             };
-            terms.push(if tiled {
+            terms.push(if lifted {
                 tiled_term_from_packed_witness::<F, E>(
                     witness,
                     tail_point,
@@ -198,6 +286,52 @@ where
         }
     }
     Ok(terms)
+}
+
+/// Strided (suffix-aligned) term for one packed witness of a shorter span.
+///
+/// The lifted table is `g~(x) = g(x >> pad)` over the joint tail (each entry
+/// of `g` repeated `2^pad` times consecutively), paired against the full-tail
+/// transparent factor. By partition of unity of the equality kernel in the
+/// replicated LOW coordinates, `sum_x g~(x) * A_eta(x)` equals the span's own
+/// claim `sum_w g(w) * A_eta^{own}(w)`, and the final folded value is
+/// `g~(rho) = g(rho[pad..])` (`specs/eor-setup-prefix-absorption.md`).
+fn strided_term_from_packed_witness<F, E>(
+    witness: TensorPackedWitness<E>,
+    tail_point: &[E],
+    group_tail_vars: usize,
+    eta: &[E],
+    coeff: E,
+) -> Result<ExtensionOpeningReductionTerm<E>, AkitaError>
+where
+    F: FieldCore + CanonicalField,
+    E: ExtField<F>,
+{
+    let TensorPackedWitness::Dense(witness_evals) = witness else {
+        return Err(AkitaError::InvalidInput(
+            "strided extension-opening spans require a dense packed witness".to_string(),
+        ));
+    };
+    let pad = tail_point.len() - group_tail_vars;
+    let expected_len = 1usize
+        .checked_shl(group_tail_vars as u32)
+        .ok_or_else(|| AkitaError::InvalidInput("strided EOR table overflow".to_string()))?;
+    if witness_evals.len() != expected_len {
+        return Err(AkitaError::InvalidSize {
+            expected: expected_len,
+            actual: witness_evals.len(),
+        });
+    }
+    let strided_len = expected_len
+        .checked_shl(pad as u32)
+        .ok_or_else(|| AkitaError::InvalidInput("strided EOR table overflow".to_string()))?;
+    let copies = 1usize << pad;
+    let mut strided = Vec::with_capacity(strided_len);
+    for value in witness_evals {
+        strided.extend(std::iter::repeat_n(value, copies));
+    }
+    let factor_evals = tensor_equality_factor_evals::<F, E>(tail_point, eta)?;
+    ExtensionOpeningReductionTerm::new(strided, factor_evals, coeff)
 }
 
 /// One reduction term for a sparse span, over its own group tail prefix.
@@ -294,13 +428,15 @@ where
                 coeff,
             )
         }
-        TensorPackedWitness::Sparse(witness) => ExtensionOpeningReductionTerm::new_tiled_sparse::<F>(
-            witness,
-            tail_point,
-            eta,
-            coeff,
-            group_tail_vars.min(SPARSE_TENSOR_FACTOR_MAX_LAZY_ROUNDS),
-        ),
+        TensorPackedWitness::Sparse(witness) => {
+            ExtensionOpeningReductionTerm::new_tiled_sparse::<F>(
+                witness,
+                tail_point,
+                eta,
+                coeff,
+                group_tail_vars.min(SPARSE_TENSOR_FACTOR_MAX_LAZY_ROUNDS),
+            )
+        }
     }
 }
 
@@ -317,7 +453,7 @@ pub(in crate::protocol::core) fn prepare_extension_opening_reduction<
     prepared: Option<&<B as ComputeBackendSetup<F>>::PreparedSetup>,
     polys: &[&P],
     opening_batch: &OpeningClaims<'_, E>,
-    claim_layout: Option<&OpeningClaimsLayout>,
+    alignment: EorClaimAlignment<'_>,
     pad_base_evals: bool,
     transcript: &mut T,
 ) -> Result<PreparedExtensionOpeningReduction<E>, AkitaError>
@@ -346,7 +482,15 @@ where
             "extension-opening reduction input lengths do not match".to_string(),
         ));
     }
-    let claim_spans = eor_claim_spans::<F, E>(claim_layout, num_claims, num_vars)?;
+    // Recorded before `alignment` is consumed. ONLY the recursive
+    // carried-claim suffix builds its EOR batch with real claimed values
+    // (`recursive_suffix_eor_claims`); the root passes a shape carrier
+    // (`OpeningClaims::with_padded_point`, evaluations are placeholders), so
+    // the Defect-1 probe below must never fire there or it would corrupt the
+    // root proof and make the regression verdict unattributable.
+    #[cfg(feature = "attack-probe")]
+    let probe_suffix_aligned = matches!(alignment, EorClaimAlignment::Suffix(_));
+    let claim_spans = eor_claim_spans::<F, E>(alignment, num_claims, num_vars)?;
 
     let padded_point = opening_batch.point().to_vec();
 
@@ -356,17 +500,26 @@ where
     {
         let _span =
             tracing::info_span!("extension_opening_prepare_partials", width, split_bits).entered();
-        // Each span's polynomials are reduced at their own prefix of the
-        // shared padded point; a group claim at that prefix equals the claim
-        // of the constant-extended polynomial at the full point, so the
-        // derived column partials feed the joint reduction unchanged.
+        // Each span's polynomials are reduced at their own slice of the
+        // shared padded point (prefix for grouped roots, suffix for the
+        // recursive carried-claim batch); a group claim at that slice equals
+        // the claim of the constant-extended polynomial at the full point, so
+        // the derived column partials feed the joint reduction unchanged.
         let mut point_partials = Vec::with_capacity(num_claims);
-        for &(start, end, group_num_vars) in &claim_spans {
+        let mut claim_points = Vec::with_capacity(num_claims);
+        for &EorClaimSpan {
+            start,
+            end,
+            num_vars: group_num_vars,
+            offset,
+        } in &claim_spans
+        {
+            let span_point = &padded_point[offset..offset + group_num_vars];
             let span_partials = TensorProjectionBatchKernel::column_partials_batch(
                 backend,
                 prepared,
                 P::tensor_batch(&polys[start..end])?,
-                &padded_point[..group_num_vars],
+                span_point,
             )?;
             if span_partials.len() != end - start {
                 return Err(AkitaError::InvalidSize {
@@ -374,6 +527,7 @@ where
                     actual: span_partials.len(),
                 });
             }
+            claim_points.extend(std::iter::repeat_n(span_point, end - start));
             point_partials.extend(span_partials);
         }
         if point_partials.len() != num_claims {
@@ -382,9 +536,9 @@ where
                 actual: point_partials.len(),
             });
         }
-        for column_partials in point_partials {
+        for (column_partials, claim_point) in point_partials.into_iter().zip(claim_points) {
             let opening = derive_tensor_extension_opening_claim_from_partials::<F, E>(
-                &padded_point,
+                claim_point,
                 &column_partials,
             )?;
             let row_partials = tensor_row_partials_from_columns::<F, E>(&column_partials)?;
@@ -393,8 +547,68 @@ where
             row_partials_by_claim.push(row_partials);
         }
     }
-    let proof_partials = partials.clone();
-    let row_coefficients = if pad_base_evals {
+    #[allow(unused_mut)]
+    let mut proof_partials = partials.clone();
+    // ---- Defect-1 regression injection (feature `attack-probe`) ------------
+    // The previous level's stage 3 shipped carried claims `(O_S + delta,
+    // O_w - delta)` while the honest column partials open the true `O_*`.
+    // Ship partials that match whatever the batch claims: a constant shift of
+    // `claimed - true` on a claim's `width` partials moves its derived
+    // opening by exactly that amount, because
+    // `derive_tensor_extension_opening_claim_from_partials` weights them by an
+    // `eq` kernel whose weights sum to 1 (head-independent). Under the old
+    // unit-coefficient batching the two shifts then cancelled in the batched
+    // EOR input claim, so the shared sumcheck was still the honest one and the
+    // verifier accepted. Inert for an honest prover (`claimed == true`).
+    #[cfg(feature = "attack-probe")]
+    if crate::attack_probe::is_armed() && probe_suffix_aligned {
+        let mut claimed = Vec::with_capacity(num_claims);
+        for group_index in 0..opening_batch.num_groups() {
+            claimed.extend_from_slice(opening_batch.group_evaluations(group_index)?);
+        }
+        if claimed.len() != num_claims {
+            return Err(AkitaError::InvalidInput(
+                "probe: claimed value count mismatch".to_string(),
+            ));
+        }
+        let mut shifted = 0usize;
+        for (claim_idx, (&claim, truth)) in claimed.iter().zip(openings.iter_mut()).enumerate() {
+            let delta = claim - *truth;
+            if delta.is_zero() {
+                continue;
+            }
+            shifted += 1;
+            for slot in proof_partials
+                .iter_mut()
+                .skip(claim_idx * width)
+                .take(width)
+            {
+                *slot += delta;
+            }
+            // Absorb what the VERIFIER will absorb (the false carried claim),
+            // not the truth: the strongest attacker keeps its transcript in
+            // lockstep and relies on the batching being blind to the shift.
+            *truth = claim;
+        }
+        if shifted != 0 {
+            crate::attack_probe::note(format!(
+                "suffix EOR: shifted {shifted}/{num_claims} claims' partials to match false \
+                 carried claims"
+            ));
+        }
+    }
+    // ---- end Defect-1 regression injection ---------------------------------
+    // Per-claim batching coefficients. A single-claim batch needs none (the
+    // sum has one term, so `rho_0 = 1` loses nothing and keeps the historical
+    // recursive-suffix bytes). Every multi-claim batch MUST squeeze them from
+    // the transcript AFTER absorbing the claimed values, root and recursive
+    // alike: with `rho_l = 1` the combination `sum_l v_l` is satisfied by any
+    // error vector summing to zero, which is exactly the accepted forgery of
+    // Defect 1 in `aerie/_docs/ABSORPTION-AUDIT.md` (a compensating
+    // `(+delta, -delta)` on the two carried claims of the `G = 2` recursive
+    // suffix). Absorbing first and squeezing after restores the
+    // Schwartz-Zippel pricing of [AK] Lemma 5.7.
+    let row_coefficients = if pad_base_evals && num_claims == 1 {
         vec![E::one(); num_claims]
     } else {
         let transcript_openings = openings.as_slice();
@@ -434,6 +648,9 @@ where
     let eta = (0..split_bits)
         .map(|_| sample_ext_challenge::<F, E, T>(transcript, CHALLENGE_SUMCHECK_BATCH))
         .collect::<Vec<_>>();
+    // Only consumed by the honest-prover cross-check below; the `attack-probe`
+    // build deliberately drops that check (see there).
+    #[cfg_attr(feature = "attack-probe", allow(unused_variables))]
     let input_claim = {
         let _span = tracing::debug_span!("extension_opening_input_claim").entered();
         proof_row_partials_by_claim
@@ -451,6 +668,11 @@ where
             tensor_reduction_claim_from_rows::<F, E>(row_partials, &eta)
                 .map(|claim| acc + coeff * claim)
         })?;
+    // The shipped and the true input claim coincide for any honest prover.
+    // The `attack-probe` regression build deliberately breaks that (shipped
+    // partials encode false carried claims), and the divergence is exactly
+    // what the rho-weighted batching is supposed to expose, so do not assert.
+    #[cfg(not(feature = "attack-probe"))]
     debug_assert_eq!(input_claim, true_input_claim);
 
     let tail_point = &padded_point[split_bits..];
@@ -481,7 +703,7 @@ pub(in crate::protocol::core) fn prove_extension_opening_reduction<F, E, T, P, B
     tensor_prepared: Option<&<B as ComputeBackendSetup<F>>::PreparedSetup>,
     polys: &[&P],
     opening_batch: &OpeningClaims<'_, E>,
-    claim_layout: Option<&OpeningClaimsLayout>,
+    alignment: EorClaimAlignment<'_>,
     pad_base_evals: bool,
     transcript: &mut T,
     path: &'static str,
@@ -507,7 +729,7 @@ where
         tensor_prepared,
         polys,
         opening_batch,
-        claim_layout,
+        alignment,
         pad_base_evals,
         transcript,
     )?;
@@ -574,6 +796,7 @@ where
         reduction,
         row_coefficients: prepared.row_coefficients,
         protocol_point,
+        rho,
     })
 }
 

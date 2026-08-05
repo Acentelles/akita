@@ -8,7 +8,7 @@
 
 use akita_algebra::eq_poly::EqPolynomial;
 use akita_algebra::poly::{fold_evals_in_place, multilinear_eval};
-use akita_field::{FpExt4, FromPrimitiveInt, Prime32Offset99, RandomSampling};
+use akita_field::{FpExt4, Prime32Offset99, RandomSampling};
 use rand::rngs::StdRng;
 use rand::SeedableRng;
 use std::time::Instant;

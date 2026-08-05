@@ -9,10 +9,10 @@ use crate::protocol::extension_opening_reduction::SparseExtensionOpeningWitness;
 use crate::{CommitInnerWitness, DecomposeFoldWitness};
 use akita_algebra::CyclotomicRing;
 use akita_field::AkitaError;
-use akita_types::FpExtEncoding;
 use akita_field::{
     CanonicalField, ExtField, FieldCore, FromPrimitiveInt, HalvingField, MulBaseUnreduced,
 };
+use akita_types::FpExtEncoding;
 
 /// Tensor-packed root witness alternatives produced by a tensor kernel.
 ///

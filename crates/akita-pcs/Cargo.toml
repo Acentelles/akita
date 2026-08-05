@@ -57,10 +57,20 @@ profile-ci = [
   "akita-config/schedules-fp128-d64-onehot-multi-chunk-w4r2",
 ]
 disk-persistence = ["akita-setup/disk-persistence"]
+# TEST-ONLY. Enables the adversarial prover injections needed by
+# `tests/suffix_carried_claim_forgery_*.rs` (Defect 1 of
+# `aerie/_docs/ABSORPTION-AUDIT.md`). Not part of `default` or `profile-ci`.
+attack-probe = ["akita-prover/attack-probe"]
 logging-transcript = [
   "akita-transcript/logging-transcript",
   "akita-prover/logging-transcript",
 ]
+# TEST-ONLY, and additive: makes the unaudited algebraic Poseidon2 sponge
+# *nameable* so `tests/poseidon2_transcript_roundtrip.rs` can drive the protocol
+# with it. It does NOT change which backend is selected: `TranscriptSponge`
+# still resolves to Blake2b, because selection priority is
+# Blake2b > Keccak > Poseidon2. Not part of `default` or `profile-ci`.
+transcript-poseidon2 = ["akita-transcript/transcript-poseidon2"]
 
 [dependencies]
 akita-algebra = { version = "0.1.0", path = "../akita-algebra" }

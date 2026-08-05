@@ -282,10 +282,13 @@ fn derive_setup_prefix_group(
     log_basis: u32,
     n_prefix: usize,
 ) -> Result<Option<PrecommittedLevelParams>, AkitaError> {
-    if policy.ring_dimension != SETUP_OFFLOAD_D_SETUP {
-        return Err(AkitaError::InvalidSetup(
-            "recursive setup planning requires D64".to_string(),
-        ));
+    if !akita_types::setup_offload_ring_dim_supported(policy.ring_dimension) {
+        return Err(AkitaError::InvalidSetup(format!(
+            "recursive setup planning requires a supported offload ring dimension \
+             ({:?}), got D={}",
+            akita_types::SETUP_OFFLOAD_SUPPORTED_RING_DIMS,
+            policy.ring_dimension
+        )));
     }
     if n_prefix == 0 || !n_prefix.is_power_of_two() {
         return Err(AkitaError::InvalidSetup(
@@ -456,8 +459,11 @@ pub(crate) fn derive_candidate_level_params(
             else {
                 return Ok(None);
             };
+            // The slot commitment dimension is the (uniform) level ring
+            // dimension, which equals the setup generation dimension for
+            // every planner-emitted schedule.
             Some(akita_types::setup_prefix_slot_id(
-                SETUP_OFFLOAD_D_SETUP,
+                policy.ring_dimension,
                 natural_len,
                 group,
             ))

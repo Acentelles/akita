@@ -17,6 +17,63 @@ pub(super) struct SuffixVerifierState<'a, F: FieldCore, E: FieldCore> {
     pub setup_prefix_opening: Option<SetupPrefixOpening<E>>,
 }
 
+/// Per-group prepared opening points for a suffix-aligned shared
+/// extension-opening reduction: each group's packed point is derived from its
+/// own slice of the reduction sumcheck point `rho` and re-routed by the
+/// group's within-slice selection (`specs/eor-setup-prefix-absorption.md`),
+/// mirroring the prover's `finish_prepared_fold` per-group loop.
+#[allow(clippy::too_many_arguments)]
+fn prepare_suffix_group_points_from_reduction<F, E>(
+    rho: &[E],
+    fold_claims: &OpeningClaims<'_, E>,
+    lp: &LevelParams,
+    opening_batch: &OpeningClaimsLayout,
+    role_d_a: usize,
+    alpha_bits: usize,
+    block_order: BlockOrder,
+) -> Result<Vec<PreparedOpeningPoint<F, E>>, AkitaError>
+where
+    F: FieldCore + CanonicalField,
+    E: FpExtEncoding<F> + ExtField<F> + FrobeniusExtField<F> + FromPrimitiveInt + AkitaSerialize,
+{
+    dispatch_for_field!(
+        ProtocolDispatchSlot::Role(RingRole::Inner),
+        F,
+        role_d_a,
+        |D| {
+            let mut prepared_points = Vec::with_capacity(opening_batch.num_groups());
+            for group_index in 0..opening_batch.num_groups() {
+                let group_lp = lp.group_params(opening_batch, group_index)?;
+                let target_len = alpha_bits
+                    .checked_add(group_lp.m_vars())
+                    .and_then(|n| n.checked_add(group_lp.r_vars()))
+                    .ok_or_else(|| {
+                        AkitaError::InvalidSetup("group opening point length overflow".to_string())
+                    })?;
+                let point_vars = fold_claims.group_point_vars(group_index)?;
+                if point_vars.num_vars() != target_len {
+                    return Err(AkitaError::InvalidPointDimension {
+                        expected: target_len,
+                        actual: point_vars.num_vars(),
+                    });
+                }
+                let group_protocol_point =
+                    akita_types::suffix_aligned_group_packed_point::<F, E, D>(rho, point_vars)?;
+                let prepared_point = prepare_opening_point::<F, E, D>(
+                    &group_protocol_point,
+                    BasisMode::Lagrange,
+                    group_lp.m_vars(),
+                    group_lp.r_vars(),
+                    alpha_bits,
+                    block_order,
+                )?;
+                prepared_points.push(prepared_point);
+            }
+            Ok(prepared_points)
+        }
+    )
+}
+
 fn prepare_suffix_group_points<F, E>(
     protocol_point: &[E],
     fold_claims: &OpeningClaims<'_, E>,
@@ -240,46 +297,126 @@ where
     if openings.len() != opening_batch.num_total_polynomials() {
         return Err(AkitaError::InvalidProof);
     }
-    let row_coefficients = vec![E::one(); opening_batch.num_total_polynomials()];
-    let requires_extension_reduction =
-        <E as ExtField<F>>::EXT_DEGREE != 1 && lp.setup_prefix.is_none();
-    let FoldEorReplay {
-        prepared_points,
-        reduction_challenges: _,
-        final_relation: eor_trace_final,
-        ..
-    } = verify_fold_eor::<F, E, T>(
-        proof.extension_opening_reduction(),
-        fold_claims.point(),
-        &openings,
-        &row_coefficients,
-        &opening_batch,
-        current_state.basis,
-        lp,
-        block_order,
-        requires_extension_reduction,
-        transcript,
-    )?;
-    if proof.extension_opening_reduction().is_some() && opening_batch.num_groups() != 1 {
-        return Err(AkitaError::InvalidProof);
-    }
-    let prepared_points = if proof.extension_opening_reduction().is_some() {
-        prepared_points
-    } else {
-        prepare_suffix_group_points::<F, E>(
-            fold_claims.point(),
-            &fold_claims,
-            lp,
-            &opening_batch,
-            role_dims.d_a(),
-            alpha_bits,
-            block_order,
-        )?
-    };
+    // Per-claim batching coefficients for the suffix batch.
+    //
+    // A single-claim suffix batch needs none (`rho_0 = 1` is lossless, and it
+    // keeps the historical bytes). The `G = 2` carried-claim batch MUST draw
+    // them from the transcript after absorbing the two claimed values: with
+    // unit coefficients the fold enforces only `O_S + O_w = s' + v_w'`, and a
+    // prover that shifts the two carried claims by `(+delta, -delta)` is
+    // accepted with probability 1. That forgery was executed end to end
+    // against this verifier at both `k = 2` and `k = 1`; see Defect 1 and
+    // "Verification of Defect 1" in `aerie/_docs/ABSORPTION-AUDIT.md` and the
+    // regression tests `crates/akita-pcs/tests/suffix_carried_claim_*`.
+    // Absorb-then-squeeze restores the per-claim Schwartz-Zippel pricing of
+    // [AK] Lemma 5.7 (1/|E| for independent coefficients).
+    let num_suffix_claims = opening_batch.num_total_polynomials();
+    let batched_suffix_claims = num_suffix_claims > 1;
+    // At k > 1 every suffix level runs the extension-opening reduction; a
+    // carried setup-prefix claim joins it as one more claim in the shared
+    // sumcheck, suffix-aligned into the joint domain
+    // (`specs/eor-setup-prefix-absorption.md`).
+    let requires_extension_reduction = <E as ExtField<F>>::EXT_DEGREE != 1;
+    let mut trace_claim_scales: Option<Vec<E>> = None;
+    let mut row_coefficients = vec![E::one(); num_suffix_claims];
+    let (prepared_points, eor_trace_final) =
+        if requires_extension_reduction && opening_batch.num_groups() > 1 {
+            let Some(reduction) = proof.extension_opening_reduction() else {
+                return Err(AkitaError::InvalidProof);
+            };
+            // Suffix-aligned claim offsets, structurally identical to the
+            // prover's `eor_claim_spans`.
+            let max_num_vars = opening_batch.max_num_vars();
+            let mut claim_offsets = Vec::with_capacity(opening_batch.num_total_polynomials());
+            for group_index in 0..opening_batch.num_groups() {
+                let group = opening_batch.group_layout(group_index)?;
+                claim_offsets.extend(std::iter::repeat_n(
+                    max_num_vars - group.num_vars(),
+                    group.num_polynomials(),
+                ));
+            }
+            // Mirrors the prover's `prepare_extension_opening_reduction`:
+            // claimed values -> row coefficients -> partials -> eta -> sumcheck.
+            if batched_suffix_claims {
+                append_claim_values_to_transcript::<F, E, T>(&openings, transcript);
+                row_coefficients =
+                    sample_public_row_coefficients::<F, E, T>(&opening_batch, transcript)?;
+            }
+            let replay = replay_eor_reduction::<F, E, T>(
+                reduction,
+                fold_claims.point(),
+                &openings,
+                &row_coefficients,
+                &opening_batch,
+                Some(&claim_offsets),
+                transcript,
+            )?;
+            let prepared_points = prepare_suffix_group_points_from_reduction::<F, E>(
+                &replay.rho,
+                &fold_claims,
+                lp,
+                &opening_batch,
+                role_dims.d_a(),
+                alpha_bits,
+                block_order,
+            )?;
+            trace_claim_scales = Some(vec![
+                replay.final_factor;
+                opening_batch.num_total_polynomials()
+            ]);
+            (
+                prepared_points,
+                Some((replay.final_claim, vec![replay.final_factor])),
+            )
+        } else {
+            if proof.extension_opening_reduction().is_some() && opening_batch.num_groups() != 1 {
+                return Err(AkitaError::InvalidProof);
+            }
+            let FoldEorReplay {
+                prepared_points,
+                reduction_challenges: _,
+                final_relation: eor_trace_final,
+                ..
+            } = verify_fold_eor::<F, E, T>(
+                proof.extension_opening_reduction(),
+                fold_claims.point(),
+                &openings,
+                &row_coefficients,
+                &opening_batch,
+                current_state.basis,
+                lp,
+                block_order,
+                requires_extension_reduction,
+                transcript,
+            )?;
+            let prepared_points = if proof.extension_opening_reduction().is_some() {
+                prepared_points
+            } else {
+                prepare_suffix_group_points::<F, E>(
+                    fold_claims.point(),
+                    &fold_claims,
+                    lp,
+                    &opening_batch,
+                    role_dims.d_a(),
+                    alpha_bits,
+                    block_order,
+                )?
+            };
+            (prepared_points, eor_trace_final)
+        };
     for prepared_point in &prepared_points {
         for pt in &prepared_point.padded_point {
             append_ext_field::<F, E, T>(transcript, ABSORB_EVALUATION_CLAIMS, pt);
         }
+    }
+    // `k = 1` two-group suffix: there is no extension-opening reduction, so
+    // the batching coefficients are drawn here instead, mirroring the prover's
+    // `compute_trace_target` (which absorbs the claimed values only after the
+    // per-group prepared points have gone into the transcript). Same defect,
+    // same fix; see the comment on `batched_suffix_claims` above.
+    if batched_suffix_claims && eor_trace_final.is_none() {
+        append_claim_values_to_transcript::<F, E, T>(&openings, transcript);
+        row_coefficients = sample_public_row_coefficients::<F, E, T>(&opening_batch, transcript)?;
     }
 
     let w_len = scheduled.next_w_len;
@@ -354,7 +491,7 @@ where
         trace_block_opening: None,
         trace_eval_target,
         trace_eval_scale,
-        trace_claim_scales: None,
+        trace_claim_scales,
         trace_basis: current_state.basis,
         block_order,
     })

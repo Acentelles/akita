@@ -11,4 +11,7 @@ mod witness;
 
 pub use hint::RecursiveCommitmentHintCache;
 pub use setup_prefix_source::RecursiveFoldSource;
+pub(crate) use setup_prefix_source::{
+    setup_prefix_committed_field_evals, transform_committed_field_evals,
+};
 pub use witness::{RecursiveWitnessFlat, SuffixWitnessBatchView, SuffixWitnessView};

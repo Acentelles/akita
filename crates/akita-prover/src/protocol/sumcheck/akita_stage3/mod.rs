@@ -11,7 +11,9 @@ mod utils;
 use akita_algebra::eq_poly::EqPolynomial;
 use akita_algebra::ring::scalar_powers;
 use akita_algebra::uni_poly::UniPoly;
+use akita_field::parallel::*;
 use akita_field::AkitaError;
+use akita_field::{CanonicalField, FieldCore, FromPrimitiveInt, LiftBase};
 use akita_serialization::AkitaSerialize;
 use akita_sumcheck::{SumcheckInstanceProver, SumcheckInstanceProverExt, SumcheckProof};
 use akita_transcript::{labels::ABSORB_SETUP_PREFIX_SLOT, Transcript};
@@ -19,10 +21,8 @@ use akita_types::{
     ensure_setup_envelope, prepare_setup_contribution_artifact, select_setup_prefix_slot,
     shared_setup_fold_gadget, stage3_offload_natural_field_len, AkitaExpandedSetup,
     BatchedStage3Geometry, FpExtEncoding, LevelParams, RingRelationInstance, SetupContributionPlan,
-    SetupPrefixProverRegistry, SETUP_OFFLOAD_D_SETUP, SETUP_SUMCHECK_DEGREE,
+    SetupPrefixProverRegistry, SETUP_SUMCHECK_DEGREE,
 };
-use akita_field::parallel::*;
-use akita_field::{CanonicalField, FieldCore, FromPrimitiveInt, LiftBase};
 use product_table::FactoredProductTerm;
 use std::sync::Arc;
 
@@ -61,16 +61,43 @@ pub struct AkitaStage3Prover<E: FieldCore> {
     geometry: BatchedStage3Geometry,
     setup_product_claim: E,
     pending_round: Option<PendingRound<E>>,
+    /// Regression-test injection point: this level's stage 3 feeds a carried
+    /// setup-prefix claim into the next fold, so it is the attack surface of
+    /// Defect 1 (`aerie/_docs/ABSORPTION-AUDIT.md`).
+    #[cfg(feature = "attack-probe")]
+    attack_target: bool,
+}
+
+/// Opaque carrier for the prepared stage-3 setup-product term.
+///
+/// Exists so [`AkitaStage3Prover::prepare_setup_term`] can be hoisted above the
+/// `eta` squeeze without exposing the private `FactoredProductTerm`. Its only
+/// public surface is [`Self::claim`], the setup-product claim `sigma` that must
+/// be absorbed before `eta` is drawn.
+pub struct Stage3SetupTerm<E: FieldCore> {
+    term: FactoredProductTerm<E>,
+}
+
+impl<E: FieldCore + FromPrimitiveInt> Stage3SetupTerm<E> {
+    /// The setup-product claim `sigma` carried in `SetupSumcheckProof::claim`.
+    #[inline]
+    pub fn claim(&self) -> E {
+        self.term.input_claim()
+    }
 }
 
 impl<E: FieldCore + FromPrimitiveInt> AkitaStage3Prover<E> {
-    /// Construct a batched recursive stage-3 sumcheck prover.
+    /// Build the setup-product term, absorbing the setup-prefix slot id.
     ///
-    /// This carries the stage-2 next-witness opening `W(stage2_point)` to a new
-    /// point that is a prefix/projection of the same batched challenge vector used
-    /// by the setup-product opening.
+    /// Split out of [`Self::new`] so the caller can bind the resulting
+    /// setup-product claim `sigma` into the transcript BEFORE squeezing the
+    /// stage-3 batching challenge `eta` (see
+    /// [`akita_types::bind_setup_product_claim_and_sample_eta`]). Keeping the
+    /// hoist explicit at the call site, rather than hiding an `eta` squeeze
+    /// inside this constructor, is deliberate: the ordering must read
+    /// top-to-bottom where it happens.
     #[allow(clippy::too_many_arguments)]
-    pub fn new<F, T>(
+    pub fn prepare_setup_term<F, T>(
         expanded: &AkitaExpandedSetup<F>,
         prefix_slots: &SetupPrefixProverRegistry<F>,
         lp: &LevelParams,
@@ -79,22 +106,16 @@ impl<E: FieldCore + FromPrimitiveInt> AkitaStage3Prover<E> {
         tau1: &[E],
         alpha: E,
         stage2_challenges: &[E],
-        stage2_next_w_eval: E,
-        logical_w: &[i8],
-        live_x_cols: usize,
-        col_bits: usize,
         ring_bits: usize,
-        level: usize,
-        eta: E,
         transcript: &mut T,
-    ) -> Result<Self, AkitaError>
+    ) -> Result<Stage3SetupTerm<E>, AkitaError>
     where
         F: FieldCore + CanonicalField,
         E: FpExtEncoding<F> + LiftBase<F> + AkitaSerialize,
         T: Transcript<F>,
     {
         let ring_d = relation.role_dims().d_a();
-        let setup_term = build_setup_product_term::<F, E, T>(
+        let term = build_setup_product_term::<F, E, T>(
             ring_d,
             expanded,
             prefix_slots,
@@ -106,6 +127,37 @@ impl<E: FieldCore + FromPrimitiveInt> AkitaStage3Prover<E> {
             &stage2_challenges[ring_bits..],
             transcript,
         )?;
+        Ok(Stage3SetupTerm { term })
+    }
+
+    /// Construct a batched recursive stage-3 sumcheck prover.
+    ///
+    /// This carries the stage-2 next-witness opening `W(stage2_point)` to a new
+    /// point that is a prefix/projection of the same batched challenge vector used
+    /// by the setup-product opening.
+    ///
+    /// `setup_term` comes from [`Self::prepare_setup_term`], which the caller
+    /// must have run BEFORE squeezing `eta`.
+    #[allow(clippy::too_many_arguments)]
+    #[cfg_attr(not(feature = "attack-probe"), allow(unused_variables))]
+    pub fn new<F, T>(
+        setup_term: Stage3SetupTerm<E>,
+        next_fold_level_params: &LevelParams,
+        stage2_challenges: &[E],
+        stage2_next_w_eval: E,
+        logical_w: &[i8],
+        live_x_cols: usize,
+        col_bits: usize,
+        ring_bits: usize,
+        level: usize,
+        eta: E,
+    ) -> Result<Self, AkitaError>
+    where
+        F: FieldCore + CanonicalField,
+        E: FpExtEncoding<F> + LiftBase<F> + AkitaSerialize,
+        T: Transcript<F>,
+    {
+        let setup_term = setup_term.term;
         let setup_product_claim = setup_term.input_claim();
         let witness_digits = Arc::<[i8]>::from(logical_w);
         let witness_term = build_witness_carry_term::<E>(
@@ -135,6 +187,8 @@ impl<E: FieldCore + FromPrimitiveInt> AkitaStage3Prover<E> {
             geometry,
             setup_product_claim,
             pending_round: None,
+            #[cfg(feature = "attack-probe")]
+            attack_target: next_fold_level_params.setup_prefix.is_some(),
         })
     }
 
@@ -157,8 +211,48 @@ impl<E: FieldCore + FromPrimitiveInt> AkitaStage3Prover<E> {
             )?;
         let next_w_point = self.geometry.witness_point(&batched_point)?;
         let setup_prefix_point = self.geometry.setup_point(&batched_point)?;
-        let setup_prefix_eval = self.setup.term.folded_table_value()?;
-        let next_w_eval = self.witness.term.folded_table_value()?;
+        #[allow(unused_mut)]
+        let mut setup_prefix_eval = self.setup.term.folded_table_value()?;
+        #[allow(unused_mut)]
+        let mut next_w_eval = self.witness.term.folded_table_value()?;
+        // ---- Defect-1 regression injection (feature `attack-probe`) --------
+        // `compute_round_univariate` added a round-0 lie, so the verifier's
+        // `final_claim` is `T + Gamma` while the prover's own folded terms are
+        // still honest and sum to `T`. Solve the single stage-3 linear
+        // relation for the compensating pair `(+delta, -delta)` that the old
+        // unit-coefficient fold absorption could not detect. See Defect 1 of
+        // `aerie/_docs/ABSORPTION-AUDIT.md`.
+        #[cfg(feature = "attack-probe")]
+        if crate::attack_probe::is_armed() && self.attack_target {
+            let honest = self.setup.current_claim + self.eta * self.witness.current_claim;
+            let gamma = _final_claim - honest;
+            // setup.current_claim = c2 * setup_prefix_eval,
+            // eta * witness.current_claim = c1 * next_w_eval; these are
+            // exactly the verifier's stage-3 coefficients.
+            let c2 = self.setup.current_claim
+                * setup_prefix_eval
+                    .inverse()
+                    .ok_or_else(|| AkitaError::InvalidInput("probe: s = 0".to_string()))?;
+            let c1 = self.eta
+                * self.witness.current_claim
+                * next_w_eval
+                    .inverse()
+                    .ok_or_else(|| AkitaError::InvalidInput("probe: w = 0".to_string()))?;
+            let delta = gamma
+                * (c2 - c1)
+                    .inverse()
+                    .ok_or_else(|| AkitaError::InvalidInput("probe: c1 == c2".to_string()))?;
+            setup_prefix_eval += delta;
+            next_w_eval -= delta;
+            crate::attack_probe::note(format!(
+                "stage3: gamma_is_zero={} delta_is_zero={} rounds={} relation_holds_after_shift={}",
+                gamma.is_zero(),
+                delta.is_zero(),
+                batched_point.len(),
+                c1 * next_w_eval + c2 * setup_prefix_eval == _final_claim,
+            ));
+        }
+        // ---- end Defect-1 regression injection -----------------------------
         Ok(AkitaStage3ProverOutput {
             setup_product_claim: self.setup_product_claim,
             setup_prefix_eval,
@@ -227,7 +321,23 @@ impl<E: FieldCore + FromPrimitiveInt> SumcheckInstanceProver<E> for AkitaStage3P
         let total_rounds = self.geometry.batched_rounds();
         let setup_poly = Self::term_round_poly(&mut self.setup, total_rounds, round);
         let witness_poly = Self::term_round_poly(&mut self.witness, total_rounds, round);
-        let combined = self.combine_polys(&setup_poly, &witness_poly);
+        #[allow(unused_mut)]
+        let mut combined = self.combine_polys(&setup_poly, &witness_poly);
+        // ---- Defect-1 regression injection (feature `attack-probe`) --------
+        // A cheating stage-3 sumcheck prover. `q(X) = t * (2X - 1)` leaves
+        // `g(0) + g(1)` unchanged (so the round message stays well formed) but
+        // shifts the compressed constant term, so the verifier's running claim
+        // picks up `t * (2r - 1)` at round 0 and every later round multiplies
+        // it by `r`. The final claim is `T + Gamma`, `Gamma != 0`, while every
+        // folded term stays honest.
+        #[cfg(feature = "attack-probe")]
+        if crate::attack_probe::is_armed() && self.attack_target && round == 0 {
+            let t = E::from_u64(0x0ae2_2026_0801);
+            let two_t = t + t;
+            combined.coeffs[0] -= t;
+            combined.coeffs[1] += two_t;
+        }
+        // ---- end Defect-1 regression injection -----------------------------
         self.pending_round = Some(PendingRound {
             setup_poly,
             witness_poly,
@@ -292,7 +402,11 @@ where
     let setup_len = expanded
         .shared_matrix()
         .total_ring_elements_at_dyn(ring_d)?;
-    let setup_eval_len = if ring_d == SETUP_OFFLOAD_D_SETUP {
+    // Prefix offload applies only at levels whose ring dimension equals the
+    // setup generation dimension (the flat prefix commitments are chunked at
+    // `gen_ring_dim`; the paper's divides-case is future work, see
+    // `specs/mixed-d-setup-delegation.md`). Other levels use the full scan.
+    let setup_eval_len = if ring_d == expanded.seed().gen_ring_dim {
         let setup_prefix_selection = select_setup_prefix_slot(
             setup_len,
             |slot_id| {

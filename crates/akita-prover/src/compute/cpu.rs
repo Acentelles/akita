@@ -17,10 +17,10 @@ use crate::kernels::linear::{
     selected_crt_i8_capacity_profile, CrtI8CapacityProfile,
 };
 use akita_algebra::CyclotomicRing;
-use akita_field::AkitaError;
-use akita_types::{dispatch_for_field, AkitaExpandedSetup, NttCacheKey};
 use akita_field::unreduced::{HasWide, ReduceTo};
+use akita_field::AkitaError;
 use akita_field::{AdditiveGroup, CanonicalField, FieldCore, HalvingField};
+use akita_types::{dispatch_for_field, AkitaExpandedSetup, NttCacheKey};
 use std::array::from_fn;
 use std::collections::{HashMap, HashSet};
 use std::sync::{Arc, Mutex};
@@ -618,8 +618,8 @@ mod tests {
     };
     use crate::validation::MAX_I8_LOG_BASIS;
     use crate::AkitaProverSetup;
-    use akita_types::SetupMatrixEnvelope;
     use akita_field::Prime64Offset59;
+    use akita_types::SetupMatrixEnvelope;
     use std::sync::Arc;
 
     type F = Prime64Offset59;

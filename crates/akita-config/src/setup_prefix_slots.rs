@@ -6,7 +6,7 @@ use akita_field::AkitaError;
 use akita_planner::suffix_opening_layout;
 use akita_types::{
     active_setup_field_len, config::SetupContributionMode, padded_setup_prefix_len, Schedule,
-    SetupPrefixSlotId, Step, SETUP_OFFLOAD_D_SETUP,
+    SetupPrefixSlotId, Step,
 };
 
 use crate::generated_families::recursive_group_batch_candidates_for_capacity;
@@ -14,13 +14,21 @@ use crate::CommitmentConfig;
 
 fn setup_prefix_slot_matches(
     slot: &SetupPrefixSlotId,
+    expected_d_setup: usize,
     natural_len: usize,
     n_prefix: usize,
 ) -> Result<(), AkitaError> {
     let slot_n_prefix = slot.n_prefix()?;
-    if slot.d_setup != SETUP_OFFLOAD_D_SETUP {
+    if slot.d_setup != expected_d_setup {
+        return Err(AkitaError::InvalidSetup(format!(
+            "setup-prefix slot d_setup={} does not match the delegating fold ring \
+             dimension {expected_d_setup}",
+            slot.d_setup
+        )));
+    }
+    if !akita_types::setup_offload_ring_dim_supported(slot.d_setup) {
         return Err(AkitaError::InvalidSetup(
-            "setup-prefix slot must use the recursive offload dimension".to_string(),
+            "setup-prefix slot must use a supported recursive offload dimension".to_string(),
         ));
     }
     if slot.natural_len != natural_len {
@@ -61,8 +69,11 @@ pub(crate) fn extract_setup_prefix_slot_ids_from_schedule(
 
         match fold.params.setup_contribution_mode {
             SetupContributionMode::Recursive => {
-                let natural_len =
-                    active_setup_field_len(&fold.params, &opening_layout, SETUP_OFFLOAD_D_SETUP)?;
+                let natural_len = active_setup_field_len(
+                    &fold.params,
+                    &opening_layout,
+                    fold.params.ring_dimension,
+                )?;
                 let n_prefix = padded_setup_prefix_len(natural_len);
 
                 let successor = schedule.steps.get(index + 1).ok_or_else(|| {
@@ -94,7 +105,12 @@ pub(crate) fn extract_setup_prefix_slot_ids_from_schedule(
                         "recursive fold successor is missing setup-prefix metadata".to_string(),
                     )
                 })?;
-                setup_prefix_slot_matches(slot_id, natural_len, n_prefix)?;
+                setup_prefix_slot_matches(
+                    slot_id,
+                    fold.params.ring_dimension,
+                    natural_len,
+                    n_prefix,
+                )?;
                 ids.insert(slot_id.clone());
                 incoming_setup_prefix = Some(natural_len);
             }
@@ -107,7 +123,12 @@ pub(crate) fn extract_setup_prefix_slot_ids_from_schedule(
                         )
                     })?;
                     let n_prefix = padded_setup_prefix_len(expected);
-                    setup_prefix_slot_matches(slot_id, expected, n_prefix)?;
+                    setup_prefix_slot_matches(
+                        slot_id,
+                        fold.params.ring_dimension,
+                        expected,
+                        n_prefix,
+                    )?;
                     incoming_setup_prefix = None;
                 } else {
                     incoming_setup_prefix = None;
@@ -155,7 +176,10 @@ mod tests {
     use crate::generated_families::recursive_group_batch_candidates_for_capacity;
     use crate::proof_optimized::fp128;
     use crate::RecursiveCommitmentConfig;
-    use akita_types::{AkitaScheduleLookupKey, PolynomialGroupLayout, PrecommittedGroupParams};
+    use akita_types::{
+        AkitaScheduleLookupKey, PolynomialGroupLayout, PrecommittedGroupParams,
+        SETUP_OFFLOAD_D_SETUP,
+    };
 
     type SetupCfg = RecursiveCommitmentConfig<fp128::D64OneHot>;
 
@@ -222,6 +246,62 @@ mod tests {
             assert!(slot.n_prefix().expect("n_prefix") >= slot.natural_len);
         }
         assert!(slot_envelope.max_setup_len > 1);
+    }
+
+    /// Regression guard for the verifier-side envelope filter.
+    ///
+    /// The verifier precheck excludes a consumed setup-prefix slot's
+    /// *storage* when the slot's commitment is in the registry (the prefix is
+    /// opened through `C_S`, never scanned), but the slot's **A/B matrices
+    /// are still read** at the consuming level. An earlier revision excluded
+    /// the whole slot term and was only safe because the surrounding count
+    /// over-stated the requirement by 8x; this test fails if that regresses.
+    #[test]
+    fn verifier_envelope_counts_prefix_a_even_when_committed() {
+        use crate::matrix_envelope::accumulate_verifier_matrix_envelope_for_level;
+
+        let key = profiling_recursive_key();
+        let schedule = SetupCfg::runtime_schedule(key).expect("recursive schedule");
+        let level = schedule
+            .steps
+            .iter()
+            .find_map(|step| match step {
+                akita_types::Step::Fold(fold) if fold.params.setup_prefix.is_some() => {
+                    Some(fold.params.clone())
+                }
+                _ => None,
+            })
+            .expect("recursive schedule must carry a setup-prefix level");
+        let slot = level
+            .setup_prefix
+            .clone()
+            .expect("filtered level carries a slot");
+        let prefix_a = slot.commitment_params.a_key.row_len() * slot.commitment_params.inner_width();
+        let prefix_storage = slot.n_prefix().expect("n_prefix") / slot.d_setup;
+        assert!(
+            prefix_a > 1,
+            "test is vacuous unless the prefix A footprint is non-trivial"
+        );
+
+        // Commitment present in the registry: storage is skipped, A/B are not.
+        let mut committed = 1usize;
+        accumulate_verifier_matrix_envelope_for_level(&level, &mut committed, |_| false)
+            .expect("verifier envelope");
+        assert!(
+            committed >= prefix_a,
+            "verifier envelope must still demand the prefix A footprint \
+             ({prefix_a}), got {committed}"
+        );
+
+        // Commitment absent: the prefix must be scanned, so storage counts too.
+        let mut scanned = 1usize;
+        accumulate_verifier_matrix_envelope_for_level(&level, &mut scanned, |_| true)
+            .expect("verifier envelope");
+        assert!(
+            scanned >= prefix_storage && scanned >= committed,
+            "scanned prefix must demand at least its storage ({prefix_storage}) \
+             and never less than the committed case ({committed}), got {scanned}"
+        );
     }
 
     #[test]

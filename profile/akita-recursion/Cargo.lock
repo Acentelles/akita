@@ -60,9 +60,8 @@ dependencies = [
 name = "akita-algebra"
 version = "0.1.0"
 dependencies = [
- "akita-error",
+ "akita-field",
  "akita-serialization",
- "jolt-field",
  "rand_core 0.6.4",
  "rayon",
  "tracing",
@@ -72,9 +71,8 @@ dependencies = [
 name = "akita-challenges"
 version = "0.1.0"
 dependencies = [
- "akita-error",
+ "akita-field",
  "akita-transcript",
- "jolt-field",
  "sha3 0.10.9",
  "tracing",
 ]
@@ -84,21 +82,23 @@ name = "akita-config"
 version = "0.1.0"
 dependencies = [
  "akita-challenges",
- "akita-error",
+ "akita-field",
  "akita-planner",
  "akita-schedules",
  "akita-serialization",
  "akita-transcript",
  "akita-types",
- "jolt-field",
  "tracing",
 ]
 
 [[package]]
-name = "akita-error"
+name = "akita-field"
 version = "0.1.0"
 dependencies = [
- "jolt-field",
+ "akita-serialization",
+ "num-traits",
+ "rand_core 0.6.4",
+ "rayon",
  "thiserror",
 ]
 
@@ -109,7 +109,7 @@ dependencies = [
  "akita-algebra",
  "akita-challenges",
  "akita-config",
- "akita-error",
+ "akita-field",
  "akita-prover",
  "akita-serialization",
  "akita-setup",
@@ -117,7 +117,6 @@ dependencies = [
  "akita-transcript",
  "akita-types",
  "akita-verifier",
- "jolt-field",
  "rayon",
  "tracing",
 ]
@@ -127,9 +126,8 @@ name = "akita-planner"
 version = "0.1.0"
 dependencies = [
  "akita-challenges",
- "akita-error",
+ "akita-field",
  "akita-types",
- "jolt-field",
 ]
 
 [[package]]
@@ -140,13 +138,12 @@ dependencies = [
  "akita-algebra",
  "akita-challenges",
  "akita-config",
- "akita-error",
+ "akita-field",
  "akita-serialization",
  "akita-sumcheck",
  "akita-transcript",
  "akita-types",
  "ctr",
- "jolt-field",
  "rand_core 0.6.4",
  "rayon",
  "sha3 0.10.9",
@@ -158,14 +155,15 @@ name = "akita-recursion-artifact"
 version = "0.1.0"
 dependencies = [
  "akita-config",
+ "akita-field",
  "akita-pcs",
  "akita-prover",
  "akita-recursion-glue",
+ "akita-serialization",
  "akita-transcript",
  "akita-types",
  "akita-verifier",
  "clap",
- "jolt-field",
  "rand 0.8.6",
  "rayon",
  "tracing",
@@ -177,9 +175,9 @@ name = "akita-recursion-glue"
 version = "0.1.0"
 dependencies = [
  "akita-algebra",
+ "akita-field",
  "akita-serialization",
  "akita-types",
- "jolt-field",
 ]
 
 [[package]]
@@ -187,12 +185,14 @@ name = "akita-recursion-guest"
 version = "0.1.0"
 dependencies = [
  "akita-config",
+ "akita-field",
  "akita-recursion-glue",
+ "akita-serialization",
  "akita-transcript",
  "akita-types",
  "akita-verifier",
- "jolt-field",
  "jolt-sdk",
+ "tracing",
 ]
 
 [[package]]
@@ -223,7 +223,6 @@ dependencies = [
 name = "akita-serialization"
 version = "0.1.0"
 dependencies = [
- "jolt-field",
  "thiserror",
 ]
 
@@ -233,11 +232,10 @@ version = "0.1.0"
 dependencies = [
  "akita-algebra",
  "akita-config",
- "akita-error",
+ "akita-field",
  "akita-prover",
  "akita-serialization",
  "akita-types",
- "jolt-field",
  "tracing",
 ]
 
@@ -246,10 +244,10 @@ name = "akita-sumcheck"
 version = "0.1.0"
 dependencies = [
  "akita-algebra",
- "akita-error",
+ "akita-field",
  "akita-serialization",
  "akita-transcript",
- "jolt-field",
+ "rayon",
  "tracing",
 ]
 
@@ -257,9 +255,9 @@ dependencies = [
 name = "akita-transcript"
 version = "0.1.0"
 dependencies = [
+ "akita-field",
  "akita-serialization",
  "blake2 0.10.6",
- "jolt-field",
  "spongefish",
 ]
 
@@ -269,12 +267,11 @@ version = "0.1.0"
 dependencies = [
  "akita-algebra",
  "akita-challenges",
- "akita-error",
+ "akita-field",
  "akita-serialization",
  "akita-sumcheck",
  "akita-transcript",
  "blake2 0.10.6",
- "jolt-field",
  "num-traits",
  "rand_core 0.6.4",
  "rayon",
@@ -289,12 +286,11 @@ dependencies = [
  "akita-algebra",
  "akita-challenges",
  "akita-config",
- "akita-error",
+ "akita-field",
  "akita-serialization",
  "akita-sumcheck",
  "akita-transcript",
  "akita-types",
- "jolt-field",
  "tracing",
 ]
 
@@ -1252,19 +1248,6 @@ dependencies = [
  "tracing",
  "tracing-chrome",
  "tracing-subscriber",
-]
-
-[[package]]
-name = "jolt-field"
-version = "0.1.0"
-source = "git+https://github.com/Acentelles/jolt?rev=09b2f7b6ddd9427c756b781c39530a6c005e332d#09b2f7b6ddd9427c756b781c39530a6c005e332d"
-dependencies = [
- "num-traits",
- "rand 0.8.6",
- "rand_core 0.6.4",
- "rayon",
- "serde",
- "thiserror",
 ]
 
 [[package]]

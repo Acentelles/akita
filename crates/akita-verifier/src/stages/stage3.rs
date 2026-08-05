@@ -4,7 +4,9 @@
 use crate::protocol::ring_switch::RelationMatrixEvaluator;
 use akita_algebra::eq_poly::EqPolynomial;
 use akita_algebra::ring::{eval_ring_at_pows_fast, scalar_powers};
+use akita_field::parallel::*;
 use akita_field::AkitaError;
+use akita_field::{CanonicalField, ExtField, FieldCore, FromPrimitiveInt};
 use akita_serialization::AkitaSerialize;
 use akita_transcript::labels::{
     ABSORB_SETUP_PREFIX_SLOT, ABSORB_SUMCHECK_CLAIM, CHALLENGE_SUMCHECK_ROUND,
@@ -14,10 +16,8 @@ use akita_types::{
     dispatch_for_field, ensure_setup_envelope, select_setup_prefix_slot, shared_setup_fold_gadget,
     stage3_offload_natural_field_len, AkitaExpandedSetup, AkitaVerifierSetup,
     BatchedStage3Geometry, LevelParams, SetupContributionPlan, SetupIndexWeightEvaluator,
-    SetupSumcheckProof, SETUP_OFFLOAD_D_SETUP, SETUP_SUMCHECK_DEGREE,
+    SetupSumcheckProof, SETUP_SUMCHECK_DEGREE,
 };
-use akita_field::parallel::*;
-use akita_field::{CanonicalField, ExtField, FieldCore, FromPrimitiveInt};
 
 /// Verifier counterpart to `AkitaStage3Prover`: replays the setup product
 /// sumcheck for the setup contribution at `x_challenges`.
@@ -110,6 +110,7 @@ impl<E: FieldCore> SetupSumcheckVerifier<E> {
     /// Returns the projected next-witness opening point `rho_w` to be threaded
     /// into the next recursive suffix level.
     #[allow(clippy::too_many_arguments)]
+    #[tracing::instrument(skip_all, name = "stage3_setup_sumcheck")]
     pub(crate) fn verify_batched_stage3<F, T>(
         &self,
         setup: &AkitaVerifierSetup<F>,
@@ -119,6 +120,7 @@ impl<E: FieldCore> SetupSumcheckVerifier<E> {
         stage2_next_w_eval: E,
         stage2_challenges: &[E],
         witness_rounds: usize,
+        setup_eval_len: usize,
         eta: E,
         transcript: &mut T,
     ) -> Result<(Vec<E>, Vec<E>), AkitaError>
@@ -133,17 +135,6 @@ impl<E: FieldCore> SetupSumcheckVerifier<E> {
                 actual: stage2_challenges.len(),
             });
         }
-        let setup_len = setup
-            .expanded
-            .shared_matrix()
-            .total_ring_elements_at_dyn(ring_d)?;
-        let setup_eval_len = self.setup_eval_len::<F, T>(
-            setup,
-            next_fold_level_params,
-            ring_d,
-            setup_len,
-            transcript,
-        )?;
         let setup_prefix_eval = next_fold_level_params
             .setup_prefix
             .as_ref()
@@ -168,6 +159,30 @@ impl<E: FieldCore> SetupSumcheckVerifier<E> {
         )
     }
 
+    /// Absorb the setup-prefix slot id and return the setup evaluation length.
+    ///
+    /// Hoisted out of [`Self::verify_batched_stage3`] so the caller can bind
+    /// the setup-product claim `sigma` and squeeze `eta` between this and the
+    /// sumcheck replay, mirroring the prover's `prove_stage3`. See
+    /// `akita_types::bind_setup_product_claim_and_sample_eta`.
+    pub(crate) fn bind_setup_eval_len<F, T>(
+        &self,
+        setup: &AkitaVerifierSetup<F>,
+        next_fold_level_params: &LevelParams,
+        ring_d: usize,
+        transcript: &mut T,
+    ) -> Result<usize, AkitaError>
+    where
+        F: FieldCore + CanonicalField,
+        T: Transcript<F>,
+    {
+        let setup_len = setup
+            .expanded
+            .shared_matrix()
+            .total_ring_elements_at_dyn(ring_d)?;
+        self.setup_eval_len::<F, T>(setup, next_fold_level_params, ring_d, setup_len, transcript)
+    }
+
     fn setup_eval_len<F, T>(
         &self,
         setup: &AkitaVerifierSetup<F>,
@@ -180,12 +195,23 @@ impl<E: FieldCore> SetupSumcheckVerifier<E> {
         F: FieldCore + CanonicalField,
         T: Transcript<F>,
     {
-        if ring_d == SETUP_OFFLOAD_D_SETUP {
+        // Mirror of the prover-side gate in `akita_stage3::build_setup_product_term`:
+        // prefix offload applies only at levels whose ring dimension equals the
+        // setup generation dimension.
+        if ring_d == setup.expanded.seed().gen_ring_dim {
             let natural_field_len =
                 stage3_offload_natural_field_len(self.plan.required()?, ring_d)?;
-            ensure_setup_envelope(&setup.expanded, self.plan.required()?, ring_d)?;
+            // Capacity for the coverage check is the SEED-declared envelope
+            // (transcript-bound via the instance descriptor), not the shipped
+            // matrix length: a verifier holding the slot commitment never
+            // reads the delegated prefix rows, so a setup shipping only the
+            // read prefix must still select the planned slot. The direct-scan
+            // fallback below stays gated on the ACTUAL shipped length
+            // (`ensure_setup_envelope`), and the scan itself is
+            // bounds-checked again by `ring_view`.
+            let declared_setup_len = setup.expanded.seed().max_setup_len;
             let setup_prefix_selection = select_setup_prefix_slot(
-                setup_len,
+                declared_setup_len.max(setup_len),
                 |id| {
                     setup
                         .prefix_slots
@@ -205,6 +231,7 @@ impl<E: FieldCore> SetupSumcheckVerifier<E> {
                     "planned setup-prefix slot is missing from verifier setup".to_string(),
                 ))
             } else {
+                ensure_setup_envelope(&setup.expanded, self.plan.required()?, ring_d)?;
                 Ok(setup_len)
             }
         } else {

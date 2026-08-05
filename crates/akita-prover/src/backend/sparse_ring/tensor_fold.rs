@@ -6,8 +6,8 @@ use crate::backend::tensor_fold::{
 };
 use crate::DecomposeFoldWitness;
 use akita_challenges::TensorChallenges as TensorChallengeSet;
-use akita_field::AkitaError;
 use akita_field::parallel::*;
+use akita_field::AkitaError;
 use akita_field::{CanonicalField, FieldCore, FromPrimitiveInt};
 
 pub(super) fn decompose_fold_batched_tensor_sparse<F, const D: usize>(

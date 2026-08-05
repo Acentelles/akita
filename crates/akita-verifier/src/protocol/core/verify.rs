@@ -6,8 +6,8 @@ use crate::proof::direct::verify_zero_fold_openings_with_opening_batch;
 use crate::protocol::validate_log_basis;
 use akita_algebra::CyclotomicRing;
 use akita_config::{
-    bind_transcript_instance_descriptor, effective_batched_schedule, ensure_schedule_fits_setup,
-    CommitmentConfig,
+    bind_transcript_instance_descriptor, effective_batched_schedule,
+    ensure_schedule_fits_verifier_setup, CommitmentConfig,
 };
 use akita_field::AkitaError;
 use akita_serialization::AkitaSerialize;
@@ -434,7 +434,7 @@ where
     let schedule = effective_batched_schedule::<Cfg>(&opening_batch, claims.point())
         .map_err(|_| AkitaError::InvalidProof)?;
     validate_schedule_ring_dims(&schedule, setup.expanded.seed())?;
-    ensure_schedule_fits_setup::<Cfg>(setup.expanded.as_ref(), &schedule, &opening_batch)?;
+    ensure_schedule_fits_verifier_setup::<Cfg>(setup, &schedule, &opening_batch)?;
     schedule
         .validate_structure()
         .map_err(|_| AkitaError::InvalidProof)?;

@@ -6,7 +6,7 @@
 //! the offline DP search.
 
 use std::cmp::Ordering;
-use std::collections::HashSet;
+use std::collections::BTreeSet;
 use std::sync::{LazyLock, Mutex};
 
 use akita_challenges::{SparseChallengeConfig, TensorChallengeShape};
@@ -19,17 +19,20 @@ use crate::generated::{
 };
 use crate::PlannerPolicy;
 
-static VALIDATED_CATALOGS: LazyLock<Mutex<HashSet<CatalogValidationCacheKey>>> =
-    LazyLock::new(|| Mutex::new(HashSet::new()));
+// BTreeSet, not HashSet: this cache is also exercised inside the Jolt zeroos
+// guest (profile/akita-recursion), where std's RandomState hasher aborts for
+// lack of OS randomness. The key is Ord; behavior is unchanged.
+static VALIDATED_CATALOGS: LazyLock<Mutex<BTreeSet<CatalogValidationCacheKey>>> =
+    LazyLock::new(|| Mutex::new(BTreeSet::new()));
 
 fn lock_validated_catalogs(
-) -> Result<std::sync::MutexGuard<'static, HashSet<CatalogValidationCacheKey>>, AkitaError> {
+) -> Result<std::sync::MutexGuard<'static, BTreeSet<CatalogValidationCacheKey>>, AkitaError> {
     VALIDATED_CATALOGS
         .lock()
         .map_err(|_| AkitaError::InvalidSetup("catalog validation cache poisoned".to_string()))
 }
 
-#[derive(Clone, Copy, Debug, Eq, Hash, PartialEq)]
+#[derive(Clone, Copy, Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]
 struct CatalogValidationCacheKey {
     entries_ptr: usize,
     entries_len: usize,

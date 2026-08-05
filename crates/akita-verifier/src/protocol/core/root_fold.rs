@@ -435,6 +435,7 @@ where
             openings,
             &coefficients,
             opening_batch,
+            None,
             transcript,
         )?;
         let protocol_point =

@@ -22,8 +22,28 @@ use std::io::{Read, Write};
 
 const MAX_SETUP_PREFIX_SLOTS: usize = 4096;
 
-/// Ring dimension used when delegating setup claims to a flat coefficient prefix.
+/// Initial (D64) ring dimension for setup-claim delegation.
+///
+/// Historically the only supported offload dimension (STACK.md slice-02B
+/// first-implementation restriction). The general condition is
+/// [`setup_offload_ring_dim_supported`]: the slot commitment dimension
+/// `d_setup` equals the setup generation dimension (`gen_ring_dim ==
+/// Cfg::D` for uniform presets), and delegation requires the level's ring
+/// dimension to equal it. See `specs/mixed-d-setup-delegation.md`.
 pub const SETUP_OFFLOAD_D_SETUP: usize = 64;
+
+/// Ring dimensions at which recursive setup-claim offloading is supported.
+///
+/// Adding a dimension here requires end-to-end coverage (recursive prove +
+/// verify + cross-mode rejection) and materialized-vs-direct equivalence
+/// fixtures at that dimension.
+pub const SETUP_OFFLOAD_SUPPORTED_RING_DIMS: &[usize] = &[64, 128];
+
+/// Whether recursive setup-claim offloading supports ring dimension `d`.
+#[must_use]
+pub fn setup_offload_ring_dim_supported(d: usize) -> bool {
+    SETUP_OFFLOAD_SUPPORTED_RING_DIMS.contains(&d)
+}
 
 /// Minimum padded setup-prefix field length for recursive setup offloading.
 pub const SETUP_OFFLOAD_MIN_PREFIX_FIELD_LEN: usize = 1 << 10;
@@ -1166,6 +1186,15 @@ where
     if template.natural_len != natural_field_len || template_n_prefix != n_prefix {
         return Err(AkitaError::InvalidSetup(coverage_error.to_string()));
     }
+    // The planned slot's commitment dimension must match the dimension the
+    // caller derived the natural footprint at (the level's ring dimension);
+    // a mismatch means planner and runtime disagree on the flat layout.
+    if template.d_setup != d_setup {
+        return Err(AkitaError::InvalidSetup(format!(
+            "setup prefix slot d_setup={} does not match delegating ring dimension {d_setup}",
+            template.d_setup
+        )));
+    }
 
     let Some((slot, slot_natural_len, slot_padded_len)) = lookup_slot(template) else {
         return Err(AkitaError::InvalidSetup(
@@ -1257,6 +1286,96 @@ mod tests {
             active_setup_field_len(&lp, &opening_batch, SETUP_OFFLOAD_D_SETUP).expect("field len"),
             expected_ring_slots * SETUP_OFFLOAD_D_SETUP
         );
+    }
+
+    /// A `SetupPrefixVerifierRegistry` must survive a validating round trip
+    /// when the slot's commitment has more than one B row.
+    ///
+    /// Coverage gap this closes: nothing else in the workspace round-trips a
+    /// registry through `Validate::Yes`, so the per-row `d_setup` invariant
+    /// was only ever satisfied by accident on the single shipped recursive
+    /// catalog (`fp128::D64OneHot`, `n_b = 1`). A producer that flattens all
+    /// of `u` into one row fails here at `n_b = 2` with
+    /// "row has 2*d_setup coefficients, expected d_setup".
+    #[test]
+    fn verifier_registry_round_trips_with_multi_row_commitment() {
+        use akita_field::Prime32Offset99 as TestF;
+        const TEST_D_SETUP: usize = 32;
+        const N_B: usize = 2;
+
+        let level_params = prefix_eligible_level_params();
+        let natural_len = 33usize;
+        let n_prefix = padded_setup_prefix_len(natural_len);
+        let commitment_params = PrecommittedLevelParams {
+            layout: PrecommittedGroupParams {
+                group: PolynomialGroupLayout::singleton(n_prefix.trailing_zeros() as usize),
+                m_vars: 0,
+                r_vars: 0,
+                log_basis: 3,
+                n_a: 1,
+                conservative_n_b: 1,
+                log_commit_bound: 1,
+                onehot_chunk_size: 1,
+                basis_range: (1, 8),
+            },
+            a_key: level_params.a_key.clone(),
+            b_key: level_params.b_key.clone(),
+            num_blocks: 1,
+            block_len: n_prefix / TEST_D_SETUP,
+            num_digits_commit: 2,
+            num_digits_open: 2,
+            num_digits_fold_one: 2,
+        };
+        let id = setup_prefix_slot_id(TEST_D_SETUP, natural_len, commitment_params);
+        let slot = SetupPrefixVerifierSlot {
+            id: id.clone(),
+            natural_len,
+            padded_len: n_prefix,
+            commitment: SetupPrefixPublicCommitment {
+                // One row per B ring element (the producer's contract).
+                rows: (0..N_B)
+                    .map(|_| RingVec::from_coeffs(vec![TestF::zero(); TEST_D_SETUP]))
+                    .collect(),
+            },
+        };
+        slot.check().expect("multi-row slot must satisfy the invariant");
+
+        let mut registry = SetupPrefixVerifierRegistry::new();
+        registry.insert(slot).expect("insert");
+
+        let mut bytes = Vec::new();
+        registry
+            .serialize_with_mode(&mut bytes, Compress::No)
+            .expect("serialize registry");
+        let decoded = SetupPrefixVerifierRegistry::<TestF>::deserialize_with_mode(
+            &bytes[..],
+            Compress::No,
+            Validate::Yes,
+            &(),
+        )
+        .expect("registry with n_b > 1 must round-trip under Validate::Yes");
+        assert_eq!(decoded.len(), 1);
+        let decoded_slot = decoded.get(&id).expect("slot present");
+        assert_eq!(decoded_slot.commitment.rows.len(), N_B);
+        for row in &decoded_slot.commitment.rows {
+            assert_eq!(row.coeff_len(), TEST_D_SETUP);
+        }
+
+        // The flattened encoding the producer used to emit must be rejected,
+        // so this test cannot pass again by reverting the producer.
+        let flattened = SetupPrefixVerifierSlot {
+            id: id.clone(),
+            natural_len,
+            padded_len: n_prefix,
+            commitment: SetupPrefixPublicCommitment {
+                rows: vec![RingVec::from_coeffs(vec![
+                    TestF::zero();
+                    TEST_D_SETUP * N_B
+                ])],
+            },
+        };
+        let err = flattened.check().expect_err("flattened rows must be rejected");
+        assert!(err.to_string().contains("coefficients"));
     }
 
     #[test]

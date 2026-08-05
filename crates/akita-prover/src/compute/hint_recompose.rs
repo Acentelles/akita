@@ -20,8 +20,8 @@
 
 use akita_algebra::CyclotomicRing;
 use akita_field::AkitaError;
-use akita_types::{AkitaCommitmentHint, DigitBlocks};
 use akita_field::{CanonicalField, FieldCore};
+use akita_types::{AkitaCommitmentHint, DigitBlocks};
 
 /// Recompose one D-free [`DigitBlocks`] digit stream into typed inner rows,
 /// grouped by block (`Vec<block> of Vec<CyclotomicRing<F, D>>`).

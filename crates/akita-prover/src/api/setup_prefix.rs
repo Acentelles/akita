@@ -27,7 +27,7 @@ use akita_types::{
 /// Returns an error if shapes overflow, the prefix does not fit the setup matrix,
 /// or backend commitment fails.
 #[allow(clippy::too_many_arguments)]
-pub fn commit_setup_prefix<F, const D: usize, B>(
+pub fn commit_setup_prefix<F, E, const D: usize, B>(
     expanded: &AkitaExpandedSetup<F>,
     backend: &B,
     prepared: &B::PreparedSetup,
@@ -36,7 +36,8 @@ pub fn commit_setup_prefix<F, const D: usize, B>(
     natural_len: usize,
 ) -> Result<SetupPrefixSlot<F>, AkitaError>
 where
-    F: FieldCore + CanonicalField + RandomSampling,
+    F: FieldCore + CanonicalField + RandomSampling + akita_field::FromPrimitiveInt,
+    E: akita_types::FpExtEncoding<F>,
     B: CommitmentComputeBackend<F>,
 {
     if natural_len == 0 || natural_len > n_prefix {
@@ -75,8 +76,12 @@ where
         ));
     }
 
+    // Commit the COMMITTED representation: at `k = 1` the raw padded stream;
+    // at `k > 1` its psi-packed transform, so the recursive fold opens the
+    // committed transformed polynomial
+    // (`specs/eor-setup-prefix-absorption.md`).
     let ring_elems =
-        extract_setup_prefix_ring_elems::<F, D>(expanded, padded_ring_slots, natural_len)?;
+        extract_setup_prefix_ring_elems::<F, E, D>(expanded, padded_ring_slots, natural_len)?;
     let block_slices =
         setup_prefix_block_slices(&ring_elems, level_params.num_blocks, level_params.block_len)?;
 
@@ -164,19 +169,29 @@ where
         natural_len,
         padded_len: n_prefix,
         commitment: SetupPrefixPublicCommitment {
-            rows: vec![RingVec::from_ring_elems(&u)],
+            // One row per B ring element, so every row carries exactly
+            // `d_setup` coefficients as `SetupPrefixVerifierSlot::check`
+            // requires. Flattening all of `u` into a single row happened to
+            // satisfy that invariant only while `b_key.row_len() == 1` (the
+            // shipped fp128 D64OneHot catalog) and violated it at
+            // `n_b > 1`. The partition is not transcript-visible: consumers
+            // concatenate the rows back together, and only the slot *id*
+            // (d_setup, natural_len, commitment_params - no rows) is
+            // absorbed, so this changes no proof.
+            rows: u.iter().map(|elem| RingVec::from_ring_elems(std::slice::from_ref(elem))).collect(),
         },
         hint,
     })
 }
 
-fn extract_setup_prefix_ring_elems<F, const D: usize>(
+fn extract_setup_prefix_ring_elems<F, E, const D: usize>(
     expanded: &AkitaExpandedSetup<F>,
     padded_ring_slots: usize,
     natural_len: usize,
 ) -> Result<Vec<CyclotomicRing<F, D>>, AkitaError>
 where
-    F: FieldCore,
+    F: FieldCore + CanonicalField + akita_field::FromPrimitiveInt,
+    E: akita_types::FpExtEncoding<F>,
 {
     let fields = expanded.shared_matrix().as_field_slice();
     let padded_field_len = padded_ring_slots.checked_mul(D).ok_or_else(|| {
@@ -188,11 +203,17 @@ where
         ));
     }
 
-    let mut ring_elems = vec![CyclotomicRing::zero(); padded_ring_slots];
-    for (ring, coeffs) in ring_elems.iter_mut().zip(fields[..natural_len].chunks(D)) {
-        ring.coefficients_mut()[..coeffs.len()].copy_from_slice(coeffs);
-    }
-    Ok(ring_elems)
+    let mut raw = vec![F::zero(); padded_field_len];
+    raw[..natural_len].copy_from_slice(&fields[..natural_len]);
+    let committed = crate::backend::transform_committed_field_evals::<F, E, D>(raw)?;
+    Ok(committed
+        .chunks_exact(D)
+        .map(|chunk| {
+            let mut ring = CyclotomicRing::zero();
+            ring.coefficients_mut().copy_from_slice(chunk);
+            ring
+        })
+        .collect())
 }
 
 fn setup_prefix_block_slices<F, const D: usize>(
@@ -286,7 +307,7 @@ mod tests {
         let setup = test_setup::<64>(&level_params, padded_ring_slots * 64);
         let fields = setup.expanded.shared_matrix().as_field_slice();
 
-        let ring_elems = extract_setup_prefix_ring_elems::<F, 64>(
+        let ring_elems = extract_setup_prefix_ring_elems::<F, F, 64>(
             &setup.expanded,
             padded_ring_slots,
             natural_len,
@@ -327,7 +348,7 @@ mod tests {
             },
         )
         .expect("prefix params");
-        let slot = commit_setup_prefix::<F, D, _>(
+        let slot = commit_setup_prefix::<F, F, D, _>(
             &setup.expanded,
             &backend,
             &prepared,

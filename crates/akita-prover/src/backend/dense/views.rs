@@ -11,8 +11,8 @@ use crate::compute::{
     RootTensorSource,
 };
 use akita_field::AkitaError;
-use akita_types::{CleartextWitnessProof, RingVec};
 use akita_field::FieldCore;
+use akita_types::{CleartextWitnessProof, RingVec};
 
 /// Borrowed single-polynomial view over dense ring storage at dimension `D`.
 ///

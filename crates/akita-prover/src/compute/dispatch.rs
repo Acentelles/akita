@@ -5,8 +5,8 @@ use super::kernels::TensorProjectionKernel;
 use super::poly::RootTensorSource;
 use crate::RootTensorProjectionPoly;
 use akita_field::AkitaError;
-use akita_types::FpExtEncoding;
 use akita_field::{CanonicalField, ExtField, FieldCore, FromPrimitiveInt};
+use akita_types::FpExtEncoding;
 
 pub(crate) fn tensor_root_projection<F, P, E, B, const D: usize>(
     backend: &B,

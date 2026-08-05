@@ -24,12 +24,12 @@ use super::plans::{
 };
 use crate::{CommitInnerWitness, DecomposeFoldWitness};
 use akita_algebra::CyclotomicRing;
-use akita_field::AkitaError;
-use akita_types::{AkitaExpandedSetup, FpExtEncoding, NttCacheKey};
 use akita_field::unreduced::{HasWide, ReduceTo};
+use akita_field::AkitaError;
 use akita_field::{
     AdditiveGroup, CanonicalField, ExtField, FieldCore, FromPrimitiveInt, HalvingField,
 };
+use akita_types::{AkitaExpandedSetup, FpExtEncoding, NttCacheKey};
 use std::sync::Arc;
 
 macro_rules! delegate_compute_backend_setup {

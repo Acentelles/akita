@@ -6,10 +6,10 @@ use crate::compute::{
     SuffixOpeningProveBackend, SuffixTensorProveBackend,
 };
 use crate::RootTensorProjectionPoly;
-use akita_types::schedule_terminal_direct_witness_shape;
-use akita_types::terminal_golomb_grind_tail_t_vectors;
 use akita_field::unreduced::ReduceTo;
 use akita_field::AdditiveGroup;
+use akita_types::schedule_terminal_direct_witness_shape;
+use akita_types::terminal_golomb_grind_tail_t_vectors;
 use std::sync::Arc;
 
 /// Prover state carried between suffix fold levels.
@@ -301,8 +301,12 @@ where
     commitment.append_flat_to_transcript::<T>(ABSORB_COMMITMENT, commit_d, transcript)?;
 
     let alpha = role_dims.d_a().trailing_zeros() as usize;
-    let needs_extension_reduction =
-        <E as ExtField<F>>::EXT_DEGREE != 1 && level_params.setup_prefix.is_none();
+    // At k > 1 every suffix level runs the extension-opening reduction; a
+    // carried setup-prefix claim joins it as one more claim in the shared
+    // sumcheck (`specs/eor-setup-prefix-absorption.md`), embedded
+    // suffix-aligned into the joint domain.
+    let needs_extension_reduction = <E as ExtField<F>>::EXT_DEGREE != 1;
+    let eor_suffix_aligned = level_params.setup_prefix.is_some();
     let recursive_num_vars = level_params.recursive_opening_num_vars()?;
     let witness_source = RecursiveFoldSource::witness(Arc::clone(&witness));
     let logical_witness_source = RecursiveFoldSource::witness(logical_witness);
@@ -318,21 +322,47 @@ where
             })
         })
         .transpose()?;
-    let setup_source_storage = setup_slot.map(|slot| {
-        RecursiveFoldSource::setup_prefix(Arc::clone(expanded), Arc::new(slot.clone()))
-    });
+    let setup_source_storage = setup_slot
+        .map(|slot| -> Result<RecursiveFoldSource<F>, AkitaError> {
+            // Committed representation of the prefix (psi-packed transform at
+            // k > 1): the fold opens the committed transformed polynomial
+            // while the EOR reduces the raw stream
+            // (`specs/eor-setup-prefix-absorption.md`).
+            let committed = akita_types::dispatch_for_field!(
+                ProtocolDispatchSlot::Role(RingRole::Inner),
+                F,
+                role_dims.d_a(),
+                |D| {
+                    crate::backend::setup_prefix_committed_field_evals::<F, E, D>(
+                        expanded.as_ref(),
+                        slot,
+                    )
+                }
+            )?;
+            Ok(RecursiveFoldSource::setup_prefix(
+                Arc::clone(expanded),
+                Arc::new(slot.clone()),
+                Arc::new(committed),
+            ))
+        })
+        .transpose()?;
     let setup_polys_storage = setup_source_storage.as_ref().map(|source| [source]);
-    let (fold_claims, eor_opening_batch, protocol_point) =
-        ProverOpeningData::new_recursive_suffix_fold(
-            opening_point,
-            recursive_num_vars,
-            setup_prefix_opening,
-            setup_slot,
-            setup_polys_storage.as_ref().map(|polys| &polys[..]),
-            opening,
-            &witness_polys[..],
-            (Commitment::new(commitment), suffix_hint),
-        )?;
+    let suffix_fold_inputs = ProverOpeningData::new_recursive_suffix_fold(
+        opening_point,
+        recursive_num_vars,
+        setup_prefix_opening,
+        setup_slot,
+        setup_polys_storage.as_ref().map(|polys| &polys[..]),
+        opening,
+        &witness_polys[..],
+        (Commitment::new(commitment), suffix_hint),
+    )
+    .map_err(|err| {
+        AkitaError::InvalidInput(format!(
+            "recursive suffix batch construction failed: {err:?}"
+        ))
+    })?;
+    let (fold_claims, eor_opening_batch, protocol_point) = suffix_fold_inputs;
     let logical_polys = setup_source_storage
         .as_ref()
         .into_iter()
@@ -342,6 +372,7 @@ where
     prepare_fold_inner::<F, E, T, _, _, C, O, TS, R>(
         stack,
         needs_extension_reduction,
+        eor_suffix_aligned,
         fold_claims,
         &logical_polys,
         &eor_opening_batch,
@@ -362,9 +393,9 @@ where
 mod tests {
     use super::*;
     use crate::protocol::core::fold_kernels::compute_trace_target;
+    use akita_field::Fp32;
     use akita_transcript::AkitaTranscript;
     use akita_types::RingOpeningPoint;
-    use akita_field::Fp32;
 
     type TestF = Fp32<251>;
     const D: usize = 4;
@@ -397,11 +428,12 @@ mod tests {
 
         let opening_batch = OpeningClaimsLayout::new(0, 1).expect("singleton opening batch");
         let mut transcript = AkitaTranscript::<TestF>::new(b"test/suffix-shared-trace-target");
+        let group_points: Vec<Vec<TestF>> = vec![Vec::new()];
         let err = match compute_trace_target::<TestF, TestF, _, D>(
             &reduction,
             &folded_rings,
             std::slice::from_ref(&prepared_point),
-            &[],
+            &group_points,
             0,
             BasisMode::Lagrange,
             &opening_batch,

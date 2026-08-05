@@ -4,6 +4,15 @@ mod label;
 pub mod labels;
 #[cfg(feature = "logging-transcript")]
 mod logging;
+/// Unaudited algebraic (Poseidon2) transcript sponge over `p* = 2^64 - 59`.
+///
+/// # NOT FOR PRODUCTION
+///
+/// Research backend for in-circuit transcript verification. See the module
+/// documentation for the standing cryptanalysis risk and the (H1) assumption
+/// this instance carries.
+#[cfg(feature = "transcript-poseidon2")]
+pub mod poseidon2;
 mod sponge;
 
 use akita_serialization::AkitaSerialize;
@@ -12,7 +21,9 @@ use akita_field::{CanonicalField, ExtField, FieldCore};
 pub use label::Label;
 #[cfg(feature = "logging-transcript")]
 pub use logging::{clear_thread_events, thread_events, LoggingTranscript, TranscriptEvent};
-pub use sponge::{AkitaTranscript, TranscriptSponge, PROTOCOL_TAG};
+pub use sponge::{
+    AkitaTranscript, TranscriptSponge, TranscriptSpongeBackend, PROTOCOL_TAG, TRANSCRIPT_BACKEND,
+};
 
 /// Transcript interface for protocol Fiat-Shamir transforms.
 ///

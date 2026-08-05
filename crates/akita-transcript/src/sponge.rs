@@ -9,20 +9,109 @@ use spongefish::{
 };
 use std::marker::PhantomData;
 
-#[cfg(not(any(feature = "transcript-blake2b", feature = "transcript-keccak")))]
-compile_error!("enable at least one transcript backend: transcript-blake2b or transcript-keccak");
+#[cfg(not(any(
+    feature = "transcript-blake2b",
+    feature = "transcript-keccak",
+    feature = "transcript-poseidon2"
+)))]
+compile_error!(
+    "enable at least one transcript backend: transcript-blake2b, transcript-keccak, or \
+     transcript-poseidon2"
+);
 
 /// Sponge backend selected by the active transcript feature.
 ///
-/// Cargo feature unification means `--all-features` enables both backends. In
+/// Cargo feature unification means `--all-features` enables every backend. In
 /// that case Akita selects the default Blake2b backend; use
-/// `--no-default-features --features transcript-keccak` to select Keccak.
+/// `--no-default-features --features transcript-keccak` to select Keccak, or
+/// `--no-default-features --features transcript-poseidon2` to select the
+/// unaudited algebraic Poseidon2 backend. The selection priority is
+/// Blake2b > Keccak > Poseidon2, so no existing build changes behaviour.
 #[cfg(feature = "transcript-blake2b")]
 pub type TranscriptSponge = spongefish::instantiations::Blake2b512;
 
 /// Sponge backend selected by the active transcript feature.
 #[cfg(all(not(feature = "transcript-blake2b"), feature = "transcript-keccak"))]
 pub type TranscriptSponge = spongefish::instantiations::Keccak;
+
+/// Sponge backend selected by the active transcript feature.
+///
+/// # UNAUDITED RESEARCH CRYPTOGRAPHY - NOT FOR PRODUCTION
+///
+/// See [`crate::poseidon2`].
+#[cfg(all(
+    not(feature = "transcript-blake2b"),
+    not(feature = "transcript-keccak"),
+    feature = "transcript-poseidon2"
+))]
+pub type TranscriptSponge =
+    crate::poseidon2::Poseidon2ByteSponge<crate::poseidon2::SelectedInstance>;
+
+/// Any sponge that can drive an [`AkitaTranscript`].
+///
+/// This is exactly the bound the [`Transcript`] and
+/// [`FoldChallengeSeedPreview`](crate::FoldChallengeSeedPreview)
+/// implementations for [`AkitaTranscript`] already require, packaged as one
+/// nameable trait.
+///
+/// It exists so that downstream crates can be generic over the sponge without
+/// taking a direct `spongefish` dependency. `akita-prover`, for instance, needs
+/// to say "any Akita transcript sponge" when implementing its
+/// `ProverTranscriptGrind` marker, but does not depend on `spongefish` and
+/// should not have to start.
+///
+/// The blanket implementation means every qualifying sponge gets it
+/// automatically; there is nothing to implement by hand.
+pub trait TranscriptSpongeBackend: Default + DuplexSpongeInterface<U = u8> + Send + 'static {}
+
+impl<S> TranscriptSpongeBackend for S where
+    S: Default + DuplexSpongeInterface<U = u8> + Send + 'static
+{
+}
+
+/// Name of the sponge backend [`TranscriptSponge`] resolved to.
+///
+/// Exists so tests and tools can assert which Fiat-Shamir backend a build
+/// actually selected, rather than inferring it from Cargo features (feature
+/// unification makes that unreliable).
+#[cfg(feature = "transcript-blake2b")]
+pub const TRANSCRIPT_BACKEND: &str = "blake2b";
+
+/// Name of the sponge backend [`TranscriptSponge`] resolved to.
+#[cfg(all(not(feature = "transcript-blake2b"), feature = "transcript-keccak"))]
+pub const TRANSCRIPT_BACKEND: &str = "keccak";
+
+/// Name of the sponge backend [`TranscriptSponge`] resolved to.
+#[cfg(all(
+    not(feature = "transcript-blake2b"),
+    not(feature = "transcript-keccak"),
+    feature = "transcript-poseidon2",
+    not(feature = "transcript-poseidon2-alpha7")
+))]
+pub const TRANSCRIPT_BACKEND: &str = "poseidon2-a3";
+
+/// Name of the sponge backend [`TranscriptSponge`] resolved to.
+#[cfg(all(
+    not(feature = "transcript-blake2b"),
+    not(feature = "transcript-keccak"),
+    feature = "transcript-poseidon2",
+    feature = "transcript-poseidon2-alpha7"
+))]
+pub const TRANSCRIPT_BACKEND: &str = "poseidon2-a7";
+
+/// Pad a short backend identifier into spongefish's 64-byte protocol tag.
+#[cfg(feature = "transcript-poseidon2")]
+#[allow(dead_code)]
+const fn pad_protocol_tag(id: &[u8]) -> [u8; 64] {
+    assert!(id.len() <= 64, "protocol tag identifiers must fit in 64 bytes");
+    let mut out = [0u8; 64];
+    let mut i = 0;
+    while i < id.len() {
+        out[i] = id[i];
+        i += 1;
+    }
+    out
+}
 
 /// Backend-specific 64-byte protocol tag for spongefish domain separation.
 #[cfg(feature = "transcript-blake2b")]
@@ -33,6 +122,35 @@ pub const PROTOCOL_TAG: &[u8; 64] =
 #[cfg(all(not(feature = "transcript-blake2b"), feature = "transcript-keccak"))]
 pub const PROTOCOL_TAG: &[u8; 64] =
     b"akita-pcs/transcript/v1/keccak\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0";
+
+/// Backend-specific 64-byte protocol tag for spongefish domain separation.
+///
+/// The Poseidon2 sponge additionally carries its own 28-byte capacity IV
+/// (`akita-pcs/transcript/v1/p2a3` or `...p2a7`), so the two alpha variants are
+/// domain-separated from each other and from the byte backends even in builds
+/// where feature unification leaves this tag unselected.
+#[cfg(all(
+    not(feature = "transcript-blake2b"),
+    not(feature = "transcript-keccak"),
+    feature = "transcript-poseidon2"
+))]
+pub const PROTOCOL_TAG: &[u8; 64] = &POSEIDON2_PROTOCOL_TAG;
+
+#[cfg(all(
+    not(feature = "transcript-blake2b"),
+    not(feature = "transcript-keccak"),
+    feature = "transcript-poseidon2",
+    not(feature = "transcript-poseidon2-alpha7")
+))]
+static POSEIDON2_PROTOCOL_TAG: [u8; 64] = pad_protocol_tag(b"akita-pcs/transcript/v1/poseidon2-a3");
+
+#[cfg(all(
+    not(feature = "transcript-blake2b"),
+    not(feature = "transcript-keccak"),
+    feature = "transcript-poseidon2",
+    feature = "transcript-poseidon2-alpha7"
+))]
+static POSEIDON2_PROTOCOL_TAG: [u8; 64] = pad_protocol_tag(b"akita-pcs/transcript/v1/poseidon2-a7");
 
 const SQUEEZE_CHUNK_LEN: usize = 32;
 

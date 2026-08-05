@@ -7,16 +7,18 @@ use akita_challenges::{
     grind_probe_permutation, witness_fold_challenge_labels, Challenges, FoldDraw, LiveFoldDraw,
     PreviewFoldDraw,
 };
+use akita_field::unreduced::{HasWide, ReduceTo};
 use akita_field::AkitaError;
-use akita_transcript::{AkitaTranscript, FoldChallengeSeedPreview, Transcript, TranscriptSponge};
+use akita_field::{CanonicalField, FieldCore, FromPrimitiveInt};
+use akita_transcript::{
+    AkitaTranscript, FoldChallengeSeedPreview, Transcript, TranscriptSpongeBackend,
+};
 use akita_types::{
     golomb_rice_rows_admit_terminal_wire,
     sis::{FoldWitnessGrindContract, FoldWitnessLinfCapPolicy},
     FoldLinfProtocolBinding, LevelParams, LevelParamsLike, FOLD_GRIND_PROBE_ORDER_SEQUENTIAL_MIN,
     FOLD_GRIND_PROBE_ORDER_TRANSCRIPT_SHUFFLE,
 };
-use akita_field::unreduced::{HasWide, ReduceTo};
-use akita_field::{CanonicalField, FieldCore, FromPrimitiveInt};
 
 use super::ring_relation::{
     aggregate_decompose_fold_witnesses, build_point_decompose_fold_witness,
@@ -35,8 +37,10 @@ where
 {
 }
 
-impl<F> ProverTranscriptGrind<F> for AkitaTranscript<F, TranscriptSponge> where
-    F: FieldCore + CanonicalField + akita_field::CanonicalBytes + akita_field::TranscriptChallenge
+impl<F, S> ProverTranscriptGrind<F> for AkitaTranscript<F, S>
+where
+    F: FieldCore + CanonicalField + akita_field::CanonicalBytes + akita_field::TranscriptChallenge,
+    S: TranscriptSpongeBackend,
 {
 }
 

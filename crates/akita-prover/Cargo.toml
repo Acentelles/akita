@@ -41,6 +41,11 @@ akita-config = { version = "0.1.0", path = "../akita-config", features = [
 default = ["schedules-default"]
 schedules-default = ["akita-config/schedules-default"]
 logging-transcript = ["akita-transcript/logging-transcript"]
+# TEST-ONLY. Compiles the adversarial prover injections of
+# `src/attack_probe.rs` used by the carried-claim forgery regression tests
+# (`aerie/_docs/ABSORPTION-AUDIT.md`, Defect 1). Never enable in production or
+# in any default/profile feature set.
+attack-probe = []
 parallel = [
   "dep:rayon",
   "akita-challenges/parallel",

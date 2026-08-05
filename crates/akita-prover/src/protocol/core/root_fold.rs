@@ -5,10 +5,10 @@ use crate::compute::{
     RuntimeRootProvePoly, RuntimeTensorBackendFor,
 };
 use crate::RootTensorProjectionPoly;
-use akita_types::terminal_golomb_grind_tail_t_vectors;
-use akita_types::CleartextWitnessShape;
 use akita_field::unreduced::ReduceTo;
 use akita_field::AdditiveGroup;
+use akita_types::terminal_golomb_grind_tail_t_vectors;
+use akita_types::CleartextWitnessShape;
 
 fn validate_non_eor_root_opening_shape<F, E>(
     ring_d: usize,
@@ -104,6 +104,7 @@ where
     prepare_fold_inner::<F, E, T, P, _, C, O, TS, R>(
         stack,
         needs_extension_reduction,
+        false,
         claims,
         &flat_polys,
         &eor_opening_batch,

@@ -23,6 +23,7 @@ pub use multilinear_polynomial::{
 pub use onehot::{
     MultiChunkEntry, OneHotBatchView, OneHotIndex, OneHotPoly, OneHotView, SingleChunkEntry,
 };
+pub(crate) use recursive::{setup_prefix_committed_field_evals, transform_committed_field_evals};
 pub use recursive::{
     RecursiveCommitmentHintCache, RecursiveFoldSource, RecursiveWitnessFlat,
     SuffixWitnessBatchView, SuffixWitnessView,

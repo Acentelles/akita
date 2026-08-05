@@ -239,26 +239,31 @@ pub fn recursive_group_batch_candidates_for_capacity<Cfg: CommitmentConfig>(
     max_num_batched_polys: usize,
 ) -> Result<Vec<AkitaScheduleLookupKey>, AkitaError> {
     if !Cfg::recursive_setup_planning()
-        || Cfg::decomposition().log_commit_bound != 1
-        || Cfg::D != akita_types::SETUP_OFFLOAD_D_SETUP
+        || !akita_types::setup_offload_ring_dim_supported(Cfg::D)
         || Cfg::chunked_witness_cfg().uses_multi_chunk()
         || max_num_batched_polys == 0
     {
         return Ok(Vec::new());
     }
+    // Catalog-backed recursive candidates remain one-hot (`log_commit_bound
+    // == 1`) exactly as before; the dense bounded fp64 D128 presets are
+    // enabled through the explicit table-less profile keys below.
+    let onehot_catalog_family = Cfg::decomposition().log_commit_bound == 1;
 
     let mut keys = Vec::new();
-    if let Some(catalog) = Cfg::schedule_catalog() {
-        for entry in catalog.entries {
-            if entry.precommitteds.is_empty() {
-                continue;
-            }
-            let candidate = AkitaScheduleLookupKey {
-                final_group: entry.final_group,
-                precommitteds: entry.precommitteds.to_vec(),
-            };
-            if key_within_setup_capacity(&candidate, max_num_vars, max_num_batched_polys)? {
-                push_unique_schedule_key(&mut keys, candidate);
+    if onehot_catalog_family {
+        if let Some(catalog) = Cfg::schedule_catalog() {
+            for entry in catalog.entries {
+                if entry.precommitteds.is_empty() {
+                    continue;
+                }
+                let candidate = AkitaScheduleLookupKey {
+                    final_group: entry.final_group,
+                    precommitteds: entry.precommitteds.to_vec(),
+                };
+                if key_within_setup_capacity(&candidate, max_num_vars, max_num_batched_polys)? {
+                    push_unique_schedule_key(&mut keys, candidate);
+                }
             }
         }
     }
@@ -275,8 +280,51 @@ pub fn recursive_group_batch_candidates_for_capacity<Cfg: CommitmentConfig>(
         }
     }
 
+    // Explicitly enabled table-less dense recursive families (fp64 D128
+    // bounded presets, `specs/mixed-d-setup-delegation.md`): one profile key
+    // shaped like the D64OneHot recursive profile (two singleton precommits
+    // at half the final arity), instantiated at the requested capacity.
+    if recursive_dense_profile_enabled::<Cfg>() {
+        for candidate in recursive_dense_profile_keys::<Cfg>(max_num_vars)? {
+            if key_within_setup_capacity(&candidate, max_num_vars, max_num_batched_polys)? {
+                push_unique_schedule_key(&mut keys, candidate);
+            }
+        }
+    }
+
     keys.sort_by(akita_planner::runtime_schedule_key_cmp);
     Ok(keys)
+}
+
+/// Whether `Cfg` is one of the explicitly enabled table-less dense recursive
+/// families. Enabling a new family requires end-to-end recursive coverage;
+/// see `specs/mixed-d-setup-delegation.md`.
+fn recursive_dense_profile_enabled<Cfg: CommitmentConfig>() -> bool {
+    let id = std::any::TypeId::of::<Cfg>();
+    id == std::any::TypeId::of::<RecursiveCommitmentConfig<fp64::D128FullBound18>>()
+        || id == std::any::TypeId::of::<RecursiveCommitmentConfig<fp64::D128FullBound6>>()
+}
+
+/// Profile keys for a table-less dense recursive family: a two-polynomial
+/// final group at `max_num_vars` plus two singleton conservative precommits at
+/// `max_num_vars / 2` (the same shape as the D64OneHot recursive profile).
+fn recursive_dense_profile_keys<Cfg: CommitmentConfig>(
+    max_num_vars: usize,
+) -> Result<Vec<AkitaScheduleLookupKey>, AkitaError> {
+    let min_pre_num_vars = policy_of::<Cfg>().ring_dimension.trailing_zeros() as usize + 1;
+    let pre_num_vars = max_num_vars / 2;
+    if pre_num_vars < min_pre_num_vars {
+        return Ok(Vec::new());
+    }
+    let precommitted_group = PolynomialGroupLayout::new(pre_num_vars, 1);
+    // Use the same static per-group-index hook the runtime schedule-key
+    // derivation uses (`recursive_schedule_key` -> `precommitted_group_params`),
+    // so the materialized slots match the runtime request byte-for-byte.
+    let precommitted = Cfg::precommitted_group_params(0, precommitted_group)?;
+    Ok(vec![AkitaScheduleLookupKey {
+        final_group: PolynomialGroupLayout::new(max_num_vars, 2),
+        precommitteds: vec![precommitted, precommitted],
+    }])
 }
 
 fn push_unique_schedule_key(

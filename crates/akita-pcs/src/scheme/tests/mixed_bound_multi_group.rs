@@ -326,7 +326,7 @@ fn multi_group_root_mixed_dense_bound18_bound6_fp64_round_trips() {
     let pre_key = akita_types::PolynomialGroupLayout::new(PRE_NV, 1);
     let (pre_poly, pre_evals) =
         make_seeded_dense_poly_bounded::<Fp64F>(PRE_NV, MIXED_D64, 1u64 << 5, 0x001f_64e2_0b02);
-    let pre_polys = vec![pre_poly];
+    let pre_polys = [pre_poly];
     let pre_openings = vec![dense_opening_ext_generic(&pre_evals, &point[..PRE_NV])];
     let (pre_commitment, pre_hint) =
         ConservativePreScheme64::batched_commit(&setup, &pre_polys[..], &stack)

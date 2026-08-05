@@ -225,6 +225,9 @@ pub fn fold_evals_in_place<E: HasOptimizedFold>(evals: &mut Vec<E>, r: E) {
             // is written exactly once by the disjoint `par_chunks_mut` below
             // before the vector is read. `E: FieldCore` is `Copy` with a
             // trivial drop, so overwriting the uninitialized slots is sound.
+            // The allow keeps `clippy -D warnings` viable under toolchain
+            // 1.95, whose `uninit_vec` lint flags this documented pattern.
+            #[allow(clippy::uninit_vec)]
             unsafe {
                 folded.set_len(half);
             }

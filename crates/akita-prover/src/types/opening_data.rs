@@ -2,13 +2,13 @@ use crate::api::CommitmentWithHint;
 use crate::backend::RecursiveFoldSource;
 use crate::compute::RootPolyMeta;
 use akita_field::AkitaError;
+use akita_field::{CanonicalField, ExtField, FieldCore};
 use akita_transcript::Transcript;
 use akita_types::{
     AkitaCommitmentHint, BatchedStage3Geometry, Commitment, LevelParams, OpeningClaims,
     OpeningClaimsLayout, PointVariableSelection, PolynomialGroupClaims, PolynomialGroupLayout,
     RelationMatrixRowLayout, RingVec, SetupPrefixSlot,
 };
-use akita_field::{CanonicalField, ExtField, FieldCore};
 
 /// Prover opening input: public claims plus prover-only hints and polynomials.
 #[derive(Debug, Clone)]
@@ -419,10 +419,20 @@ where
         witness_hint: AkitaCommitmentHint<CommitF>,
         witness_commitment: Commitment<CommitF>,
     ) -> Result<Self, AkitaError> {
-        let setup_commitment_rows =
-            setup_slot.commitment.rows.first().cloned().ok_or_else(|| {
-                AkitaError::InvalidSetup("setup-prefix slot has no commitment rows".into())
-            })?;
+        // Concatenate every row, matching the verifier's reconstruction in
+        // `akita-verifier` `protocol::core::suffix`. Taking only `rows[0]`
+        // was equivalent while the producer emitted a single flattened row,
+        // but silently dropped `u[1..]` once rows are per-ring-element.
+        if setup_slot.commitment.rows.is_empty() {
+            return Err(AkitaError::InvalidSetup(
+                "setup-prefix slot has no commitment rows".into(),
+            ));
+        }
+        let mut setup_commitment_coeffs = Vec::new();
+        for row in &setup_slot.commitment.rows {
+            setup_commitment_coeffs.extend_from_slice(row.coeffs());
+        }
+        let setup_commitment_rows = RingVec::from_coeffs(setup_commitment_coeffs);
         let setup_group = PolynomialGroupClaims::new(
             setup_prefix_point_vars,
             vec![setup_prefix_eval],
@@ -447,9 +457,9 @@ where
 #[cfg(test)]
 mod tests {
     use super::*;
+    use akita_field::Fp32;
     use akita_transcript::labels::ABSORB_COMMITMENT;
     use akita_transcript::AkitaTranscript;
-    use akita_field::Fp32;
 
     type F = Fp32<251>;
 

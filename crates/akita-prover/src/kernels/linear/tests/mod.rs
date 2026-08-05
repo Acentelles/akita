@@ -14,8 +14,8 @@ use akita_algebra::ntt::{
     PrimeWidth,
 };
 use akita_algebra::{CrtNttParamSet, CyclotomicCrtNtt, CyclotomicRing};
-use akita_types::layout::FlatMatrix;
 use akita_field::{CanonicalField, FieldCore, Fp64, Prime128Offset275, Prime64Offset59};
+use akita_types::layout::FlatMatrix;
 
 fn centered_i32_ring<F: akita_field::CanonicalField, const D: usize>(
     coeffs: &[i32; D],

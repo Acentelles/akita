@@ -60,6 +60,69 @@ pub(crate) fn accumulate_matrix_envelope_for_level(
     Ok(())
 }
 
+/// Verifier-side per-level setup footprint.
+///
+/// This is deliberately **not** the prover's envelope. The A/B/D commitment
+/// matrices accumulated by [`accumulate_matrix_envelope_for_level`] are
+/// prover-side: the verifier never builds relation-matrix columns
+/// (`compute_relation_matrix_col_evals` has no verifier caller), so it never
+/// views them. What the verifier does read from the shared matrix is
+///
+/// * the A/B matrices of a **consumed setup-prefix slot** (the delegated
+///   prefix participates as a precommitted group at its consuming level), and
+/// * the prefix **storage** rows, but only when the slot's public commitment
+///   is absent from the verifier registry, i.e. when the prefix must be
+///   scanned instead of opened through `C_S`.
+///
+/// Everything else the verifier touches (the setup-contribution scan, the
+/// stage-3 setup MLE, direct-witness recommitment) is bounds-checked at read
+/// time and reports a role-specific `InvalidSetup`; this precheck is
+/// defense-in-depth and is intentionally allowed to be looser than the
+/// prover's envelope, never looser than the read-time guards.
+///
+/// # Errors
+///
+/// Returns [`AkitaError::InvalidSetup`] on overflow.
+pub(crate) fn accumulate_verifier_matrix_envelope_for_level(
+    lp: &LevelParams,
+    max_setup_len: &mut usize,
+    prefix_storage_is_scanned: impl Fn(&SetupPrefixSlotId) -> bool,
+) -> Result<(), AkitaError> {
+    let Some(slot) = &lp.setup_prefix else {
+        return Ok(());
+    };
+    let mut envelope = SetupMatrixEnvelope {
+        max_setup_len: *max_setup_len,
+    };
+    // The prefix group's A/B are read whether or not the prefix itself is
+    // scanned: they back the precommitted-group relation at the consuming
+    // level. Regressing this to "skip the whole slot when the commitment is
+    // present" is what `verifier_envelope_counts_prefix_a_even_when_committed`
+    // guards against.
+    let params = &slot.commitment_params;
+    include_matrix(
+        &mut envelope,
+        params.a_key.row_len(),
+        params.inner_width(),
+        "setup-prefix A",
+    )?;
+    include_matrix(
+        &mut envelope,
+        params.b_key.row_len(),
+        params.outer_width(),
+        "setup-prefix B",
+    )?;
+    if prefix_storage_is_scanned(slot) {
+        let n_prefix = slot.n_prefix()?;
+        let prefix_ring_len = n_prefix.checked_div(slot.d_setup).ok_or_else(|| {
+            AkitaError::InvalidSetup("setup-prefix slot has invalid padded length".to_string())
+        })?;
+        envelope.max_setup_len = envelope.max_setup_len.max(prefix_ring_len);
+    }
+    *max_setup_len = envelope.max_setup_len;
+    Ok(())
+}
+
 fn include_matrix_len(
     max_setup_len: &mut usize,
     rows: usize,

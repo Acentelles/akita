@@ -13,7 +13,7 @@ use akita_types::{
     level_proof_bytes, padded_setup_prefix_len, AkitaScheduleInputs, AkitaScheduleLookupKey,
     CleartextWitnessShape, CommitmentRingDims, DecompositionParams, DirectStep, FoldStep,
     LevelParams, PolynomialGroupLayout, PrecommittedGroupParams, PrecommittedLevelParams,
-    RelationMatrixRowLayout, Schedule, SetupContributionMode, Step, SETUP_OFFLOAD_D_SETUP,
+    RelationMatrixRowLayout, Schedule, SetupContributionMode, Step,
     SETUP_OFFLOAD_MIN_PREFIX_FIELD_LEN,
 };
 
@@ -745,7 +745,7 @@ pub fn find_group_batch_schedule(
             }
 
             let natural_len =
-                active_setup_field_len(&candidate_params, &opening_batch, SETUP_OFFLOAD_D_SETUP)?;
+                active_setup_field_len(&candidate_params, &opening_batch, policy.ring_dimension)?;
             let n_prefix = padded_setup_prefix_len(natural_len);
             let recursion_threshold_met =
                 policy.recursive_setup_planning && n_prefix > SETUP_OFFLOAD_MIN_PREFIX_FIELD_LEN;
