@@ -23,16 +23,16 @@ use std::sync::{LazyLock, Mutex};
 /// smallest reachable `2`) keeps the shrink strong enough that every preset — dense
 /// and small-field included — supports the full `nv` range, and matches the value
 /// the unpinned planner already favored at the root.
-pub(crate) const PROOF_OPTIMIZED_LOG_BASIS_MIN: u32 = 3;
+pub const PROOF_OPTIMIZED_LOG_BASIS_MIN: u32 = 3;
 /// Maximum proof-optimized log-basis.
-pub(crate) const PROOF_OPTIMIZED_LOG_BASIS_MAX: u32 = 6;
+pub const PROOF_OPTIMIZED_LOG_BASIS_MAX: u32 = 6;
 /// Maximum A/source log basis searched by proof-optimized presets.
 ///
 /// The signed-i16 commitment path supports larger values, but exhaustive
 /// sweeps select 10 or 11 throughout the current dense/full-field domain.
 pub(crate) const PROOF_OPTIMIZED_INNER_LOG_BASIS_MAX: u32 = 11;
 
-const fn proof_optimized_inner_basis_range(
+pub const fn proof_optimized_inner_basis_range(
     profile: akita_types::SisModulusProfileId,
 ) -> (u32, u32) {
     let max = match profile {
@@ -65,7 +65,7 @@ const DEFAULT_GROUP_BATCH_MAX_PRECOMMITTED_GROUPS: usize = 2;
 /// The planner and generated-table expansion call this hook with each
 /// schedule-selected A dimension. The flat public matrix has no generation
 /// dimension.
-pub(crate) fn proof_optimized_ring_challenge_config(
+pub fn proof_optimized_ring_challenge_config(
     d: usize,
 ) -> Result<akita_challenges::SparseChallengeConfig, AkitaError> {
     let cfg =
@@ -77,7 +77,7 @@ pub(crate) fn proof_optimized_ring_challenge_config(
     Ok(cfg)
 }
 
-pub(crate) fn proof_optimized_schedule_key(
+pub fn proof_optimized_schedule_key(
     layout: &OpeningClaimsLayout,
 ) -> Result<AkitaScheduleLookupKey, AkitaError> {
     layout.check()?;
@@ -108,7 +108,7 @@ type SetupMatrixCapacityCache =
 static SETUP_MATRIX_CAPACITY_CACHE: SetupMatrixCapacityCache =
     LazyLock::new(|| Mutex::new(HashMap::new()));
 
-pub(crate) fn proof_optimized_setup_matrix_capacity<Cfg: CommitmentConfig>(
+pub fn proof_optimized_setup_matrix_capacity<Cfg: CommitmentConfig>(
     max_num_vars: usize,
     max_num_batched_polys: usize,
 ) -> Result<SetupMatrixCapacity, AkitaError> {
@@ -391,6 +391,13 @@ fn ensure_required_setup_field_elements(
 /// shared ring-challenge policy, the shared setup-matrix sizer, and the
 /// `[PROOF_OPTIMIZED_LOG_BASIS_MIN, MAX]` basis range, so those are not
 /// parameters.
+///
+/// Exported so downstream workspaces can define their own application
+/// `CommitmentConfig` presets with identical semantics; the expansion
+/// references `akita_types`, `akita_challenges`, `akita_schedules`, and
+/// `akita_field` by name, so invokers must have those crates as direct
+/// dependencies.
+#[macro_export]
 macro_rules! impl_proof_optimized_preset {
     (@selection_policy default) => {
         fn selection_policy() -> akita_schedules::SelectionPolicyId {
@@ -423,33 +430,33 @@ macro_rules! impl_proof_optimized_preset {
         const RING_DIMENSION_SCHEDULE_MODE: akita_schedules::RingDimensionScheduleMode = $mode;
     };
     ($cfg:ident, $field:ty, $ext_field:ty, $family:expr, $d:expr, $field_bits:expr, $log_commit_bound:expr, fold_norms = $fold_norms:expr) => {
-        impl_proof_optimized_preset!(@core $cfg, $field, $ext_field, $family, $d, $field_bits, $log_commit_bound, $fold_norms, none, default);
+        $crate::impl_proof_optimized_preset!(@core $cfg, $field, $ext_field, $family, $d, $field_bits, $log_commit_bound, $fold_norms, none, default);
     };
     ($cfg:ident, $field:ty, $ext_field:ty, $family:expr, $d:expr, $field_bits:expr, $log_commit_bound:expr, fold_norms = $fold_norms:expr, schedules = ($feat:literal, $family_name:literal, $table:ident)) => {
-        impl_proof_optimized_preset!(@core $cfg, $field, $ext_field, $family, $d, $field_bits, $log_commit_bound, $fold_norms, table, $feat, $family_name, $table, default);
+        $crate::impl_proof_optimized_preset!(@core $cfg, $field, $ext_field, $family, $d, $field_bits, $log_commit_bound, $fold_norms, table, $feat, $family_name, $table, default);
     };
     ($cfg:ident, $field:ty, $ext_field:ty, $family:expr, $d:expr, $field_bits:expr, $log_commit_bound:expr, fold_norms = $fold_norms:expr, schedules = ($feat:literal, $family_name:literal, $table:ident), selection_policy = $selection_policy:expr) => {
-        impl_proof_optimized_preset!(@core $cfg, $field, $ext_field, $family, $d, $field_bits, $log_commit_bound, $fold_norms, table, $feat, $family_name, $table, selection_policy = $selection_policy);
+        $crate::impl_proof_optimized_preset!(@core $cfg, $field, $ext_field, $family, $d, $field_bits, $log_commit_bound, $fold_norms, table, $feat, $family_name, $table, selection_policy = $selection_policy);
     };
     ($cfg:ident, $field:ty, $ext_field:ty, $family:expr, $d:expr, $field_bits:expr, $log_commit_bound:expr, fold_norms = $fold_norms:expr, schedules = ($feat:literal, $family_name:literal, $table:ident), ring_dimension_schedule_mode = $mode:expr) => {
-        impl_proof_optimized_preset!(@core $cfg, $field, $ext_field, $family, $d, $field_bits, $log_commit_bound, $fold_norms, table, $feat, $family_name, $table, ring_dimension_schedule_mode = $mode);
+        $crate::impl_proof_optimized_preset!(@core $cfg, $field, $ext_field, $family, $d, $field_bits, $log_commit_bound, $fold_norms, table, $feat, $family_name, $table, ring_dimension_schedule_mode = $mode);
     };
     ($cfg:ident, $field:ty, $ext_field:ty, $family:expr, $d:expr, $field_bits:expr, $log_commit_bound:expr, fold_norms = $fold_norms:expr, schedules = ($feat:literal, $family_name:literal, $table:ident), selection_policy = $selection_policy:expr, ring_dimension_schedule_mode = $mode:expr) => {
-        impl_proof_optimized_preset!(@core $cfg, $field, $ext_field, $family, $d, $field_bits, $log_commit_bound, $fold_norms, table, $feat, $family_name, $table, selection_policy = $selection_policy, ring_dimension_schedule_mode = $mode);
+        $crate::impl_proof_optimized_preset!(@core $cfg, $field, $ext_field, $family, $d, $field_bits, $log_commit_bound, $fold_norms, table, $feat, $family_name, $table, selection_policy = $selection_policy, ring_dimension_schedule_mode = $mode);
     };
     (@options default) => {
-        impl_proof_optimized_preset!(@selection_policy default);
+        $crate::impl_proof_optimized_preset!(@selection_policy default);
     };
     (@options selection_policy = $selection_policy:expr) => {
-        impl_proof_optimized_preset!(@selection_policy $selection_policy);
+        $crate::impl_proof_optimized_preset!(@selection_policy $selection_policy);
     };
     (@options ring_dimension_schedule_mode = $mode:expr) => {
-        impl_proof_optimized_preset!(@ring_dimension_schedule_mode $mode);
-        impl_proof_optimized_preset!(@selection_policy default);
+        $crate::impl_proof_optimized_preset!(@ring_dimension_schedule_mode $mode);
+        $crate::impl_proof_optimized_preset!(@selection_policy default);
     };
     (@options selection_policy = $selection_policy:expr, ring_dimension_schedule_mode = $mode:expr) => {
-        impl_proof_optimized_preset!(@ring_dimension_schedule_mode $mode);
-        impl_proof_optimized_preset!(@selection_policy $selection_policy);
+        $crate::impl_proof_optimized_preset!(@ring_dimension_schedule_mode $mode);
+        $crate::impl_proof_optimized_preset!(@selection_policy $selection_policy);
     };
     (@core $cfg:ident, $field:ty, $ext_field:ty, $family:expr, $d:expr, $field_bits:expr, $log_commit_bound:expr, $fold_norms:expr, none, $($options:tt)*) => {
         impl $crate::CommitmentConfig for $cfg {
@@ -457,7 +464,7 @@ macro_rules! impl_proof_optimized_preset {
             type ExtField = $ext_field;
             const D: usize = $d;
 
-            impl_proof_optimized_preset!(@options $($options)*);
+            $crate::impl_proof_optimized_preset!(@options $($options)*);
 
             fn decomposition() -> akita_types::DecompositionParams {
                 akita_types::DecompositionParams {
@@ -523,7 +530,7 @@ macro_rules! impl_proof_optimized_preset {
                 }
             }
 
-            impl_proof_optimized_preset!(@schedule_catalog none);
+            $crate::impl_proof_optimized_preset!(@schedule_catalog none);
         }
     };
     (@core $cfg:ident, $field:ty, $ext_field:ty, $family:expr, $d:expr, $field_bits:expr, $log_commit_bound:expr, $fold_norms:expr, table, $feat:literal, $family_name:literal, $table:ident, $($options:tt)*) => {
@@ -532,7 +539,7 @@ macro_rules! impl_proof_optimized_preset {
             type ExtField = $ext_field;
             const D: usize = $d;
 
-            impl_proof_optimized_preset!(@options $($options)*);
+            $crate::impl_proof_optimized_preset!(@options $($options)*);
 
             fn decomposition() -> akita_types::DecompositionParams {
                 akita_types::DecompositionParams {
@@ -598,7 +605,7 @@ macro_rules! impl_proof_optimized_preset {
                 }
             }
 
-            impl_proof_optimized_preset!(@schedule_catalog ($feat, $family_name, $table));
+            $crate::impl_proof_optimized_preset!(@schedule_catalog ($feat, $family_name, $table));
         }
     };
 }
