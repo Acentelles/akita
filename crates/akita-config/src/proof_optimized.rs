@@ -16,9 +16,9 @@ use std::collections::HashMap;
 use std::sync::{LazyLock, Mutex};
 
 /// Minimum proof-optimized log-basis.
-pub(crate) const PROOF_OPTIMIZED_LOG_BASIS_MIN: u32 = 2;
+pub const PROOF_OPTIMIZED_LOG_BASIS_MIN: u32 = 2;
 /// Maximum proof-optimized log-basis.
-pub(crate) const PROOF_OPTIMIZED_LOG_BASIS_MAX: u32 = 6;
+pub const PROOF_OPTIMIZED_LOG_BASIS_MAX: u32 = 6;
 
 /// Shared short ring-challenge policy for every proof-optimized preset.
 ///
@@ -26,7 +26,7 @@ pub(crate) const PROOF_OPTIMIZED_LOG_BASIS_MAX: u32 = 6;
 /// [`akita_challenges::SparseChallengeConfig::production_for_ring_dim`].
 /// A preset's `D` is fixed across all schedule levels, so both the planner DP
 /// and the generated-table expansion call the per-`Cfg` hook with `d == Cfg::D`.
-pub(crate) fn proof_optimized_ring_challenge_config(
+pub fn proof_optimized_ring_challenge_config(
     d: usize,
 ) -> Result<akita_challenges::SparseChallengeConfig, AkitaError> {
     let cfg =
@@ -38,7 +38,7 @@ pub(crate) fn proof_optimized_ring_challenge_config(
     Ok(cfg)
 }
 
-pub(crate) fn proof_optimized_schedule_key<Cfg: CommitmentConfig>(
+pub fn proof_optimized_schedule_key<Cfg: CommitmentConfig>(
     layout: &OpeningClaimsLayout,
 ) -> Result<AkitaScheduleLookupKey, AkitaError> {
     layout.check()?;
@@ -84,7 +84,7 @@ type SetupMatrixEnvelopeCache =
 static SETUP_MATRIX_ENVELOPE_CACHE: SetupMatrixEnvelopeCache =
     LazyLock::new(|| Mutex::new(HashMap::new()));
 
-pub(crate) fn proof_optimized_max_setup_matrix_size<Cfg: CommitmentConfig>(
+pub fn proof_optimized_max_setup_matrix_size<Cfg: CommitmentConfig>(
     max_num_vars: usize,
     max_num_batched_polys: usize,
 ) -> Result<SetupMatrixEnvelope, AkitaError> {
@@ -375,6 +375,7 @@ fn root_commit_params_from_schedule(
 /// family is `Q128`. Presets share `log_basis = 3`, the ring-challenge policy,
 /// and the setup-matrix sizer. Most search the full proof-optimized basis
 /// range; latency-oriented presets can provide a narrower range.
+#[macro_export]
 macro_rules! impl_proof_optimized_preset {
     (@onehot_chunk_size $onehot_chunk_size:expr) => {
         $onehot_chunk_size
@@ -396,19 +397,19 @@ macro_rules! impl_proof_optimized_preset {
         }
     };
     ($cfg:ident, $field:ty, $ext_field:ty, $family:expr, $d:expr, $field_bits:expr, $log_commit_bound:expr) => {
-        impl_proof_optimized_preset!(@core $cfg, $field, $ext_field, $family, $d, $field_bits, $log_commit_bound, 1, $crate::proof_optimized::PROOF_OPTIMIZED_LOG_BASIS_MIN, $crate::proof_optimized::PROOF_OPTIMIZED_LOG_BASIS_MAX, none);
+        $crate::impl_proof_optimized_preset!(@core $cfg, $field, $ext_field, $family, $d, $field_bits, $log_commit_bound, 1, $crate::proof_optimized::PROOF_OPTIMIZED_LOG_BASIS_MIN, $crate::proof_optimized::PROOF_OPTIMIZED_LOG_BASIS_MAX, none);
     };
     ($cfg:ident, $field:ty, $ext_field:ty, $family:expr, $d:expr, $field_bits:expr, $log_commit_bound:expr, basis_range = ($basis_min:expr, $basis_max:expr)) => {
-        impl_proof_optimized_preset!(@core $cfg, $field, $ext_field, $family, $d, $field_bits, $log_commit_bound, 1, $basis_min, $basis_max, none);
+        $crate::impl_proof_optimized_preset!(@core $cfg, $field, $ext_field, $family, $d, $field_bits, $log_commit_bound, 1, $basis_min, $basis_max, none);
     };
     ($cfg:ident, $field:ty, $ext_field:ty, $family:expr, $d:expr, $field_bits:expr, $log_commit_bound:expr, schedules = ($feat:literal, $family_name:literal, $table:ident)) => {
-        impl_proof_optimized_preset!(@core $cfg, $field, $ext_field, $family, $d, $field_bits, $log_commit_bound, 1, $crate::proof_optimized::PROOF_OPTIMIZED_LOG_BASIS_MIN, $crate::proof_optimized::PROOF_OPTIMIZED_LOG_BASIS_MAX, table, $feat, $family_name, $table);
+        $crate::impl_proof_optimized_preset!(@core $cfg, $field, $ext_field, $family, $d, $field_bits, $log_commit_bound, 1, $crate::proof_optimized::PROOF_OPTIMIZED_LOG_BASIS_MIN, $crate::proof_optimized::PROOF_OPTIMIZED_LOG_BASIS_MAX, table, $feat, $family_name, $table);
     };
     ($cfg:ident, $field:ty, $ext_field:ty, $family:expr, $d:expr, $field_bits:expr, $log_commit_bound:expr, $onehot_chunk_size:expr) => {
-        impl_proof_optimized_preset!(@core $cfg, $field, $ext_field, $family, $d, $field_bits, $log_commit_bound, $onehot_chunk_size, $crate::proof_optimized::PROOF_OPTIMIZED_LOG_BASIS_MIN, $crate::proof_optimized::PROOF_OPTIMIZED_LOG_BASIS_MAX, none);
+        $crate::impl_proof_optimized_preset!(@core $cfg, $field, $ext_field, $family, $d, $field_bits, $log_commit_bound, $onehot_chunk_size, $crate::proof_optimized::PROOF_OPTIMIZED_LOG_BASIS_MIN, $crate::proof_optimized::PROOF_OPTIMIZED_LOG_BASIS_MAX, none);
     };
     ($cfg:ident, $field:ty, $ext_field:ty, $family:expr, $d:expr, $field_bits:expr, $log_commit_bound:expr, $onehot_chunk_size:expr, schedules = ($feat:literal, $family_name:literal, $table:ident)) => {
-        impl_proof_optimized_preset!(@core $cfg, $field, $ext_field, $family, $d, $field_bits, $log_commit_bound, $onehot_chunk_size, $crate::proof_optimized::PROOF_OPTIMIZED_LOG_BASIS_MIN, $crate::proof_optimized::PROOF_OPTIMIZED_LOG_BASIS_MAX, table, $feat, $family_name, $table);
+        $crate::impl_proof_optimized_preset!(@core $cfg, $field, $ext_field, $family, $d, $field_bits, $log_commit_bound, $onehot_chunk_size, $crate::proof_optimized::PROOF_OPTIMIZED_LOG_BASIS_MIN, $crate::proof_optimized::PROOF_OPTIMIZED_LOG_BASIS_MAX, table, $feat, $family_name, $table);
     };
     (@core $cfg:ident, $field:ty, $ext_field:ty, $family:expr, $d:expr, $field_bits:expr, $log_commit_bound:expr, $onehot_chunk:expr, $basis_min:expr, $basis_max:expr, none) => {
         impl $crate::CommitmentConfig for $cfg {
@@ -464,7 +465,7 @@ macro_rules! impl_proof_optimized_preset {
                 )?)
             }
 
-            impl_proof_optimized_preset!(@schedule_catalog none);
+            $crate::impl_proof_optimized_preset!(@schedule_catalog none);
         }
     };
     (@core $cfg:ident, $field:ty, $ext_field:ty, $family:expr, $d:expr, $field_bits:expr, $log_commit_bound:expr, $onehot_chunk:expr, $basis_min:expr, $basis_max:expr, table, $feat:literal, $family_name:literal, $table:ident) => {
@@ -521,7 +522,7 @@ macro_rules! impl_proof_optimized_preset {
                 )?)
             }
 
-            impl_proof_optimized_preset!(@schedule_catalog ($feat, $family_name, $table));
+            $crate::impl_proof_optimized_preset!(@schedule_catalog ($feat, $family_name, $table));
         }
     };
 }

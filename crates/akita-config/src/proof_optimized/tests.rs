@@ -18,6 +18,21 @@ use akita_schedules::{
 #[cfg(feature = "schedules-default")]
 use akita_types::SisModulusFamily;
 
+/// Test-local copy of the migrated bound-18 preset (application copies
+/// live in the aerie workspace).
+#[derive(Clone, Copy, Debug, Default)]
+struct TestBound18;
+crate::impl_proof_optimized_preset!(
+    TestBound18,
+    fp64::Field,
+    fp64::ExtensionField,
+    akita_types::SisModulusFamily::Q64,
+    128,
+    64,
+    18,
+    basis_range = (3, 3)
+);
+
 #[cfg(feature = "schedules-default")]
 const MAX_I8_LOG_BASIS: u32 = 6;
 #[cfg(feature = "schedules-default")]
@@ -1212,7 +1227,7 @@ fn all_proof_optimized_presets_use_shared_ring_challenge() {
     assert_preset_uses_shared_ring_challenge::<fp64::D64Full>();
     assert_preset_uses_shared_ring_challenge::<fp64::D64OneHot>();
     assert_preset_uses_shared_ring_challenge::<fp64::D128Full>();
-    assert_preset_uses_shared_ring_challenge::<fp64::D128FullBound18>();
+    assert_preset_uses_shared_ring_challenge::<TestBound18>();
     assert_preset_uses_shared_ring_challenge::<fp64::D128OneHot>();
     assert_preset_uses_shared_ring_challenge::<fp64::D256Full>();
     assert_preset_uses_shared_ring_challenge::<fp64::D256OneHot>();
@@ -1238,10 +1253,10 @@ fn fp32_d128_fast_prover_preset_pins_b8_decomposition() {
 #[test]
 fn fp64_bound18_preset_pins_application_bound_and_b8_decomposition() {
     assert_eq!(
-        <fp64::D128FullBound18 as CommitmentConfig>::basis_range(),
+        <TestBound18 as CommitmentConfig>::basis_range(),
         (3, 3)
     );
-    assert_eq!(fp64::D128FullBound18::decomposition().log_commit_bound, 18);
+    assert_eq!(TestBound18::decomposition().log_commit_bound, 18);
 }
 
 #[test]

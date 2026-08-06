@@ -26,25 +26,9 @@ pub struct D128Full;
 #[derive(Clone, Copy, Debug, Default)]
 pub struct D128FullFastProver;
 
-/// Full-field `D=128` preset for explicitly range-proven 18-bit root data.
-///
-/// The application must supply a separate proof of this source bound; the PCS
-/// configuration does not enforce it by itself.
-#[derive(Clone, Copy, Debug, Default)]
-pub struct D128FullBound18;
-
 /// Onehot `D=128` preset for planner-backed fp32 experiments.
 #[derive(Clone, Copy, Debug, Default)]
 pub struct D128OneHot;
-
-/// Binary one-hot `D=128` preset with 256-entry logical chunks.
-///
-/// This is the natural root shape for Shout addresses split into bytes. Unlike
-/// [`D128OneHot`], whose legacy generated schedule leaves the chunk-size hint
-/// at `1`, this preset asks the runtime planner to price the actual sparse
-/// witness norm for one hot bit among 256 positions.
-#[derive(Clone, Copy, Debug, Default)]
-pub struct D128OneHot256;
 
 /// Full-field `D=256` preset for planner-backed fp32 experiments.
 #[derive(Clone, Copy, Debug, Default)]
@@ -92,16 +76,6 @@ impl_proof_optimized_preset!(
     basis_range = (3, 3)
 );
 impl_proof_optimized_preset!(
-    D128FullBound18,
-    Field,
-    ExtensionField,
-    akita_types::SisModulusFamily::Q32,
-    128,
-    32,
-    18,
-    basis_range = (3, 3)
-);
-impl_proof_optimized_preset!(
     D128OneHot,
     Field,
     ExtensionField,
@@ -114,16 +88,6 @@ impl_proof_optimized_preset!(
         "fp32_d128_onehot",
         fp32_d128_onehot_table
     )
-);
-impl_proof_optimized_preset!(
-    D128OneHot256,
-    Field,
-    ExtensionField,
-    akita_types::SisModulusFamily::Q32,
-    128,
-    32,
-    1,
-    256
 );
 impl_proof_optimized_preset!(
     D256Full,

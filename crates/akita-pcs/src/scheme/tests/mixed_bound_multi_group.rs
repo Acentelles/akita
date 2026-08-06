@@ -5,8 +5,9 @@
 //!     basis range (3, 3)) plus a one-hot bound-1 precommitted group frozen
 //!     under `ConservativeCommitmentConfig<fp32::D128OneHot>` (basis range
 //!     (2, 6)); and
-//! (b) fp64 ext-2: dense bound-18 main group (`fp64::D128FullBound18`) plus a
-//!     dense bound-6 precommitted group (`fp64::D128FullBound6`).
+//! (b) fp64 ext-2: dense bound-18 main group plus a dense bound-6
+//!     precommitted group (test-local presets; the application-side copies
+//!     live in the aerie workspace).
 //!
 //! Both prove under `MixedPrecommitConfig<Main, Pre>`, whose static
 //! per-group-index hook freezes every precommitted group under `Pre`'s
@@ -295,8 +296,34 @@ fn multi_group_root_mixed_dense_main_onehot_precommit_fp32_round_trips() {
 type Fp64F = fp64::Field;
 type Ext2F = fp64::ExtensionField;
 
-type MainCfg64 = fp64::D128FullBound18;
-type PreCfg64 = fp64::D128FullBound6;
+/// Test-local bound presets (the aerie application hosts its own copies).
+#[derive(Clone, Copy, Debug, Default)]
+struct TestBound18;
+#[derive(Clone, Copy, Debug, Default)]
+struct TestBound6;
+akita_config::impl_proof_optimized_preset!(
+    TestBound18,
+    fp64::Field,
+    fp64::ExtensionField,
+    akita_types::SisModulusFamily::Q64,
+    128,
+    64,
+    18,
+    basis_range = (3, 3)
+);
+akita_config::impl_proof_optimized_preset!(
+    TestBound6,
+    fp64::Field,
+    fp64::ExtensionField,
+    akita_types::SisModulusFamily::Q64,
+    128,
+    64,
+    6,
+    basis_range = (3, 3)
+);
+
+type MainCfg64 = TestBound18;
+type PreCfg64 = TestBound6;
 type MixedCfg64 = MixedPrecommitConfig<MainCfg64, PreCfg64>;
 type MixedScheme64 = AkitaCommitmentScheme<MixedCfg64>;
 type ConservativePre64 = ConservativeCommitmentConfig<PreCfg64>;
