@@ -88,6 +88,9 @@ pub(super) fn mat_vec_mul_digits_i8_with_params_impl<
     }
 
     let lut = DigitMontLut::<W, K>::new_with_digit_bound(params, digit_bound);
+    // Computed once across all tiles; live blocks exit the scan at the first
+    // nonzero byte, so this stays cheap even for fully dense witnesses.
+    let zero_blocks: Vec<bool> = blocks.iter().map(|block| is_zero_block(block)).collect();
     drive_block_chunked_matvec(
         num_blocks,
         n_a,
@@ -99,7 +102,7 @@ pub(super) fn mat_vec_mul_digits_i8_with_params_impl<
         |accs, start, end| {
             if CHECK_ZERO {
                 for (block_idx, block) in blocks.iter().enumerate() {
-                    if start >= block.len() {
+                    if zero_blocks[block_idx] || start >= block.len() {
                         continue;
                     }
                     let block_tile_end = end.min(block.len());
@@ -118,7 +121,7 @@ pub(super) fn mat_vec_mul_digits_i8_with_params_impl<
             } else {
                 for block_idx in 0..num_blocks {
                     let block = blocks[block_idx];
-                    if start >= block.len() {
+                    if zero_blocks[block_idx] || start >= block.len() {
                         continue;
                     }
                     let block_tile_end = end.min(block.len());

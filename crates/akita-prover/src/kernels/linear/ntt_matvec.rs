@@ -162,7 +162,11 @@ pub fn mat_vec_mul_ntt_digits_i8<F: FieldCore + CanonicalField, const D: usize>(
 ///
 /// The generic pre-decomposed digit kernel skips all-zero planes, which is
 /// profitable for sparse witnesses. Dense witnesses pay that scan on almost
-/// every plane, so this variant uses the same math without the zero checks.
+/// every plane, so this variant uses the same math without the per-plane
+/// checks. All-zero row *blocks* are still skipped in every variant:
+/// plane-major packed digit layouts pad the plane count to a power of two,
+/// leaving contiguous trailing blocks structurally zero, and the block-level
+/// scan exits at the first nonzero byte on live blocks.
 #[tracing::instrument(skip_all, name = "mat_vec_mul_ntt_dense_digits_i8")]
 pub fn mat_vec_mul_ntt_dense_digits_i8<F: FieldCore + CanonicalField, const D: usize>(
     slot: &NttSlotCache<D>,

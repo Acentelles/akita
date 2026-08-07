@@ -22,6 +22,9 @@ pub(super) fn mat_vec_mul_digits_i8_block_parallel<
 
     cfg_into_iter!(blocks)
         .map(|block| {
+            if is_zero_block(block) {
+                return vec![CyclotomicRing::<F, D>::zero(); n_a];
+            }
             let mut accs: Vec<CyclotomicCrtNtt<W, K, D>> =
                 vec![CyclotomicCrtNtt::<W, K, D>::zero(); n_a];
             let mut rhs_scratch = [[MontCoeff::from_raw(W::default()); D]; K];
@@ -68,6 +71,9 @@ pub(super) fn mat_vec_mul_digits_i8_block_parallel_chunked<
 
     cfg_into_iter!(blocks)
         .map(|block| {
+            if is_zero_block(block) {
+                return vec![CyclotomicRing::<F, D>::zero(); n_a];
+            }
             let live_width = block.len().min(inner_width);
             let mut out = vec![CyclotomicRing::<F, D>::zero(); n_a];
             let mut rhs_scratch = [[MontCoeff::from_raw(W::default()); D]; K];

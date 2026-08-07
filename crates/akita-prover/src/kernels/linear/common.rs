@@ -16,6 +16,16 @@ pub(super) fn is_zero_plane<const D: usize>(plane: &[i8; D]) -> bool {
     plane.iter().all(|&d| d == 0)
 }
 
+/// Whole-block zero test for pre-decomposed digit blocks. Plane-major packed
+/// digit layouts pad the plane count to a power of two, so entire trailing
+/// row blocks are structurally zero; live blocks exit this scan at the first
+/// nonzero byte, so dense witnesses pay one early-exit pass per block instead
+/// of a scan per plane.
+#[inline]
+pub(super) fn is_zero_block<const D: usize>(planes: &[[i8; D]]) -> bool {
+    planes.iter().all(is_zero_plane)
+}
+
 #[inline]
 pub(super) fn is_zero_centered_row<const D: usize>(row: &[i32; D]) -> bool {
     row.iter().all(|&d| d == 0)
