@@ -174,6 +174,26 @@ where
         DensePoly::tensor_extension_column_partials_batch::<E, D>(source.polys, logical_point)
     }
 
+    fn packed_linear_combination(
+        &self,
+        _prepared: Option<&Self::PreparedSetup>,
+        source: DenseBatchView<'_, F, D>,
+        coeffs: &[E],
+    ) -> Result<Option<TensorPackedWitness<E>>, AkitaError> {
+        if source.polys.len() != coeffs.len() {
+            return Err(AkitaError::InvalidSize {
+                expected: source.polys.len(),
+                actual: coeffs.len(),
+            });
+        }
+        if source.polys.len() < 2 {
+            return Ok(None);
+        }
+        DensePoly::tensor_packed_extension_linear_combination::<E, D>(source.polys, coeffs)
+            .map(TensorPackedWitness::Dense)
+            .map(Some)
+    }
+
     fn sparse_linear_combination(
         &self,
         _prepared: Option<&Self::PreparedSetup>,

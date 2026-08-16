@@ -1,4 +1,7 @@
 use super::poly::DensePoly;
+use crate::compute::{
+    CpuBackend, RootTensorSource, TensorCluster, TensorPackedWitness, TensorProjectionBatchKernel,
+};
 use akita_algebra::CyclotomicRing;
 use akita_field::Prime128OffsetA7F7 as F;
 use akita_field::{Ext2, ExtField, FpExt4, FpExt8};
@@ -38,6 +41,84 @@ where
     let got = poly.tensor_packed_extension_poly::<E, D>().unwrap();
 
     assert_eq!(got.ring_coeffs::<D>().unwrap(), expected);
+}
+
+fn assert_dense_packed_linear_combination_matches_individual<E, const D: usize>()
+where
+    E: ExtField<F>,
+{
+    let num_vars = 8;
+    let polys = (0..3)
+        .map(|poly| {
+            let evals = (0..1usize << num_vars)
+                .map(|index| F::from_u64(97 * poly as u64 + 13 * index as u64 + 5))
+                .collect::<Vec<_>>();
+            DensePoly::<F>::from_field_evals(num_vars, D, evals).unwrap()
+        })
+        .collect::<Vec<_>>();
+    let refs = polys.iter().collect::<Vec<_>>();
+    let coeffs = (0..polys.len())
+        .map(|index| {
+            E::from_base_slice(
+                &(0..E::EXT_DEGREE)
+                    .map(|coordinate| F::from_u64(11 * index as u64 + coordinate as u64 + 2))
+                    .collect::<Vec<_>>(),
+            )
+        })
+        .collect::<Vec<_>>();
+    let individual = polys
+        .iter()
+        .map(|poly| poly.tensor_packed_extension_evals::<E, D>().unwrap())
+        .collect::<Vec<_>>();
+    let expected = (0..individual[0].len())
+        .map(|index| {
+            individual
+                .iter()
+                .zip(&coeffs)
+                .map(|(witness, &coeff)| coeff * witness[index])
+                .sum::<E>()
+        })
+        .collect::<Vec<_>>();
+
+    assert_eq!(
+        DensePoly::tensor_packed_extension_linear_combination::<E, D>(&refs, &coeffs).unwrap(),
+        expected
+    );
+
+    let batch = <DensePoly<F> as RootTensorSource<F, D>>::tensor_batch(&refs).unwrap();
+    for witness in [
+        TensorProjectionBatchKernel::packed_linear_combination(
+            &CpuBackend::DEFAULT,
+            None,
+            batch,
+            &coeffs,
+        )
+        .unwrap(),
+        TensorProjectionBatchKernel::packed_linear_combination(
+            &TensorCluster,
+            None,
+            batch,
+            &coeffs,
+        )
+        .unwrap(),
+    ] {
+        let Some(TensorPackedWitness::Dense(actual)) = witness else {
+            panic!("dense batch should use the fused packed witness");
+        };
+        assert_eq!(actual, expected);
+    }
+
+    let singleton = <DensePoly<F> as RootTensorSource<F, D>>::tensor_batch(&refs[..1]).unwrap();
+    assert!(
+        TensorProjectionBatchKernel::<_, F, E, D>::packed_linear_combination(
+            &CpuBackend::DEFAULT,
+            None,
+            singleton,
+            &coeffs[..1],
+        )
+        .unwrap()
+        .is_none()
+    );
 }
 
 #[test]
@@ -113,6 +194,62 @@ fn dense_tensor_projection_matches_reference_for_every_supported_degree() {
 #[test]
 fn dense_tensor_projection_preserves_transformed_padded_ring_coefficients() {
     assert_dense_tensor_projection_matches_reference::<FpExt8<F>, 16>(3);
+}
+
+#[test]
+fn dense_packed_linear_combination_matches_individual_witnesses() {
+    assert_dense_packed_linear_combination_matches_individual::<Ext2<F>, 16>();
+    assert_dense_packed_linear_combination_matches_individual::<FpExt4<F>, 16>();
+    assert_dense_packed_linear_combination_matches_individual::<FpExt8<F>, 16>();
+}
+
+#[test]
+fn dense_packed_linear_combination_rejects_malformed_batches() {
+    const D: usize = 16;
+    type E = Ext2<F>;
+    let full = DensePoly::from_field_evals(8, D, vec![F::one(); 256]).unwrap();
+    let short = DensePoly::from_field_evals(7, D, vec![F::one(); 128]).unwrap();
+
+    let wrong_coeff_count =
+        DensePoly::tensor_packed_extension_linear_combination::<E, D>(&[&full, &full], &[E::one()])
+            .unwrap_err();
+    assert!(matches!(
+        wrong_coeff_count,
+        akita_field::AkitaError::InvalidSize {
+            expected: 2,
+            actual: 1
+        }
+    ));
+    let singleton_refs = [&full];
+    let singleton =
+        <DensePoly<F> as RootTensorSource<F, D>>::tensor_batch(&singleton_refs).unwrap();
+    let kernel_error = TensorProjectionBatchKernel::<_, F, E, D>::packed_linear_combination(
+        &CpuBackend::DEFAULT,
+        None,
+        singleton,
+        &[],
+    )
+    .unwrap_err();
+    assert!(matches!(
+        kernel_error,
+        akita_field::AkitaError::InvalidSize {
+            expected: 1,
+            actual: 0
+        }
+    ));
+
+    let mixed_arity = DensePoly::tensor_packed_extension_linear_combination::<E, D>(
+        &[&full, &short],
+        &[E::one(), E::one()],
+    )
+    .unwrap_err();
+    assert!(matches!(
+        mixed_arity,
+        akita_field::AkitaError::InvalidSize {
+            expected: 256,
+            actual: 128
+        }
+    ));
 }
 
 #[test]

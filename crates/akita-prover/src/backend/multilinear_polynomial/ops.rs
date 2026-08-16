@@ -375,4 +375,43 @@ where
             }
         }
     }
+
+    fn packed_linear_combination(
+        &self,
+        prepared: Option<&Self::PreparedSetup>,
+        source: MultilinearPolynomialBatchView<'_, F, D, I>,
+        coeffs: &[E],
+    ) -> Result<Option<TensorPackedWitness<E>>, AkitaError> {
+        if source.polys().len() != coeffs.len() {
+            return Err(AkitaError::InvalidSize {
+                expected: source.polys().len(),
+                actual: coeffs.len(),
+            });
+        }
+        let Some(first) = source.polys().first() else {
+            return Ok(None);
+        };
+        match first {
+            MultilinearPolynomial::Dense(_) => {
+                let Some(dense_polys) = source.homogeneous_dense_polys() else {
+                    return Ok(None);
+                };
+                let dense_view =
+                    <DensePoly<F> as RootTensorSource<F, D>>::tensor_batch(&dense_polys)?;
+                TensorProjectionBatchKernel::<DenseBatchView<'_, F, D>, F, E, D>::packed_linear_combination(
+                    self, prepared, dense_view, coeffs,
+                )
+            }
+            MultilinearPolynomial::OneHot(_) => {
+                let Some(onehot_polys) = source.homogeneous_onehot_polys() else {
+                    return Ok(None);
+                };
+                let onehot_view =
+                    <OneHotPoly<F, I> as RootTensorSource<F, D>>::tensor_batch(&onehot_polys)?;
+                TensorProjectionBatchKernel::<OneHotBatchView<'_, F, D, I>, F, E, D>::packed_linear_combination(
+                    self, prepared, onehot_view, coeffs,
+                )
+            }
+        }
+    }
 }

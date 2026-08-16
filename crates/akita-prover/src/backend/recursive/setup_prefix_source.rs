@@ -510,7 +510,7 @@ where
 mod tests {
     use super::*;
     use akita_challenges::SparseChallenge;
-    use akita_field::Prime128OffsetA7F7;
+    use akita_field::{Ext2, Prime128OffsetA7F7};
 
     #[test]
     fn setup_prefix_q128_base_fold_matches_separate_oracle() {
@@ -566,6 +566,61 @@ mod tests {
             checked_setup_prefix_ring_count::<256>(1 << 26, 1 << 26),
             Ok(1 << 18)
         );
+    }
+
+    #[test]
+    fn recursive_witness_batch_preserves_default_packed_linear_combination() {
+        type F = Prime128OffsetA7F7;
+        type E = Ext2<F>;
+        const D: usize = 16;
+        let mut first = vec![0; 64];
+        first[3] = 1;
+        let mut second = vec![0; 64];
+        second[19] = -1;
+        let witnesses = [
+            Arc::new(RecursiveWitnessFlat::from_i8_digits(first)),
+            Arc::new(RecursiveWitnessFlat::from_i8_digits(second)),
+        ];
+        let witness_refs = witnesses.iter().map(Arc::as_ref).collect::<Vec<_>>();
+        let coeffs = [E::from_u64(3), E::from_u64(5)];
+        let direct_batch =
+            <RecursiveWitnessFlat as RootTensorSource<F, D>>::tensor_batch(&witness_refs).unwrap();
+        let direct = TensorProjectionBatchKernel::packed_linear_combination(
+            &CpuBackend::DEFAULT,
+            None,
+            direct_batch,
+            &coeffs,
+        )
+        .unwrap();
+
+        let wrapped = witnesses
+            .iter()
+            .cloned()
+            .map(RecursiveFoldSource::witness)
+            .collect::<Vec<_>>();
+        let wrapped_refs = wrapped.iter().collect::<Vec<_>>();
+        let wrapped_batch =
+            <RecursiveFoldSource<F> as RootTensorSource<F, D>>::tensor_batch(&wrapped_refs)
+                .unwrap();
+        let actual = TensorProjectionBatchKernel::packed_linear_combination(
+            &CpuBackend::DEFAULT,
+            None,
+            wrapped_batch,
+            &coeffs,
+        )
+        .unwrap();
+
+        match (actual, direct) {
+            (None, None) => {}
+            (
+                Some(TensorPackedWitness::Sparse(actual)),
+                Some(TensorPackedWitness::Sparse(direct)),
+            ) => {
+                assert_eq!(actual.table_len(), direct.table_len());
+                assert_eq!(actual.entries(), direct.entries());
+            }
+            _ => panic!("recursive wrapper changed the suffix batch representation"),
+        }
     }
 
     #[test]

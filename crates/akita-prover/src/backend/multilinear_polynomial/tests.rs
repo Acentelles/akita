@@ -3,8 +3,8 @@ use crate::backend::{DenseBatchView, OneHotBatchView, OneHotView};
 use crate::compute::{
     BatchDecomposeFoldOutcome, CommitInnerPlan, ComputeBackendSetup, CpuBackend,
     DecomposeFoldBatchPlan, OpeningBatchKernel, RootCommitKernel, RootCommitSource,
-    RootOpeningSource, RootPolyShape, RootTensorSource, TensorProjectionBatchKernel,
-    TensorProjectionKernel,
+    RootOpeningSource, RootPolyShape, RootTensorSource, TensorPackedWitness,
+    TensorProjectionBatchKernel, TensorProjectionKernel,
 };
 use crate::{AkitaProverSetup, DensePoly, OneHotPoly};
 use akita_field::{CanonicalField, ExtField, FpExt4, Prime24Offset3};
@@ -68,6 +68,45 @@ fn multilinear_polynomial_forwards_onehot_chunk_size_from_inner() {
         >::dense(dense)),
         None
     );
+}
+
+#[test]
+fn multilinear_dense_batch_forwards_packed_linear_combination() {
+    type F = Prime24Offset3;
+    type E = FpExt4<F>;
+    const D: usize = 16;
+
+    let dense = [sample_dense::<D>(), sample_dense::<D>()];
+    let dense_refs = dense.iter().collect::<Vec<_>>();
+    let coeffs = [E::from_u64(3), E::from_u64(5)];
+    let dense_batch = <DensePoly<F> as RootTensorSource<F, D>>::tensor_batch(&dense_refs).unwrap();
+    let expected = TensorProjectionBatchKernel::packed_linear_combination(
+        &CpuBackend::DEFAULT,
+        None,
+        dense_batch,
+        &coeffs,
+    )
+    .unwrap();
+
+    let wrapped = dense.map(MultilinearPolynomial::dense);
+    let wrapped_refs = wrapped.iter().collect::<Vec<_>>();
+    let wrapped_batch =
+        <MultilinearPolynomial<F> as RootTensorSource<F, D>>::tensor_batch(&wrapped_refs).unwrap();
+    let actual = TensorProjectionBatchKernel::packed_linear_combination(
+        &CpuBackend::DEFAULT,
+        None,
+        wrapped_batch,
+        &coeffs,
+    )
+    .unwrap();
+
+    let Some(TensorPackedWitness::Dense(actual)) = actual else {
+        panic!("multilinear dense batch should preserve the fused witness");
+    };
+    let Some(TensorPackedWitness::Dense(expected)) = expected else {
+        panic!("dense batch should produce a fused witness");
+    };
+    assert_eq!(actual, expected);
 }
 
 #[test]

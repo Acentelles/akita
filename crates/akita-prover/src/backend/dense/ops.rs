@@ -168,6 +168,51 @@ where
         Ok(evals)
     }
 
+    pub(crate) fn tensor_packed_extension_linear_combination<E, const D: usize>(
+        polys: &[&Self],
+        coeffs: &[E],
+    ) -> Result<Vec<E>, AkitaError>
+    where
+        E: ExtField<F>,
+    {
+        if polys.len() != coeffs.len() {
+            return Err(AkitaError::InvalidSize {
+                expected: polys.len(),
+                actual: coeffs.len(),
+            });
+        }
+        let first = polys.first().ok_or_else(|| {
+            AkitaError::InvalidInput(
+                "dense tensor-packed combination requires at least one polynomial".to_string(),
+            )
+        })?;
+        let (_split_bits, width) = first.tensor_shape::<E, D>(None)?;
+        let live_len = first.live_coeff_len()?;
+        for poly in polys.iter().skip(1) {
+            let (_, poly_width) = poly.tensor_shape::<E, D>(None)?;
+            let poly_live_len = poly.live_coeff_len()?;
+            if poly_width != width || poly_live_len != live_len {
+                return Err(AkitaError::InvalidSize {
+                    expected: live_len,
+                    actual: poly_live_len,
+                });
+            }
+        }
+        let packed_len = live_len / width;
+        Ok(cfg_into_iter!(0..packed_len)
+            .map(|packed_index| {
+                let start = packed_index * width;
+                let end = start + width;
+                polys
+                    .iter()
+                    .zip(coeffs)
+                    .fold(E::zero(), |acc, (poly, &coeff)| {
+                        acc + coeff * E::from_base_slice(&poly.field_coeffs()[start..end])
+                    })
+            })
+            .collect())
+    }
+
     pub(crate) fn tensor_packed_extension_sparse_evals<E>(
         &self,
     ) -> Result<Option<SparseExtensionOpeningWitness<E>>, AkitaError>

@@ -494,6 +494,60 @@ where
             coeffs.iter().copied().zip(witnesses.iter()),
         )?))
     }
+
+    fn packed_linear_combination(
+        &self,
+        prepared: Option<&Self::PreparedSetup>,
+        source: RootTensorProjectionBatchView<'_, F, D>,
+        coeffs: &[E],
+    ) -> Result<Option<TensorPackedWitness<E>>, AkitaError> {
+        if source.polys.len() != coeffs.len() {
+            return Err(AkitaError::InvalidSize {
+                expected: source.polys.len(),
+                actual: coeffs.len(),
+            });
+        }
+        if source.polys.is_empty() {
+            return Ok(None);
+        }
+        if source
+            .polys
+            .iter()
+            .all(|poly| matches!(poly, RootTensorProjectionPoly::Dense(_)))
+        {
+            let polys = source
+                .polys
+                .iter()
+                .filter_map(|poly| match poly {
+                    RootTensorProjectionPoly::Dense(poly) => Some(poly),
+                    RootTensorProjectionPoly::Sparse(_) => None,
+                })
+                .collect::<Vec<_>>();
+            let batch = <DensePoly<F> as RootTensorSource<F, D>>::tensor_batch(&polys)?;
+            return TensorProjectionBatchKernel::<DenseBatchView<'_, F, D>, F, E, D>::packed_linear_combination(
+                self, prepared, batch, coeffs,
+            );
+        }
+        if source
+            .polys
+            .iter()
+            .all(|poly| matches!(poly, RootTensorProjectionPoly::Sparse(_)))
+        {
+            let polys = source
+                .polys
+                .iter()
+                .filter_map(|poly| match poly {
+                    RootTensorProjectionPoly::Dense(_) => None,
+                    RootTensorProjectionPoly::Sparse(poly) => Some(poly.as_ref()),
+                })
+                .collect::<Vec<_>>();
+            let batch = <SparseRingPoly<F> as RootTensorSource<F, D>>::tensor_batch(&polys)?;
+            return TensorProjectionBatchKernel::<SparseRingBatchView<'_, F, D>, F, E, D>::packed_linear_combination(
+                self, prepared, batch, coeffs,
+            );
+        }
+        Ok(None)
+    }
 }
 
 fn tensor_extension_split<F, E>(context: &'static str) -> Result<(usize, usize), AkitaError>
@@ -605,6 +659,60 @@ mod tests {
             assert_eq!(actual.inner_rows.ring_dim(), expected.inner_rows.ring_dim());
             assert_eq!(actual.inner_rows.coeffs(), expected.inner_rows.coeffs());
         }
+    }
+
+    #[test]
+    fn homogeneous_projected_dense_batch_preserves_fused_witness() {
+        type F = Prime32Offset99;
+        type E = FpExt4<F>;
+        const D: usize = 16;
+        let dense = (0..2)
+            .map(|poly| {
+                DensePoly::from_field_evals(
+                    6,
+                    D,
+                    (0..64)
+                        .map(|index| F::from_u64(31 * poly + index as u64 + 1))
+                        .collect::<Vec<_>>(),
+                )
+                .unwrap()
+            })
+            .collect::<Vec<_>>();
+        let dense_refs = dense.iter().collect::<Vec<_>>();
+        let coeffs = [E::from_u64(7), E::from_u64(11)];
+        let dense_batch =
+            <DensePoly<F> as RootTensorSource<F, D>>::tensor_batch(&dense_refs).unwrap();
+        let expected = TensorProjectionBatchKernel::packed_linear_combination(
+            &CpuBackend::DEFAULT,
+            None,
+            dense_batch,
+            &coeffs,
+        )
+        .unwrap();
+
+        let projected = dense
+            .into_iter()
+            .map(RootTensorProjectionPoly::Dense)
+            .collect::<Vec<_>>();
+        let projected_refs = projected.iter().collect::<Vec<_>>();
+        let projected_batch =
+            <RootTensorProjectionPoly<F> as RootTensorSource<F, D>>::tensor_batch(&projected_refs)
+                .unwrap();
+        let actual = TensorProjectionBatchKernel::packed_linear_combination(
+            &CpuBackend::DEFAULT,
+            None,
+            projected_batch,
+            &coeffs,
+        )
+        .unwrap();
+
+        let Some(TensorPackedWitness::Dense(actual)) = actual else {
+            panic!("projected dense batch should preserve the fused witness");
+        };
+        let Some(TensorPackedWitness::Dense(expected)) = expected else {
+            panic!("dense batch should produce a fused witness");
+        };
+        assert_eq!(actual, expected);
     }
 
     #[test]

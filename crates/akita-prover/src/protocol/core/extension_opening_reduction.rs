@@ -337,7 +337,7 @@ where
         });
     }
 
-    if let Some(terms) = try_sparse_extension_opening_reduction_terms::<F, E, P, B, D>(
+    if let Some(terms) = try_batched_extension_opening_reduction_terms::<F, E, P, B, D>(
         backend,
         prepared,
         polys,
@@ -358,7 +358,7 @@ where
     )
 }
 
-fn try_sparse_extension_opening_reduction_terms<F, E, P, B, const D: usize>(
+fn try_batched_extension_opening_reduction_terms<F, E, P, B, const D: usize>(
     backend: &B,
     prepared: Option<&<B as ComputeBackendSetup<F>>::PreparedSetup>,
     polys: &[&P],
@@ -374,8 +374,8 @@ where
         + for<'a> TensorProjectionBatchKernel<P::TensorBatchView<'a>, F, E, D>,
 {
     let _span =
-        tracing::info_span!("extension_opening_sparse_terms", num_terms = polys.len()).entered();
-    let Some(witness_evals) = TensorProjectionBatchKernel::sparse_linear_combination(
+        tracing::info_span!("extension_opening_batched_terms", num_terms = polys.len()).entered();
+    let Some(witness) = TensorProjectionBatchKernel::packed_linear_combination(
         backend,
         prepared,
         P::tensor_batch(polys)?,
@@ -384,31 +384,43 @@ where
     else {
         return Ok(None);
     };
-    let lazy_rounds = tail_point.len().min(SPARSE_TENSOR_FACTOR_MAX_LAZY_ROUNDS);
-    let term = if lazy_rounds == 0 {
-        let factor_evals = {
-            let _span = tracing::debug_span!(
-                "extension_opening_factor_evals",
-                tail_vars = tail_point.len()
-            )
-            .entered();
-            tensor_equality_factor_evals::<F, E>(tail_point, eta)?
-        };
-        ExtensionOpeningReductionTerm::new_sparse(witness_evals, factor_evals, E::one())?
-    } else {
-        let _span = tracing::debug_span!(
-            "extension_opening_lazy_tensor_factor",
-            tail_vars = tail_point.len(),
-            lazy_rounds
-        )
-        .entered();
-        ExtensionOpeningReductionTerm::new_sparse_tensor_factor::<F>(
-            witness_evals,
-            tail_point.to_vec(),
-            eta.to_vec(),
-            E::one(),
-            lazy_rounds,
-        )?
+    let term = match witness {
+        TensorPackedWitness::Dense(witness_evals) => {
+            extension_opening_term_from_packed_witness::<F, E>(
+                TensorPackedWitness::Dense(witness_evals),
+                tail_point,
+                eta,
+                E::one(),
+            )?
+        }
+        TensorPackedWitness::Sparse(witness_evals) => {
+            let lazy_rounds = tail_point.len().min(SPARSE_TENSOR_FACTOR_MAX_LAZY_ROUNDS);
+            if lazy_rounds == 0 {
+                let factor_evals = {
+                    let _span = tracing::debug_span!(
+                        "extension_opening_factor_evals",
+                        tail_vars = tail_point.len()
+                    )
+                    .entered();
+                    tensor_equality_factor_evals::<F, E>(tail_point, eta)?
+                };
+                ExtensionOpeningReductionTerm::new_sparse(witness_evals, factor_evals, E::one())?
+            } else {
+                let _span = tracing::debug_span!(
+                    "extension_opening_lazy_tensor_factor",
+                    tail_vars = tail_point.len(),
+                    lazy_rounds
+                )
+                .entered();
+                ExtensionOpeningReductionTerm::new_sparse_tensor_factor::<F>(
+                    witness_evals,
+                    tail_point.to_vec(),
+                    eta.to_vec(),
+                    E::one(),
+                    lazy_rounds,
+                )?
+            }
+        }
     };
     Ok(Some(vec![term]))
 }
@@ -465,3 +477,82 @@ where
 
 pub(in crate::protocol::core) type FoldedClaimEvals<F, const D: usize> =
     (Vec<CyclotomicRing<F, D>>, Vec<Vec<CyclotomicRing<F, D>>>);
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::compute::CpuBackend;
+    use crate::DensePoly;
+    use akita_field::{FpExt4, Prime32Offset99};
+    use akita_serialization::AkitaSerialize;
+    use akita_transcript::AkitaTranscript;
+
+    type F = Prime32Offset99;
+    type E = FpExt4<F>;
+
+    fn ext(seed: u64) -> E {
+        let coordinates: [F; 4] = std::array::from_fn(|index| F::from_u64(seed + 7 * index as u64));
+        E::from_base_slice(&coordinates)
+    }
+
+    fn prove_terms(
+        terms: Vec<ExtensionOpeningReductionTerm<E>>,
+    ) -> (SumcheckProof<E>, Vec<E>, E, Vec<u8>) {
+        let claim = ExtensionOpeningReductionProver::input_claim_from_terms(&terms).unwrap();
+        let mut prover = ExtensionOpeningReductionProver::new(terms, claim).unwrap();
+        let mut transcript = AkitaTranscript::<F>::new(b"test/dense-eor-batch-equivalence");
+        let (proof, point, final_claim) = prover
+            .prove::<F, _, _>(&mut transcript, |transcript| {
+                sample_ext_challenge::<F, E, _>(transcript, CHALLENGE_SUMCHECK_ROUND)
+            })
+            .unwrap();
+        let mut bytes = Vec::new();
+        proof.serialize_compressed(&mut bytes).unwrap();
+        (proof, point, final_claim, bytes)
+    }
+
+    #[test]
+    fn dense_batched_terms_match_legacy_eor_proof_byte_for_byte() {
+        const D: usize = 16;
+        let polys = (0..3)
+            .map(|poly| {
+                DensePoly::from_field_evals(
+                    8,
+                    D,
+                    (0..256)
+                        .map(|index| F::from_u64(101 * poly + 13 * index as u64 + 3))
+                        .collect::<Vec<_>>(),
+                )
+                .unwrap()
+            })
+            .collect::<Vec<_>>();
+        let refs = polys.iter().collect::<Vec<_>>();
+        let coefficients = [ext(2), ext(17), ext(41)];
+        let tail_point = (0..6).map(|index| ext(73 + index * 11)).collect::<Vec<_>>();
+        let eta = [ext(151), ext(173)];
+
+        let batched = build_extension_opening_reduction_terms::<F, E, DensePoly<F>, CpuBackend, D>(
+            &CpuBackend::DEFAULT,
+            None,
+            &refs,
+            &coefficients,
+            &tail_point,
+            &eta,
+        )
+        .unwrap();
+        let legacy =
+            build_dense_extension_opening_reduction_terms::<F, E, DensePoly<F>, CpuBackend, D>(
+                &CpuBackend::DEFAULT,
+                None,
+                &refs,
+                &coefficients,
+                &tail_point,
+                &eta,
+            )
+            .unwrap();
+
+        assert_eq!(batched.len(), 1);
+        assert_eq!(legacy.len(), 3);
+        assert_eq!(prove_terms(batched), prove_terms(legacy));
+    }
+}

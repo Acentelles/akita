@@ -11,7 +11,7 @@ use super::backend::{
 use super::cpu::CpuBackend;
 use super::kernels::{
     OpeningBatchKernel, OpeningFoldKernel, RingSwitchRelationKernel, RootCommitKernel,
-    TensorProjectionBatchKernel, TensorProjectionKernel,
+    TensorPackedWitness, TensorProjectionBatchKernel, TensorProjectionKernel,
 };
 use super::operation_plans::{
     CommitInnerPlan, DecomposeFoldBatchPlan, DecomposeFoldPlan, OpeningFoldOutput, OpeningFoldPlan,
@@ -255,6 +255,15 @@ macro_rules! delegate_tensor_kernels {
                 AkitaError,
             > {
                 CpuBackend::DEFAULT.sparse_linear_combination(prepared, source, coeffs)
+            }
+
+            fn packed_linear_combination(
+                &self,
+                prepared: Option<&Self::PreparedSetup>,
+                source: S,
+                coeffs: &[E],
+            ) -> Result<Option<TensorPackedWitness<E>>, AkitaError> {
+                CpuBackend::DEFAULT.packed_linear_combination(prepared, source, coeffs)
             }
         }
     };

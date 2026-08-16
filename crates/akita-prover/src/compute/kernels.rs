@@ -166,6 +166,23 @@ where
     where
         E: MulBaseUnreduced<F>;
 
+    /// Linear combination of tensor-packed root witnesses.
+    ///
+    /// The default preserves sparse witnesses when the batch supports them.
+    /// Dense backends may override this to fuse several sources into one dense
+    /// packed witness rather than materializing one witness per source.
+    /// `Ok(None)` means that no compatible fused path was selected and the
+    /// caller should materialize the sources separately.
+    fn packed_linear_combination(
+        &self,
+        prepared: Option<&Self::PreparedSetup>,
+        source: S,
+        coeffs: &[E],
+    ) -> Result<Option<TensorPackedWitness<E>>, AkitaError> {
+        self.sparse_linear_combination(prepared, source, coeffs)
+            .map(|witness| witness.map(TensorPackedWitness::Sparse))
+    }
+
     /// Sparse linear combination of tensor-packed root witnesses.
     ///
     /// Returns `Ok(None)` when a sparse combination is unavailable for the whole
