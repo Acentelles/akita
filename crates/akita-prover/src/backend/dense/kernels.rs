@@ -26,21 +26,38 @@ where
         sources: Vec<DenseView<'_, F, D>>,
         plan: CommitInnerPlan,
     ) -> Result<Vec<CommitInnerWitness<F>>, AkitaError> {
-        cfg_into_iter!(sources)
-            .map(|source| {
-                source
-                    .poly
-                    .commit_rows::<D>(
-                        self,
-                        prepared,
-                        plan.n_a,
-                        plan.num_positions_per_block,
-                        plan.num_digits_inner,
-                        plan.log_basis_inner,
-                    )
-                    .map(CommitInnerWitness::from_rows)
-            })
-            .collect()
+        let commit_one = |source: DenseView<'_, F, D>| {
+            source
+                .poly
+                .commit_rows::<D>(
+                    self,
+                    prepared,
+                    plan.n_a,
+                    plan.num_positions_per_block,
+                    plan.num_digits_inner,
+                    plan.log_basis_inner,
+                )
+                .map(CommitInnerWitness::from_rows)
+        };
+        // Commit the first source before fanning out. Every source of one
+        // group requests the same shared-NTT cache key (the group layout is
+        // uniform), so the first commit builds the slot from the calling
+        // thread, outside the worker pool, and the parallel remainder only
+        // ever reads it. Fanning all sources out cold can deadlock: sibling
+        // workers park on the slot's `OnceLock` while the builder's nested
+        // parallel work has no free worker left to run it.
+        let mut sources = sources.into_iter();
+        let Some(first) = sources.next() else {
+            return Ok(Vec::new());
+        };
+        let first = commit_one(first)?;
+        let rest = cfg_into_iter!(sources.collect::<Vec<_>>())
+            .map(commit_one)
+            .collect::<Result<Vec<_>, AkitaError>>()?;
+        let mut witnesses = Vec::with_capacity(rest.len() + 1);
+        witnesses.push(first);
+        witnesses.extend(rest);
+        Ok(witnesses)
     }
 }
 
