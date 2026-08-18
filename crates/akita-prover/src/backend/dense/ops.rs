@@ -5,8 +5,9 @@
 
 use super::poly::{DenseColumnSource, DensePoly};
 use crate::backend::poly_helpers::{
-    balanced_ring_decompose_fold_partitioned, build_decompose_fold_witness,
-    cached_digit_decompose_fold_partitioned, decompose_ring_single_digit, sparse_mul_acc,
+    balanced_ring_decompose_fold_partitioned_with_extent, build_decompose_fold_witness,
+    cached_digit_decompose_fold_partitioned_with_extent, decompose_ring_single_digit,
+    sparse_mul_acc,
     DecomposeParams,
 };
 use crate::backend::RootTensorProjectionPoly;
@@ -38,13 +39,21 @@ where
             .expect("DensePoly::fold_blocks: invalid ring view");
         let n = coeffs.len();
         let num_live_blocks = n.div_ceil(num_positions_per_block);
+        let live_extent = self.live_extent;
         cfg_into_iter!(0..num_live_blocks)
             .map(|i| {
                 let start = i * num_positions_per_block;
                 let end = (start + num_positions_per_block).min(n);
                 let block = &coeffs[start..end];
                 let mut acc = CyclotomicRing::<F, D>::zero();
-                for (b_j, &a_j) in block.iter().zip(scalars.iter()) {
+                for (offset, (b_j, &a_j)) in block.iter().zip(scalars.iter()).enumerate() {
+                    // Structurally-zero rings contribute nothing.
+                    if let Some(extent) = live_extent {
+                        if !extent.ring_is_live(start + offset) {
+                            debug_assert!(b_j.is_zero());
+                            continue;
+                        }
+                    }
                     b_j.scale_accumulate_into(&mut acc, a_j);
                 }
                 acc
@@ -62,13 +71,21 @@ where
             .expect("DensePoly::fold_blocks_ring: invalid ring view");
         let n = coeffs.len();
         let num_live_blocks = n.div_ceil(num_positions_per_block);
+        let live_extent = self.live_extent;
         cfg_into_iter!(0..num_live_blocks)
             .map(|i| {
                 let start = i * num_positions_per_block;
                 let end = (start + num_positions_per_block).min(n);
                 let block = &coeffs[start..end];
                 let mut acc = CyclotomicRing::<F, D>::zero();
-                for (b_j, &a_j) in block.iter().zip(scalars.iter()) {
+                for (offset, (b_j, &a_j)) in block.iter().zip(scalars.iter()).enumerate() {
+                    // Structurally-zero rings contribute nothing.
+                    if let Some(extent) = live_extent {
+                        if !extent.ring_is_live(start + offset) {
+                            debug_assert!(b_j.is_zero());
+                            continue;
+                        }
+                    }
                     b_j.mul_accumulate_sparse_rhs_into(&a_j, &mut acc);
                 }
                 acc
@@ -219,11 +236,22 @@ where
             output_rings = source_rings.len(),
         )
         .entered();
+        // `psi_embed` is ring-local and maps the zero ring to the zero
+        // ring, so a declared live extent survives the projection: dead
+        // rings are emitted as zeros without embedding.
+        let live_extent = self.live_extent;
         macro_rules! project {
             ($k:expr) => {{
                 let params = SubfieldParams::<D, $k>::new()?;
                 cfg_iter!(source_rings)
-                    .map(|ring| {
+                    .enumerate()
+                    .map(|(ring_index, ring)| {
+                        if let Some(extent) = live_extent {
+                            if !extent.ring_is_live(ring_index) {
+                                debug_assert!(ring.is_zero());
+                                return Ok([F::zero(); D]);
+                            }
+                        }
                         psi_embed::<F, D, $k>(params, ring.coefficients())
                             .map(|projected| *projected.coefficients())
                     })
@@ -243,7 +271,9 @@ where
         };
         let projected = coefficient_rows.into_flattened();
         let projected_num_vars = self.num_vars.max(D.trailing_zeros() as usize);
-        DensePoly::from_field_evals(projected_num_vars, D, projected)
+        let mut poly = DensePoly::from_field_evals(projected_num_vars, D, projected)?;
+        poly.live_extent = self.live_extent;
+        Ok(poly)
     }
 
     pub(crate) fn tensor_packed_extension_root_poly<E, const D: usize>(
@@ -286,15 +316,19 @@ where
             .expect("DensePoly::decompose_fold: invalid ring view");
         let n = coeffs.len();
 
+        let ring_extent = self
+            .live_extent
+            .map(|extent| (extent.live_rings, extent.ring_stride));
         if let Some(digit_planes) = self.digit_planes_for::<D>(num_digits, log_basis) {
             let coeff_accum = {
                 let _span = tracing::info_span!("dense_cached_digit_accumulate").entered();
-                cached_digit_decompose_fold_partitioned::<F, D>(
+                cached_digit_decompose_fold_partitioned_with_extent::<F, D>(
                     digit_planes,
                     challenges,
                     num_positions_per_block,
                     num_digits,
                     log_basis,
+                    ring_extent,
                 )
             };
             let modulus = (-F::one()).to_canonical_u128() + 1;
@@ -326,6 +360,15 @@ where
                                 let global_idx = block_idx * num_positions_per_block + elem_idx;
                                 if global_idx >= small_coeffs.len() {
                                     continue;
+                                }
+                                if let Some((live, stride)) = ring_extent {
+                                    let dead = match stride {
+                                        None => global_idx >= live,
+                                        Some(stride) => global_idx % stride >= live,
+                                    };
+                                    if dead {
+                                        continue;
+                                    }
                                 }
                                 sparse_mul_acc::<D>(&small_coeffs[global_idx], c_i, &mut z_local);
                             }
@@ -367,12 +410,13 @@ where
 
         let centered_coeffs = {
             let _span = tracing::info_span!("dense_multi_digit_accumulate").entered();
-            balanced_ring_decompose_fold_partitioned::<F, D>(
+            balanced_ring_decompose_fold_partitioned_with_extent::<F, D>(
                 coeffs,
                 challenges,
                 num_positions_per_block,
                 num_digits,
                 &params,
+                ring_extent,
             )
         };
 

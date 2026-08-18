@@ -47,6 +47,49 @@ pub(super) struct DenseProjectionCache<F: FieldCore> {
     pub(super) projected: std::sync::Arc<DensePoly<F>>,
 }
 
+/// Caller-declared structural-zero extent of a dense polynomial, in RING
+/// elements at the construction dimension. With `ring_stride = None`, rings
+/// at `live_rings..` are exactly zero (a contiguous zero suffix). With
+/// `ring_stride = Some(s)`, rings with `ring mod s >= live_rings` are
+/// exactly zero (a plane-major layout whose every plane of `s` rings ends
+/// in a zero suffix). This is a performance hint: kernels skip work whose
+/// contribution is exactly zero, byte-identically. A false declaration
+/// makes the committed/opened polynomial disagree with the caller's table
+/// (a caller bug caught by verification, not a soundness hole); debug
+/// builds additionally scan the declared-zero region.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub struct LiveExtent {
+    pub live_rings: usize,
+    pub ring_stride: Option<usize>,
+}
+
+impl LiveExtent {
+    /// Whether the given ring element may be nonzero under this extent.
+    #[inline]
+    #[must_use]
+    pub fn ring_is_live(&self, ring: usize) -> bool {
+        match self.ring_stride {
+            None => ring < self.live_rings,
+            Some(stride) => ring % stride < self.live_rings,
+        }
+    }
+
+    /// One past the last possibly-live ring, given the total ring count.
+    #[must_use]
+    pub fn live_ring_bound(&self, num_rings: usize) -> usize {
+        match self.ring_stride {
+            None => self.live_rings.min(num_rings),
+            Some(stride) => {
+                if num_rings <= stride {
+                    self.live_rings.min(num_rings)
+                } else {
+                    num_rings - stride + self.live_rings.min(stride)
+                }
+            }
+        }
+    }
+}
+
 /// Dense polynomial: all ring coefficients materialized in memory.
 ///
 /// Storage is D-free: coefficients are a flat field-element buffer, and the
@@ -67,6 +110,8 @@ pub struct DensePoly<F: FieldCore> {
     pub(super) small_i8_coeffs: Option<Vec<i8>>,
     digit_cache: OnceLock<DenseDigitCache>,
     pub(super) projection_cache: OnceLock<DenseProjectionCache<F>>,
+    /// Caller-declared structural-zero extent (see [`LiveExtent`]).
+    pub(super) live_extent: Option<LiveExtent>,
 }
 
 impl<F: FieldCore + Clone> Clone for DensePoly<F> {
@@ -78,6 +123,7 @@ impl<F: FieldCore + Clone> Clone for DensePoly<F> {
             small_i8_coeffs: self.small_i8_coeffs.clone(),
             digit_cache: OnceLock::new(),
             projection_cache: OnceLock::new(),
+            live_extent: self.live_extent,
         }
     }
 }
@@ -274,7 +320,72 @@ impl<F: FieldCore + CanonicalField> DensePoly<F> {
             small_i8_coeffs: all_small_i8.then_some(small_i8_coeffs),
             digit_cache: OnceLock::new(),
             projection_cache: OnceLock::new(),
+            live_extent: None,
         })
+    }
+
+    /// [`Self::from_field_evals`] with a caller-declared structural-zero
+    /// extent, given in CELLS at the construction dimension (`live` and the
+    /// optional `stride` must be multiples of `ring_d` so the zero structure
+    /// is ring-local). Debug builds scan the declared-zero region.
+    ///
+    /// # Errors
+    ///
+    /// As [`Self::from_field_evals`], plus an invalid extent shape.
+    pub fn from_field_evals_with_live_extent<'a>(
+        num_vars: usize,
+        ring_d: usize,
+        evals: impl Into<Cow<'a, [F]>>,
+        live_cells: usize,
+        cell_stride: Option<usize>,
+    ) -> Result<Self, AkitaError>
+    where
+        F: 'a,
+    {
+        let evals = evals.into();
+        let len = evals.len();
+        let valid_shape = live_cells > 0
+            && live_cells.is_multiple_of(ring_d)
+            && match cell_stride {
+                None => live_cells <= len,
+                Some(stride) => {
+                    stride.is_power_of_two()
+                        && stride.is_multiple_of(ring_d)
+                        && live_cells <= stride
+                        && len.is_multiple_of(stride)
+                }
+            };
+        if !valid_shape {
+            return Err(AkitaError::InvalidInput(
+                "live extent is not ring-local or exceeds the table".to_string(),
+            ));
+        }
+        #[cfg(debug_assertions)]
+        {
+            let declared_zero_is_zero = match cell_stride {
+                None => evals[live_cells..].iter().all(|value| *value == F::zero()),
+                Some(stride) => evals
+                    .chunks_exact(stride)
+                    .all(|plane| plane[live_cells..].iter().all(|value| *value == F::zero())),
+            };
+            debug_assert!(
+                declared_zero_is_zero,
+                "live extent excludes nonzero cells"
+            );
+        }
+        let extent = LiveExtent {
+            live_rings: live_cells / ring_d,
+            ring_stride: cell_stride.map(|stride| stride / ring_d),
+        };
+        let mut poly = Self::from_field_evals(num_vars, ring_d, evals)?;
+        poly.live_extent = Some(extent);
+        Ok(poly)
+    }
+
+    /// Caller-declared structural-zero extent, if any.
+    #[must_use]
+    pub fn live_extent(&self) -> Option<LiveExtent> {
+        self.live_extent
     }
 
     /// Flatten an existing vector of ring elements into dense storage.
@@ -310,6 +421,7 @@ impl<F: FieldCore + CanonicalField> DensePoly<F> {
             small_i8_coeffs,
             digit_cache: OnceLock::new(),
             projection_cache: OnceLock::new(),
+            live_extent: None,
         }
     }
 
@@ -347,9 +459,19 @@ impl<F: FieldCore + CanonicalField> DensePoly<F> {
         let q = (-F::one()).to_canonical_u128() + 1;
         let params = BalancedDecomposePow2Params::new(num_digits, log_basis, q);
         let mut planes = vec![0i8; num_rings * num_digits * D];
+        // Structurally-zero rings decompose to all-zero digit planes, which
+        // the buffer already holds: skip them under a declared live extent.
+        let live_extent = self.live_extent;
         cfg_chunks_mut!(planes, num_digits * D)
             .zip(cfg_iter!(rings))
-            .for_each(|(dst, ring)| {
+            .enumerate()
+            .for_each(|(ring_index, (dst, ring))| {
+                if let Some(extent) = live_extent {
+                    if !extent.ring_is_live(ring_index) {
+                        debug_assert!(ring.is_zero());
+                        return;
+                    }
+                }
                 let (dst_planes, remainder) = dst.as_chunks_mut::<D>();
                 debug_assert!(remainder.is_empty());
                 ring.balanced_decompose_pow2_i8_into_with_params(dst_planes, &params);

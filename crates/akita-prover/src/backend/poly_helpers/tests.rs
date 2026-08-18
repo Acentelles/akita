@@ -734,3 +734,108 @@ fn fp128_overflow_paths_match_direct_and_fused_sparse_path() {
     decompose_ring_full_challenge_accumulate::<F, D>(&ring, &rotated, &mut fused_acc, &params);
     assert_eq!(fused_acc, generic_acc);
 }
+
+/// A declared structural-zero extent must be a pure performance hint: the
+/// fold with a correct extent (contiguous suffix or strided per-plane
+/// suffix) is value-identical to the fold without one.
+#[test]
+fn decompose_fold_with_live_extent_matches_unbounded() {
+    use super::decompose_fold_partitioned::{
+        balanced_ring_decompose_fold_partitioned_with_extent,
+        cached_digit_decompose_fold_partitioned_with_extent,
+    };
+    type F = Prime128Offset275;
+    const D: usize = 8;
+    const POSITIONS: usize = 4;
+    let num_digits = 3;
+    let log_basis = 3;
+    let num_rings = 32;
+    // Strided layout: four planes of eight rings, the last three rings of
+    // every plane zero. Contiguous layout: the last ten rings zero.
+    let make_rings = |stride: Option<usize>, live: usize| -> Vec<CyclotomicRing<F, D>> {
+        (0..num_rings)
+            .map(|ring| {
+                let dead = match stride {
+                    None => ring >= live,
+                    Some(stride) => ring % stride >= live,
+                };
+                if dead {
+                    CyclotomicRing::<F, D>::zero()
+                } else {
+                    CyclotomicRing::<F, D>::from_coefficients(std::array::from_fn(|j| {
+                        F::from_canonical_u128_reduced(((ring * 31 + j * 7) % 13) as u128)
+                    }))
+                }
+            })
+            .collect()
+    };
+    let challenges = (0..num_rings / POSITIONS)
+        .map(|block| SparseChallenge {
+            positions: vec![(block % D) as u32, ((block + 3) % D) as u32].into(),
+            coeffs: vec![1, -1].into(),
+        })
+        .collect::<Vec<_>>();
+    let q = (-F::one()).to_canonical_u128() + 1;
+    let threshold =
+        akita_algebra::ring::cyclotomic::decompose_centering_threshold(num_digits, log_basis, q);
+    let params = DecomposeParams {
+        threshold,
+        q,
+        mask: (1i128 << log_basis) - 1,
+        half_b: 1i128 << (log_basis - 1),
+        b_val: 1i128 << log_basis,
+        log_basis,
+        overflow_possible: q.saturating_sub(threshold) > i128::MAX as u128,
+    };
+
+    for (stride, live) in [(None, 22_usize), (Some(8_usize), 5_usize)] {
+        let rings = make_rings(stride, live);
+        let unbounded = balanced_ring_decompose_fold_partitioned::<F, D>(
+            &rings,
+            &challenges,
+            POSITIONS,
+            num_digits,
+            &params,
+        );
+        let bounded = balanced_ring_decompose_fold_partitioned_with_extent::<F, D>(
+            &rings,
+            &challenges,
+            POSITIONS,
+            num_digits,
+            &params,
+            Some((live, stride)),
+        );
+        assert_eq!(unbounded, bounded, "stride {stride:?}");
+
+        // The predecomposed path must agree too.
+        let mut planes = Vec::with_capacity(num_rings * num_digits);
+        for ring in &rings {
+            let digits = ring.balanced_decompose_pow2_i16(num_digits, log_basis);
+            for digit in digits {
+                let mut plane = [0i8; D];
+                for (slot, value) in plane.iter_mut().zip(digit) {
+                    *slot = i8::try_from(value).expect("small digit");
+                }
+                planes.push(plane);
+            }
+        }
+        let cached_unbounded = cached_digit_decompose_fold_partitioned_with_extent::<F, D>(
+            &planes,
+            &challenges,
+            POSITIONS,
+            num_digits,
+            log_basis,
+            None,
+        );
+        let cached_bounded = cached_digit_decompose_fold_partitioned_with_extent::<F, D>(
+            &planes,
+            &challenges,
+            POSITIONS,
+            num_digits,
+            log_basis,
+            Some((live, stride)),
+        );
+        assert_eq!(cached_unbounded, cached_bounded, "cached stride {stride:?}");
+        assert_eq!(unbounded, cached_unbounded, "paths agree");
+    }
+}

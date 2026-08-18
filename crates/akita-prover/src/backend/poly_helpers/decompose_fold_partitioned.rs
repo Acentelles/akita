@@ -447,11 +447,28 @@ fn flush_narrow_accumulator<const D: usize>(narrow: &mut [[i16; D]], wide: &mut 
     }
 }
 
+/// Caller-declared structural-zero extent in ring elements:
+/// `(live_rings, None)` = contiguous zero suffix past `live_rings`;
+/// `(live_rings, Some(stride))` = per-plane zero suffixes
+/// (`ring % stride >= live_rings` is zero). Skipped rings have all-zero
+/// digits, so their accumulation is exactly a no-op.
+pub type RingLiveExtent = (usize, Option<usize>);
+
+#[inline]
+fn ring_is_live(extent: Option<RingLiveExtent>, ring: usize) -> bool {
+    match extent {
+        None => true,
+        Some((live, None)) => ring < live,
+        Some((live, Some(stride))) => ring % stride < live,
+    }
+}
+
 fn element_partitioned_decompose_fold<F: CanonicalField, const D: usize>(
     source: ElementFoldSource<'_, F, D>,
     challenges: &[SparseChallenge],
     num_positions_per_block: usize,
     num_digits: usize,
+    extent: Option<RingLiveExtent>,
 ) -> Vec<[i32; D]> {
     let inner_width = num_positions_per_block
         .checked_mul(num_digits)
@@ -513,6 +530,9 @@ fn element_partitioned_decompose_fold<F: CanonicalField, const D: usize>(
                         .as_mut()
                         .expect("narrow fold path requires an accumulator");
                     for local_elem_idx in 0..(ring_end - ring_start) {
+                        if !ring_is_live(extent, ring_start + local_elem_idx) {
+                            continue;
+                        }
                         source.accumulate_ring_narrow(
                             ring_start + local_elem_idx,
                             local_elem_idx,
@@ -537,6 +557,9 @@ fn element_partitioned_decompose_fold<F: CanonicalField, const D: usize>(
                         .as_mut()
                         .expect("narrow fold path requires an accumulator");
                     for local_elem_idx in 0..(ring_end - ring_start) {
+                        if !ring_is_live(extent, ring_start + local_elem_idx) {
+                            continue;
+                        }
                         source.accumulate_ring_chunked_narrow(
                             ring_start + local_elem_idx,
                             local_elem_idx,
@@ -559,6 +582,9 @@ fn element_partitioned_decompose_fold<F: CanonicalField, const D: usize>(
                         narrow_bound = 0;
                     }
                     for local_elem_idx in 0..(ring_end - ring_start) {
+                        if !ring_is_live(extent, ring_start + local_elem_idx) {
+                            continue;
+                        }
                         source.accumulate_ring(
                             ring_start + local_elem_idx,
                             local_elem_idx,
@@ -592,6 +618,26 @@ pub fn cached_digit_decompose_fold_partitioned<F: CanonicalField, const D: usize
     num_digits: usize,
     log_basis: u32,
 ) -> Vec<[i32; D]> {
+    cached_digit_decompose_fold_partitioned_with_extent::<F, D>(
+        digit_planes,
+        challenges,
+        num_positions_per_block,
+        num_digits,
+        log_basis,
+        None,
+    )
+}
+
+/// [`cached_digit_decompose_fold_partitioned`] with a caller-declared
+/// structural-zero extent.
+pub fn cached_digit_decompose_fold_partitioned_with_extent<F: CanonicalField, const D: usize>(
+    digit_planes: &[[i8; D]],
+    challenges: &[SparseChallenge],
+    num_positions_per_block: usize,
+    num_digits: usize,
+    log_basis: u32,
+    extent: Option<RingLiveExtent>,
+) -> Vec<[i32; D]> {
     let num_rings = digit_planes.len() / num_digits;
     let digit_abs_bound = akita_types::balanced_signed_digit_abs_bound(log_basis)
         .expect("cached decompose-fold basis must be validated")
@@ -605,6 +651,7 @@ pub fn cached_digit_decompose_fold_partitioned<F: CanonicalField, const D: usize
         challenges,
         num_positions_per_block,
         num_digits,
+        extent,
     )
 }
 
@@ -616,11 +663,32 @@ pub fn balanced_ring_decompose_fold_partitioned<F: CanonicalField, const D: usiz
     num_digits: usize,
     p: &DecomposeParams,
 ) -> Vec<[i32; D]> {
+    balanced_ring_decompose_fold_partitioned_with_extent::<F, D>(
+        coeffs,
+        challenges,
+        num_positions_per_block,
+        num_digits,
+        p,
+        None,
+    )
+}
+
+/// [`balanced_ring_decompose_fold_partitioned`] with a caller-declared
+/// structural-zero extent.
+pub fn balanced_ring_decompose_fold_partitioned_with_extent<F: CanonicalField, const D: usize>(
+    coeffs: &[CyclotomicRing<F, D>],
+    challenges: &[SparseChallenge],
+    num_positions_per_block: usize,
+    num_digits: usize,
+    p: &DecomposeParams,
+    extent: Option<RingLiveExtent>,
+) -> Vec<[i32; D]> {
     element_partitioned_decompose_fold::<F, D>(
         ElementFoldSource::LiveRings { coeffs, params: p },
         challenges,
         num_positions_per_block,
         num_digits,
+        extent,
     )
 }
 
@@ -648,5 +716,6 @@ pub fn balanced_tight_digit_fold_partitioned<F: CanonicalField, const D: usize>(
         challenges,
         num_positions_per_block,
         1,
+        None,
     )
 }
