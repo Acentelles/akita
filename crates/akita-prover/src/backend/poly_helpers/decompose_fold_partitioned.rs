@@ -454,12 +454,40 @@ fn flush_narrow_accumulator<const D: usize>(narrow: &mut [[i16; D]], wide: &mut 
 /// digits, so their accumulation is exactly a no-op.
 pub type RingLiveExtent = (usize, Option<usize>);
 
-#[inline]
-fn ring_is_live(extent: Option<RingLiveExtent>, ring: usize) -> bool {
-    match extent {
-        None => true,
-        Some((live, None)) => ring < live,
-        Some((live, Some(stride))) => ring % stride < live,
+/// Precomputed guard: `(ring & mask) < live` with `mask = usize::MAX` for
+/// contiguous or absent extents (absent uses `live = usize::MAX`, so the
+/// unbounded path costs one always-true compare per ring and stays
+/// vectorizable). Strides are powers of two, so the modulo is a mask.
+#[derive(Clone, Copy)]
+struct RingLiveGuard {
+    mask: usize,
+    live: usize,
+}
+
+impl RingLiveGuard {
+    fn new(extent: Option<RingLiveExtent>) -> Self {
+        match extent {
+            None => Self {
+                mask: usize::MAX,
+                live: usize::MAX,
+            },
+            Some((live, None)) => Self {
+                mask: usize::MAX,
+                live,
+            },
+            Some((live, Some(stride))) => {
+                debug_assert!(stride.is_power_of_two());
+                Self {
+                    mask: stride - 1,
+                    live,
+                }
+            }
+        }
+    }
+
+    #[inline(always)]
+    fn ring_is_live(self, ring: usize) -> bool {
+        (ring & self.mask) < self.live
     }
 }
 
@@ -489,6 +517,7 @@ fn element_partitioned_decompose_fold<F: CanonicalField, const D: usize>(
         )
     });
     let position_tile = position_tile_len(num_positions_per_block);
+    let guard = RingLiveGuard::new(extent);
     let mut out = vec![[0i32; D]; inner_width];
 
     cfg_chunks_mut!(out, position_tile * num_digits)
@@ -530,7 +559,7 @@ fn element_partitioned_decompose_fold<F: CanonicalField, const D: usize>(
                         .as_mut()
                         .expect("narrow fold path requires an accumulator");
                     for local_elem_idx in 0..(ring_end - ring_start) {
-                        if !ring_is_live(extent, ring_start + local_elem_idx) {
+                        if !guard.ring_is_live(ring_start + local_elem_idx) {
                             continue;
                         }
                         source.accumulate_ring_narrow(
@@ -557,7 +586,7 @@ fn element_partitioned_decompose_fold<F: CanonicalField, const D: usize>(
                         .as_mut()
                         .expect("narrow fold path requires an accumulator");
                     for local_elem_idx in 0..(ring_end - ring_start) {
-                        if !ring_is_live(extent, ring_start + local_elem_idx) {
+                        if !guard.ring_is_live(ring_start + local_elem_idx) {
                             continue;
                         }
                         source.accumulate_ring_chunked_narrow(
@@ -582,7 +611,7 @@ fn element_partitioned_decompose_fold<F: CanonicalField, const D: usize>(
                         narrow_bound = 0;
                     }
                     for local_elem_idx in 0..(ring_end - ring_start) {
-                        if !ring_is_live(extent, ring_start + local_elem_idx) {
+                        if !guard.ring_is_live(ring_start + local_elem_idx) {
                             continue;
                         }
                         source.accumulate_ring(

@@ -46,15 +46,26 @@ where
                 let end = (start + num_positions_per_block).min(n);
                 let block = &coeffs[start..end];
                 let mut acc = CyclotomicRing::<F, D>::zero();
-                for (offset, (b_j, &a_j)) in block.iter().zip(scalars.iter()).enumerate() {
-                    // Structurally-zero rings contribute nothing.
-                    if let Some(extent) = live_extent {
-                        if !extent.ring_is_live(start + offset) {
-                            debug_assert!(b_j.is_zero());
-                            continue;
+                // The undeclared path keeps the exact original loop body so
+                // its codegen is untouched; the declared path skips
+                // structurally-zero rings, which contribute nothing.
+                match live_extent {
+                    None => {
+                        for (b_j, &a_j) in block.iter().zip(scalars.iter()) {
+                            b_j.scale_accumulate_into(&mut acc, a_j);
                         }
                     }
-                    b_j.scale_accumulate_into(&mut acc, a_j);
+                    Some(extent) => {
+                        for (offset, (b_j, &a_j)) in
+                            block.iter().zip(scalars.iter()).enumerate()
+                        {
+                            if !extent.ring_is_live(start + offset) {
+                                debug_assert!(b_j.is_zero());
+                                continue;
+                            }
+                            b_j.scale_accumulate_into(&mut acc, a_j);
+                        }
+                    }
                 }
                 acc
             })
@@ -78,15 +89,26 @@ where
                 let end = (start + num_positions_per_block).min(n);
                 let block = &coeffs[start..end];
                 let mut acc = CyclotomicRing::<F, D>::zero();
-                for (offset, (b_j, &a_j)) in block.iter().zip(scalars.iter()).enumerate() {
-                    // Structurally-zero rings contribute nothing.
-                    if let Some(extent) = live_extent {
-                        if !extent.ring_is_live(start + offset) {
-                            debug_assert!(b_j.is_zero());
-                            continue;
+                // The undeclared path keeps the exact original loop body so
+                // its codegen is untouched; the declared path skips
+                // structurally-zero rings, which contribute nothing.
+                match live_extent {
+                    None => {
+                        for (b_j, &a_j) in block.iter().zip(scalars.iter()) {
+                            b_j.mul_accumulate_sparse_rhs_into(&a_j, &mut acc);
                         }
                     }
-                    b_j.mul_accumulate_sparse_rhs_into(&a_j, &mut acc);
+                    Some(extent) => {
+                        for (offset, (b_j, &a_j)) in
+                            block.iter().zip(scalars.iter()).enumerate()
+                        {
+                            if !extent.ring_is_live(start + offset) {
+                                debug_assert!(b_j.is_zero());
+                                continue;
+                            }
+                            b_j.mul_accumulate_sparse_rhs_into(&a_j, &mut acc);
+                        }
+                    }
                 }
                 acc
             })
@@ -243,19 +265,25 @@ where
         macro_rules! project {
             ($k:expr) => {{
                 let params = SubfieldParams::<D, $k>::new()?;
-                cfg_iter!(source_rings)
-                    .enumerate()
-                    .map(|(ring_index, ring)| {
-                        if let Some(extent) = live_extent {
+                match live_extent {
+                    None => cfg_iter!(source_rings)
+                        .map(|ring| {
+                            psi_embed::<F, D, $k>(params, ring.coefficients())
+                                .map(|projected| *projected.coefficients())
+                        })
+                        .collect::<Result<Vec<_>, _>>()?,
+                    Some(extent) => cfg_iter!(source_rings)
+                        .enumerate()
+                        .map(|(ring_index, ring)| {
                             if !extent.ring_is_live(ring_index) {
                                 debug_assert!(ring.is_zero());
                                 return Ok([F::zero(); D]);
                             }
-                        }
-                        psi_embed::<F, D, $k>(params, ring.coefficients())
-                            .map(|projected| *projected.coefficients())
-                    })
-                    .collect::<Result<Vec<_>, _>>()?
+                            psi_embed::<F, D, $k>(params, ring.coefficients())
+                                .map(|projected| *projected.coefficients())
+                        })
+                        .collect::<Result<Vec<_>, _>>()?,
+                }
             }};
         }
         let coefficient_rows = match E::EXT_DEGREE {

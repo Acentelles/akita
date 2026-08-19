@@ -461,21 +461,28 @@ impl<F: FieldCore + CanonicalField> DensePoly<F> {
         let mut planes = vec![0i8; num_rings * num_digits * D];
         // Structurally-zero rings decompose to all-zero digit planes, which
         // the buffer already holds: skip them under a declared live extent.
-        let live_extent = self.live_extent;
-        cfg_chunks_mut!(planes, num_digits * D)
-            .zip(cfg_iter!(rings))
-            .enumerate()
-            .for_each(|(ring_index, (dst, ring))| {
-                if let Some(extent) = live_extent {
+        // The undeclared path keeps the exact original loop body.
+        match self.live_extent {
+            None => cfg_chunks_mut!(planes, num_digits * D)
+                .zip(cfg_iter!(rings))
+                .for_each(|(dst, ring)| {
+                    let (dst_planes, remainder) = dst.as_chunks_mut::<D>();
+                    debug_assert!(remainder.is_empty());
+                    ring.balanced_decompose_pow2_i8_into_with_params(dst_planes, &params);
+                }),
+            Some(extent) => cfg_chunks_mut!(planes, num_digits * D)
+                .zip(cfg_iter!(rings))
+                .enumerate()
+                .for_each(|(ring_index, (dst, ring))| {
                     if !extent.ring_is_live(ring_index) {
                         debug_assert!(ring.is_zero());
                         return;
                     }
-                }
-                let (dst_planes, remainder) = dst.as_chunks_mut::<D>();
-                debug_assert!(remainder.is_empty());
-                ring.balanced_decompose_pow2_i8_into_with_params(dst_planes, &params);
-            });
+                    let (dst_planes, remainder) = dst.as_chunks_mut::<D>();
+                    debug_assert!(remainder.is_empty());
+                    ring.balanced_decompose_pow2_i8_into_with_params(dst_planes, &params);
+                }),
+        }
         let _ = self.digit_cache.set(DenseDigitCache {
             ring_d: D,
             num_digits,
