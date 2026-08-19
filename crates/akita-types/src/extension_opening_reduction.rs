@@ -464,7 +464,10 @@ where
         });
     }
     let eta_weights = EqPolynomial::evals(eta)?;
-    let mut out = EqPolynomial::evals(tail_point)?;
+    // Prover-only path (see tensor_equality_factor_eval_at_point for the
+    // verifier counterpart): the tail table may legitimately exceed the
+    // verifier-reachable equality-table budget at large batch shapes.
+    let mut out = EqPolynomial::evals_prover_unbudgeted(tail_point)?;
     let project = |value: &mut E| {
         *value = project_tensor_factor_value::<F, E>(*value, &eta_weights, width)?;
         Ok::<(), AkitaError>(())

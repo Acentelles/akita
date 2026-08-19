@@ -211,6 +211,32 @@ impl<E: FieldCore> EqPolynomial<E> {
         Ok(evals)
     }
 
+    /// Prover-side variant of [`Self::evals`] without the materialized-table
+    /// budget. The budget exists to cap verifier-reachable allocations;
+    /// honest provers legitimately materialize large equality tables (for
+    /// example the extension-opening tail factor at large batch shapes,
+    /// which exceeds the budget from 2^27 extension elements). Never call
+    /// this from verifier-reachable code.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error on dimension overflow or allocation failure.
+    pub fn evals_prover_unbudgeted(r: &[E]) -> Result<Vec<E>, AkitaError> {
+        let size = Self::table_len(r.len())?;
+        let mut evals = Self::zero_vec("eq evaluation table (prover)", size)?;
+        evals[0] = E::one();
+        let mut len = 1usize;
+        for &t in r.iter().rev() {
+            for j in (0..len).rev() {
+                let (left, right) = Self::split_lagrange_parent(evals[j], t);
+                evals[2 * j] = left;
+                evals[2 * j + 1] = right;
+            }
+            len *= 2;
+        }
+        Ok(evals)
+    }
+
     /// Compute eq evaluations and cache intermediate tables.
     ///
     /// Returns `result` where `result[j]` contains evaluations for the prefix
