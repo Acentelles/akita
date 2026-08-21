@@ -133,11 +133,11 @@ impl<E: FieldCore> TensorEqualityFactor<E> {
         Ok(TensorFactorTransition { zero, one })
     }
 
-    pub(super) fn len(&self) -> usize {
+    pub(in crate::protocol::extension_opening_reduction) fn len(&self) -> usize {
         1usize << (self.table_vars - self.round)
     }
 
-    pub(super) fn is_ready_to_materialize(&self) -> bool {
+    pub(in crate::protocol::extension_opening_reduction) fn is_ready_to_materialize(&self) -> bool {
         self.round >= self.materialize_at
     }
 
@@ -217,7 +217,7 @@ impl<E: FieldCore> TensorEqualityFactor<E> {
             })
     }
 
-    pub(super) fn factor_at_index(&self, index: usize) -> E {
+    pub(in crate::protocol::extension_opening_reduction) fn factor_at_index(&self, index: usize) -> E {
         let low_bits = self.materialize_at.saturating_sub(self.round);
         if low_bits == 0 {
             return self.eval_state_at_suffix(&self.prefix_state, index);
@@ -228,7 +228,7 @@ impl<E: FieldCore> TensorEqualityFactor<E> {
         self.eval_state_at_suffix(&self.low_states[low], suffix_index)
     }
 
-    pub(super) fn fold_in_place(&mut self, r_round: E) {
+    pub(in crate::protocol::extension_opening_reduction) fn fold_in_place(&mut self, r_round: E) {
         if self.len() <= 1 {
             return;
         }
@@ -239,7 +239,7 @@ impl<E: FieldCore> TensorEqualityFactor<E> {
         self.rebuild_low_states();
     }
 
-    pub(super) fn materialize_dense(&self) -> Vec<E> {
+    pub(in crate::protocol::extension_opening_reduction) fn materialize_dense(&self) -> Vec<E> {
         debug_assert!(self.is_ready_to_materialize());
         let suffix_len = self.suffix_tables.first().map(Vec::len).unwrap_or(0);
         let _span = tracing::debug_span!(
@@ -291,7 +291,7 @@ impl<E: FieldCore + HasUnreducedOps> TensorEqualityFactor<E> {
     /// delayed accumulators, halving the column loads and tightening the loop
     /// without changing the accumulation order, so the result is byte-identical
     /// to two independent evaluations.
-    pub(super) fn factor_pair(&self, pair: usize) -> (E, E) {
+    pub(in crate::protocol::extension_opening_reduction) fn factor_pair(&self, pair: usize) -> (E, E) {
         let low_bits = self.materialize_at - self.round;
         debug_assert!(low_bits > 0);
         let rest_low_bits = low_bits - 1;

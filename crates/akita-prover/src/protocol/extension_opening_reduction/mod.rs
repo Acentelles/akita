@@ -145,4 +145,6 @@ pub use prover::ExtensionOpeningReductionProver;
 pub use sparse::{ExtensionOpeningReductionTerm, SparseExtensionOpeningWitness};
 
 pub(crate) use dense::accumulate_dense_round;
-pub(in crate::protocol::extension_opening_reduction) use dense::fused_fold_and_accumulate;
+pub(in crate::protocol::extension_opening_reduction) use dense::{
+    accumulate_dense_round_with_factor_fn, dense_claim_with_factor_fn, fused_fold_and_accumulate,
+};

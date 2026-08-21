@@ -58,6 +58,49 @@ impl<E: FieldCore> ExtensionOpeningReductionTerm<E> {
         })
     }
 
+    /// Construct one dense-witness term with a lazy transparent tensor factor.
+    ///
+    /// The factor is the same `(tail_point, eta)` equality table
+    /// [`Self::new_with_shared_factor`] materializes, kept as its exact
+    /// multilinear folding state instead: no full-size table is built and no
+    /// factor table is folded through the large rounds. Values, and therefore
+    /// proofs, are byte-identical.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if the tensor factor shape and witness length differ,
+    /// or if the tensor opening parameters are malformed.
+    pub fn new_with_lazy_factor<F>(
+        witness_evals: Vec<E>,
+        tail_point: Vec<E>,
+        eta: Vec<E>,
+        coeff: E,
+        materialize_at: usize,
+    ) -> Result<Self, AkitaError>
+    where
+        F: FieldCore,
+        E: ExtField<F>,
+    {
+        let factor = TensorEqualityFactor::new::<F>(tail_point, eta, materialize_at)?;
+        if witness_evals.len() != factor.len() {
+            return Err(AkitaError::InvalidSize {
+                expected: witness_evals.len(),
+                actual: factor.len(),
+            });
+        }
+        if factor.is_ready_to_materialize() {
+            return Self::new(witness_evals, factor.materialize_dense(), coeff);
+        }
+        Ok(Self {
+            tables: ExtensionOpeningTables::Dense {
+                witness: witness_evals,
+                factor: DenseEorFactor::Lazy(factor),
+            },
+            coeff,
+            cached_accumulate: None,
+        })
+    }
+
     /// Construct one sparse-witness term `coeff * sum_x witness(x) * factor(x)`.
     ///
     /// # Errors

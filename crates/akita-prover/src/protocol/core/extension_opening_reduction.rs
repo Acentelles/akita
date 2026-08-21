@@ -455,10 +455,28 @@ where
 {
     let _span =
         tracing::info_span!("extension_opening_dense_witnesses", num_terms = polys.len()).entered();
-    // One transparent factor table per batch: every term uses the same
-    // (tail_point, eta) equality table, and the terms fold under the same
-    // challenges, so the full-size table is built once and shared.
-    let factor_evals = std::sync::Arc::new(tensor_equality_factor_evals::<F, E>(tail_point, eta)?);
+    // The transparent (tail_point, eta) equality factor of every term of one
+    // batch is the same function under the same fold challenges. With lazy
+    // rounds available it is kept as its exact multilinear folding state (no
+    // full-size table build, no factor folding through the large rounds;
+    // identical values, byte-identical proofs). At zero lazy rounds the
+    // full-size table is built once and shared, as before.
+    let lazy_rounds = tail_point.len().min(SPARSE_TENSOR_FACTOR_MAX_LAZY_ROUNDS);
+    if lazy_rounds == 0 {
+        let factor_evals =
+            std::sync::Arc::new(tensor_equality_factor_evals::<F, E>(tail_point, eta)?);
+        return polys
+            .iter()
+            .zip(row_coefficients.iter().copied())
+            .map(|(poly, coeff)| {
+                let witness = {
+                    let _s = tracing::info_span!("eor_packed_witness").entered();
+                    TensorProjectionKernel::packed_witness(backend, prepared, poly.tensor_view()?)?
+                };
+                extension_opening_term_from_packed_witness::<F, E>(witness, &factor_evals, coeff)
+            })
+            .collect();
+    }
     polys
         .iter()
         .zip(row_coefficients.iter().copied())
@@ -467,7 +485,26 @@ where
                 let _s = tracing::info_span!("eor_packed_witness").entered();
                 TensorProjectionKernel::packed_witness(backend, prepared, poly.tensor_view()?)?
             };
-            extension_opening_term_from_packed_witness::<F, E>(witness, &factor_evals, coeff)
+            match witness {
+                TensorPackedWitness::Dense(witness_evals) => {
+                    ExtensionOpeningReductionTerm::new_with_lazy_factor::<F>(
+                        witness_evals,
+                        tail_point.to_vec(),
+                        eta.to_vec(),
+                        coeff,
+                        lazy_rounds,
+                    )
+                }
+                TensorPackedWitness::Sparse(witness_evals) => {
+                    ExtensionOpeningReductionTerm::new_sparse_tensor_factor::<F>(
+                        witness_evals,
+                        tail_point.to_vec(),
+                        eta.to_vec(),
+                        coeff,
+                        lazy_rounds,
+                    )
+                }
+            }
         })
         .collect()
 }

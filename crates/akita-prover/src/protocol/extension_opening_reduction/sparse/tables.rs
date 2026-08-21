@@ -7,9 +7,16 @@ use super::*;
 /// shared; the first fold writes a fresh half-size owned table (identical
 /// values to an in-place fold) and later rounds fold in place.
 #[derive(Debug, Clone)]
-pub(in crate::protocol::extension_opening_reduction) enum DenseEorFactor<E> {
+pub(in crate::protocol::extension_opening_reduction) enum DenseEorFactor<E: FieldCore> {
     Shared(std::sync::Arc<Vec<E>>),
     Owned(Vec<E>),
+    /// Transparent lazy tensor factor for a DENSE witness: the exact
+    /// multilinear folding state of the same `(tail_point, eta)` equality
+    /// table the other variants materialize, folded per round in `O(width^2)`
+    /// state updates and read by pair lookup. Materializes into
+    /// [`Self::Owned`] at its split depth. Values are identical to the
+    /// materialized table's at every round, so proofs are byte-identical.
+    Lazy(TensorEqualityFactor<E>),
 }
 
 impl<E: FieldCore> DenseEorFactor<E> {
@@ -17,16 +24,33 @@ impl<E: FieldCore> DenseEorFactor<E> {
         match self {
             Self::Shared(factor) => factor,
             Self::Owned(factor) => factor,
+            Self::Lazy(_) => unreachable!(
+                "lazy dense EOR factors have no materialized table; use the lookup paths"
+            ),
+        }
+    }
+
+    pub(in crate::protocol::extension_opening_reduction) fn len(&self) -> usize {
+        match self {
+            Self::Shared(factor) => factor.len(),
+            Self::Owned(factor) => factor.len(),
+            Self::Lazy(factor) => factor.len(),
         }
     }
 }
 
-impl<E: FieldCore + HasOptimizedFold> DenseEorFactor<E> {
+impl<E: FieldCore + HasUnreducedOps + HasOptimizedFold> DenseEorFactor<E> {
     pub(in crate::protocol::extension_opening_reduction) fn fold_in_place(&mut self, r_round: E) {
         match self {
             Self::Owned(factor) => fold_evals_in_place(factor, r_round),
             Self::Shared(factor) => {
                 *self = Self::Owned(fold_evals_shared(factor, r_round));
+            }
+            Self::Lazy(factor) => {
+                factor.fold_in_place(r_round);
+                if factor.is_ready_to_materialize() {
+                    *self = Self::Owned(factor.materialize_dense());
+                }
             }
         }
     }
@@ -115,6 +139,20 @@ impl<E: FieldCore> ExtensionOpeningTables<E> {
 
     pub(in crate::protocol::extension_opening_reduction) fn claim(&self) -> Result<E, AkitaError> {
         match self {
+            Self::Dense {
+                witness,
+                factor: DenseEorFactor::Lazy(factor),
+            } => {
+                if witness.len() != factor.len() {
+                    return Err(AkitaError::InvalidSize {
+                        expected: witness.len(),
+                        actual: factor.len(),
+                    });
+                }
+                Ok(dense_claim_with_factor_fn(witness, |idx| {
+                    factor.factor_at_index(idx)
+                }))
+            }
             Self::Dense { witness, factor } => {
                 extension_opening_reduction_claim(witness, factor.as_slice())
             }
@@ -138,6 +176,10 @@ impl<E: FieldCore> ExtensionOpeningTables<E> {
         &self,
     ) -> Option<(E, E)> {
         match self {
+            Self::Dense {
+                factor: DenseEorFactor::Lazy(_),
+                ..
+            } => None,
             Self::Dense { witness, factor } => {
                 let factor = factor.as_slice();
                 (factor.len() == 1 && witness.len() == 1).then(|| (witness[0], factor[0]))
@@ -170,6 +212,18 @@ impl<E: FieldCore + HasUnreducedOps> ExtensionOpeningTables<E> {
         quadratic: &mut E,
     ) {
         match self {
+            Self::Dense {
+                witness,
+                factor: DenseEorFactor::Lazy(factor),
+            } => {
+                let (round_constant, round_quadratic) = accumulate_dense_round_with_factor_fn(
+                    witness,
+                    |pair| factor.factor_pair(pair),
+                    coeff,
+                );
+                *constant += round_constant;
+                *quadratic += round_quadratic;
+            }
             Self::Dense { witness, factor } => {
                 let (round_constant, round_quadratic) =
                     accumulate_dense_round(witness, factor.as_slice(), coeff);
