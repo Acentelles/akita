@@ -52,6 +52,27 @@ where
     let s = geometry.challenge_subring_dimension();
     let stride = geometry.subring_embedding_stride();
 
+    // The same position and packing weights apply in every subring lane
+    // and every block. Distribute their product before touching source data.
+    let live_weight_rows = point
+        .num_live_positions()
+        .min(point.num_positions_per_block());
+    let weight_len =
+        akita_error::checked::product([live_weight_rows, stride]).ok_or_else(|| {
+            AkitaError::InvalidInput("coefficient-packing weight length overflow".into())
+        })?;
+    let mut combined_weights = zero_vec::<E>(weight_len)?;
+    for (position_in_block, row) in combined_weights.chunks_exact_mut(stride).enumerate() {
+        let position_weight = point.position_weights()[position_in_block];
+        for (destination, &packing_weight) in row.iter_mut().zip(point.packing_weights()) {
+            *destination = position_weight * packing_weight;
+        }
+    }
+
+    if std::env::var_os("PCS_TRACE").is_some() {
+        eprintln!("[akita] precombined packing weights: variables={source_num_vars}, positions={live_weight_rows}, stride={stride}");
+    }
+
     let block_coordinates = cfg_into_iter!(0..num_blocks)
         .map(|block_index| {
             let first_position = block_index
@@ -70,7 +91,8 @@ where
                     .checked_add(position_in_block)
                     .ok_or(AkitaError::InvalidProof)?;
                 let source_position = position_at(position)?;
-                let position_weight = point.position_weights()[position_in_block];
+                let weights =
+                    &combined_weights[position_in_block * stride..(position_in_block + 1) * stride];
                 for (subring_index, accumulator) in packed.iter_mut().enumerate() {
                     let subring_offset = subring_index.checked_mul(stride).ok_or_else(|| {
                         AkitaError::InvalidInput(
@@ -78,7 +100,7 @@ where
                         )
                     })?;
                     let mut packed_position = E::zero();
-                    for (low_index, &packing_weight) in point.packing_weights().iter().enumerate() {
+                    for (low_index, &packing_weight) in weights.iter().enumerate() {
                         let coefficient_index = subring_offset + low_index;
                         let source = coefficient(
                             position,
@@ -87,7 +109,7 @@ where
                         );
                         packed_position += packing_weight.mul_base(source);
                     }
-                    *accumulator += position_weight * packed_position;
+                    *accumulator += packed_position;
                 }
             }
 
