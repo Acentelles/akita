@@ -242,14 +242,27 @@ impl<F: FieldCore, C: FpExt2Config<F>> SubAssign for FpExt2<F, C> {
         self.coeffs[1] = self.coeffs[1] - rhs.coeffs[1];
     }
 }
+/// Canonical scalar fallback shared by the default hook and specializations.
+#[inline(always)]
+pub(crate) fn fp_ext2_mul_generic<F: FieldCore, C: FpExt2Config<F>>(
+    a0: F,
+    a1: F,
+    b0: F,
+    b1: F,
+) -> (F, F) {
+    let v0 = a0 * b0;
+    let v1 = a1 * b1;
+    let cross = (a0 + a1) * (b0 + b1);
+    (v0 + C::mul_non_residue(v1, |base| base), cross - v0 - v1)
+}
+
 impl<F: FieldCore, C: FpExt2Config<F>> Mul for FpExt2<F, C> {
     type Output = Self;
     #[inline(always)]
     fn mul(self, rhs: Self) -> Self::Output {
-        let v0 = self.coeffs[0] * rhs.coeffs[0];
-        let v1 = self.coeffs[1] * rhs.coeffs[1];
-        let cross = (self.coeffs[0] + self.coeffs[1]) * (rhs.coeffs[0] + rhs.coeffs[1]);
-        Self::new(v0 + Self::mul_nr(v1), cross - v0 - v1)
+        let (c0, c1) =
+            F::fp_ext2_mul::<C>(self.coeffs[0], self.coeffs[1], rhs.coeffs[0], rhs.coeffs[1]);
+        Self::new(c0, c1)
     }
 }
 impl<F: FieldCore, C: FpExt2Config<F>> MulAssign for FpExt2<F, C> {

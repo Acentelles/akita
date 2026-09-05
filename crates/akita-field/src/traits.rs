@@ -70,6 +70,19 @@ pub trait Invertible: RingCore {
 
 /// Core field capability: a ring that is also invertible.
 pub trait FieldCore: RingCore + Invertible {
+    /// Multiply quadratic-extension coefficient pairs over this base field.
+    ///
+    /// This is the scalar counterpart of `PackedField::fp_ext2_mul`. The
+    /// default uses the ordinary Karatsuba formula; base fields may specialize
+    /// it while preserving the configured non-residue and canonical result.
+    #[inline(always)]
+    fn fp_ext2_mul<C>(a0: Self, a1: Self, b0: Self, b1: Self) -> (Self, Self)
+    where
+        C: crate::ext::FpExt2Config<Self>,
+    {
+        crate::ext::fp_ext2_mul_generic::<Self, C>(a0, a1, b0, b1)
+    }
+
     /// Multiply and add, equivalent to `self * rhs + addend`.
     ///
     /// The default preserves the ordinary field-operation semantics. Fields

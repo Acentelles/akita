@@ -87,7 +87,6 @@ impl_prime_native_algebra!(Fp64<P: u64>, from_canonical_u64);
 impl_prime_native_algebra!(Fp128<P: u128>, from_canonical_u128);
 
 impl<const P: u32> FieldCore for Fp32<P> {}
-impl<const P: u64> FieldCore for Fp64<P> {}
 impl<const P: u128> FieldCore for Fp128<P> {
     #[inline(always)]
     fn mul_add(self, rhs: Self, addend: Self) -> Self {

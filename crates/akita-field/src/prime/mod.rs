@@ -9,6 +9,7 @@
 pub(crate) mod fp128;
 pub(crate) mod fp32;
 pub(crate) mod fp64;
+mod fp64_ext2;
 mod native_algebra;
 mod native_capability;
 pub(crate) mod pseudo_mersenne;

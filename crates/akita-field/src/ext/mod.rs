@@ -31,6 +31,7 @@ use std::io::{Read, Write};
 use std::marker::PhantomData;
 use std::ops::{Add, AddAssign, Mul, MulAssign, Neg, Sub, SubAssign};
 
+pub(crate) use fp_ext2::fp_ext2_mul_generic;
 pub use fp_ext2::{Ext2, FpExt2, FpExt2Config, FpExt2NonResidueKind, NegOneNr, TwoNr};
 pub use fp_ext4::{FpExt4, FpExt4MulBackend};
 pub(crate) use fp_ext8::{fp_ext8_mul_schedule, fp_ext8_square_schedule};
