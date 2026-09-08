@@ -12,6 +12,8 @@ use akita_types::{
     CommittedGroupParams, OpeningFamily, RelationRowGeometry, RingRelationGroupOpening, RingVec,
 };
 
+mod tiled_a;
+
 #[inline]
 fn accumulate_small_signed<F: FieldCore + FromPrimitiveInt>(dst: &mut F, value: F, coeff: i64) {
     match coeff {
@@ -238,12 +240,21 @@ where
     let log_basis_outer = group.params.log_basis_outer();
     let log_basis_open = group.params.log_basis_open();
     let challenges = group_opening.ambient_a_challenges();
+    let _group_span = tracing::info_span!(
+        "relation_quotient.a_group",
+        ring_dimension = D,
+        a_rows = n_a,
+        challenge_count = challenges.len(),
+        tiled = cfg!(feature = "tiled-a-quotient")
+    )
+    .entered();
     let recomposed_inner_rows = group.recomposed_inner_rows.as_ring_slice::<D>()?;
     let (z_centered, z_remainder) = group.z_centered.as_chunks::<D>();
     if !z_remainder.is_empty() || z_centered.len() != inner_width {
         return Err(AkitaError::InvalidProof);
     }
 
+    let rows_span = tracing::info_span!("relation_quotient.a_relation_rows").entered();
     let relation_rows = RingSwitchRelationKernel::relation_rows(
         backend,
         prepared,
@@ -262,6 +273,7 @@ where
         },
     )
     .map_err(|err| AkitaError::InvalidInput(format!("A quotient rows failed: {err:?}")))?;
+    drop(rows_span);
     if !relation_rows.d_negacyclic.is_empty()
         || !relation_rows.d_cyclic.is_empty()
         || !relation_rows.b_cyclic.is_empty()
@@ -271,6 +283,7 @@ where
     }
     let a_quotients = relation_rows.a_quotients;
 
+    let consistency_span = tracing::info_span!("relation_quotient.consistency").entered();
     let consistency_quotient = match &group.folded_opening {
         OpeningFamily::EvaluationTrace(e_folded)
             if group_opening.coefficient_packing_geometry().is_none() =>
@@ -312,18 +325,37 @@ where
             ));
         }
     };
+    drop(consistency_span);
 
     let num_live_blocks_per_claim = group.params.num_live_blocks();
+    let _sparse_span = tracing::info_span!("relation_quotient.a_sparse_high_halves").entered();
+    let mut tiled_rows = if cfg!(feature = "tiled-a-quotient") {
+        Some(
+            tiled_a::accumulate_a_high_halves::<F, D>(
+                challenges,
+                recomposed_inner_rows,
+                n_a,
+                true,
+            )?
+            .into_iter(),
+        )
+    } else {
+        None
+    };
     let mut a_rows = Vec::with_capacity(n_a);
     for (a_idx, a_q) in a_quotients.iter().enumerate() {
-        let mut quotient = parallel_high_half_accumulate::<F, _, D>(challenges, |i| {
-            let claim_idx = i / num_live_blocks_per_claim;
-            let block_idx = i % num_live_blocks_per_claim;
-            let inner_idx = claim_idx * num_live_blocks_per_claim + block_idx;
-            recomposed_inner_rows
-                .get(inner_idx.checked_mul(n_a)?.checked_add(a_idx)?)
-                .copied()
-        })?;
+        let mut quotient = if let Some(rows) = &mut tiled_rows {
+            rows.next().ok_or(AkitaError::InvalidProof)?
+        } else {
+            parallel_high_half_accumulate::<F, _, D>(challenges, |i| {
+                let claim_idx = i / num_live_blocks_per_claim;
+                let block_idx = i % num_live_blocks_per_claim;
+                let inner_idx = claim_idx * num_live_blocks_per_claim + block_idx;
+                recomposed_inner_rows
+                    .get(inner_idx.checked_mul(n_a)?.checked_add(a_idx)?)
+                    .copied()
+            })?
+        };
         for (dst, src) in quotient.iter_mut().zip(a_q.coefficients()) {
             *dst -= *src;
         }
@@ -613,6 +645,13 @@ where
                     t_hat_planes.chunks(planes_per_claim),
                     &slice_geometry,
                     |slice_input| {
+                        let _span = tracing::info_span!(
+                            "relation_quotient.b_relation_rows",
+                            ring_dimension = D_B,
+                            b_rows = physical_n_b,
+                            t_hat_planes = slice_input.len()
+                        )
+                        .entered();
                         let b_rows = RingSwitchRelationKernel::relation_rows(
                             backend,
                             prepared,

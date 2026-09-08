@@ -60,6 +60,8 @@ transcript-keccak = [
 schedules-default = ["akita-config/schedules-default"]
 logging-transcript = ["akita-transcript/logging-transcript"]
 response-model-diagnostics = []
+# Same-proof tiled sparse A-row quotient accumulation; opt-in experiment.
+tiled-a-quotient = []
 parallel = [
   "dep:rayon",
   "akita-challenges/parallel",

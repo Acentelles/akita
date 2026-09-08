@@ -139,6 +139,7 @@ logging-transcript = [
   "akita-prover/logging-transcript",
 ]
 response-model-diagnostics = ["akita-prover/response-model-diagnostics"]
+tiled-a-quotient = ["akita-prover/tiled-a-quotient"]
 [dependencies]
 akita-error = { version = "0.1.0", path = "../akita-error" }
 akita-algebra = { version = "0.1.0", path = "../akita-algebra" }
