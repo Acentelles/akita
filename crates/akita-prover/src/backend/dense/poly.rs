@@ -14,6 +14,7 @@ use std::mem::size_of;
 use std::sync::OnceLock;
 
 const MAX_DENSE_DIGIT_CACHE_BYTES: usize = 512 * 1024 * 1024;
+const CACHE_CHUNK: usize = 1 << 14;
 
 /// Minimum physical flat coefficient length.
 ///
@@ -178,11 +179,21 @@ impl<F: FieldCore + CanonicalField> DensePoly<F> {
         // Padding zeros are centered-0 (trivially small-i8), so a poly whose
         // live coefficients are all small stays all-small — identical to the
         // old per-ring check over the zero-padded last ring.
+        let cache_span =
+            tracing::debug_span!("akita.dense.small_cache", coefficients = expected_len).entered();
         let q = (-F::one()).to_canonical_u128() + 1;
         let half_q = q / 2;
         let mut small_i8_coeffs = Vec::with_capacity(physical_len);
         let mut all_small_i8 = true;
-        for coeff in evals.iter() {
+        // Reject ordinary wide-field inputs before initializing the full cache.
+        // Large all-small tables then fill disjoint chunks on the current pool.
+        // Keep the original sequential path when parallelism is disabled.
+        let serial_len = if cfg!(feature = "parallel") && expected_len >= 4 * CACHE_CHUNK {
+            CACHE_CHUNK
+        } else {
+            expected_len
+        };
+        for coeff in &evals[..serial_len] {
             if let Some(centered) = try_centered_i8(*coeff, q, half_q) {
                 small_i8_coeffs.push(centered);
             } else {
@@ -192,7 +203,20 @@ impl<F: FieldCore + CanonicalField> DensePoly<F> {
         }
         if all_small_i8 {
             small_i8_coeffs.resize(physical_len, 0);
+            all_small_i8 = cfg_chunks_mut!(small_i8_coeffs[serial_len..expected_len], CACHE_CHUNK)
+                .zip(cfg_chunks!(evals[serial_len..], CACHE_CHUNK))
+                .all(|(out, values)| {
+                    for (out, &value) in out.iter_mut().zip(values) {
+                        let Some(centered) = try_centered_i8(value, q, half_q) else {
+                            return false;
+                        };
+                        *out = centered;
+                    }
+                    true
+                });
         }
+
+        drop(cache_span);
 
         // Reuse an owned evaluation vector. Borrowed inputs pay the same
         // single copy as before, while profile and application builders can
