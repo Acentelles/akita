@@ -326,6 +326,32 @@ fn consumed_packing_groups_merge_without_reencoding_sources() {
     let combined = combined.expect("two nonempty packing batches");
     assert_eq!(combined.source_count(), 4);
     assert_eq!(combined.materialize_dense(), expected);
+
+    let coeff_count = first
+        .relation_plan
+        .relation_address_geometry()
+        .relation_coefficient_block_len();
+    let ring_bits = coeff_count.trailing_zeros() as usize;
+    let live_columns = expected.len() / coeff_count;
+    let col_bits = live_columns.next_power_of_two().trailing_zeros() as usize;
+    let w: Vec<i8> = (0..expected.len()).map(|i| (i % 4) as i8 - 2).collect();
+    let alpha: Vec<E> = (0..coeff_count)
+        .map(|i| E::from_u64(103 + i as u64))
+        .collect();
+    let rows: Vec<E> = (0..1 << col_bits)
+        .map(|i| E::from_u64(211 + i as u64))
+        .collect();
+    let point: Vec<E> = (0..col_bits + ring_bits)
+        .map(|i| E::from_u64(307 + i as u64))
+        .collect();
+    let dense = PreparedProverLinearTerms::from_dense(expected, live_columns, coeff_count);
+    let build = |terms| {
+        crate::protocol::sumcheck::two_round_prefix::
+        build_stage2_bivariate_skip_proof_from_m_compact(
+            &w, &alpha, &rows, terms, &point, 4, live_columns, col_bits, ring_bits,
+        )
+    };
+    assert_eq!(build(&combined), build(&dense));
 }
 
 #[test]

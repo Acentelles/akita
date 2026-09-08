@@ -4,7 +4,7 @@ use super::stage2::*;
 use crate::protocol::sumcheck::digit_range::direct_range_leaf::LowBasisRangeCheckProver;
 use crate::protocol::sumcheck::relation_range_image::PreparedProverLinearTerms;
 use akita_algebra::eq_poly::EqPolynomial;
-use akita_field::{FieldCore, Prime128Offset275};
+use akita_field::{FieldCore, FromPrimitiveInt, Prime128Offset275};
 use akita_serialization::{AkitaDeserialize, AkitaSerialize};
 use akita_sumcheck::{EqFactoredSumcheckInstanceProver, EqFactoredUniPoly, UniPoly};
 use akita_types::{DigitRangeEqualityPoint, DigitRangePlan};
@@ -247,7 +247,7 @@ fn build_stage1_bivariate_skip_proof_from_m_compact_reference(
 }
 
 #[allow(clippy::too_many_arguments)]
-fn build_stage2_bivariate_skip_proof_from_m_compact_reference(
+fn build_stage2_bivariate_skip_proof_from_m_compact_reference<F: FieldCore + FromPrimitiveInt>(
     w_compact: &[i8],
     alpha_evals_y: &[F],
     relation_matrix_col_evals: &[F],
@@ -653,6 +653,111 @@ fn stage2_bivariate_skip_proof_builder_matches_reference_large_odd_randomized() 
             ring_bits,
         ),
     );
+}
+
+#[test]
+fn stage2_factored_norm_matches_direct_grid_fp64_extension() {
+    use crate::protocol::sumcheck::relation_range_image::{
+        StructuredLinearSegment, StructuredLinearTerm, StructuredLinearWeights,
+    };
+    use akita_field::{Ext2, Prime64Offset59};
+    type E = Ext2<Prime64Offset59>;
+    let sample = |index: usize| {
+        let n = index as u64;
+        E::new(
+            Prime64Offset59::from_u64(n.wrapping_mul(0xd6e8_feb8_6659_fd93)),
+            Prime64Offset59::from_u64(n.wrapping_mul(0xa076_1d64_78bd_642f).wrapping_add(1)),
+        )
+    };
+    let live_x_cols = 19;
+    let col_bits = 5;
+    for b in [4, 8] {
+        for ring_bits in [2, 7, 9] {
+            let y_len = 1 << ring_bits;
+            let w: Vec<i8> = (0..live_x_cols * y_len)
+                .map(|i| ((i * 37 + i / 3 + 11) % b) as i8 - (b / 2) as i8)
+                .collect();
+            let alpha: Vec<E> = (0..y_len).map(|i| sample(i + 13)).collect();
+            let rows: Vec<E> = (0..1 << col_bits).map(|i| sample(i + 29)).collect();
+            let source: Vec<E> = (0..w.len()).map(|i| sample(i + 101)).collect();
+            let first_factor = sample(501);
+            let second_factor = sample(709);
+            let weights = StructuredLinearWeights {
+                sources: vec![source.clone().into()],
+                segments: vec![
+                    StructuredLinearSegment {
+                        physical_coefficient_start: 0,
+                        source_coefficient_start: 0,
+                        coefficient_count: 12 * y_len,
+                    },
+                    StructuredLinearSegment {
+                        physical_coefficient_start: 5 * y_len,
+                        source_coefficient_start: 2 * y_len,
+                        coefficient_count: 8 * y_len,
+                    },
+                ],
+                terms: vec![
+                    StructuredLinearTerm {
+                        factor: first_factor,
+                        source_index: 0,
+                        segment_range: 0..1,
+                    },
+                    StructuredLinearTerm {
+                        factor: second_factor,
+                        source_index: 0,
+                        segment_range: 1..2,
+                    },
+                ],
+                physical_field_len: w.len(),
+            };
+            let terms =
+                PreparedProverLinearTerms::from_structured_weights(&weights, y_len).unwrap();
+            // Independent dense expansion includes overlapping support and
+            // six completely empty lanes.
+            let mut trace = vec![E::zero(); w.len()];
+            for i in 0..12 * y_len {
+                trace[i] += first_factor * source[i];
+            }
+            for i in 0..8 * y_len {
+                trace[5 * y_len + i] += second_factor * source[2 * y_len + i];
+            }
+            // Non-base-field challenges exercise extension products. Boolean
+            // first coordinates select each possible omitted norm corner.
+            for corner in 0..5 {
+                let mut point: Vec<E> = (0..col_bits + ring_bits).map(|i| sample(i + 61)).collect();
+                if corner < 4 {
+                    point[0] = E::from_u64((corner >> 1) as u64);
+                    point[1] = E::from_u64((corner & 1) as u64);
+                }
+                let actual = build_stage2_bivariate_skip_proof_from_m_compact(
+                    &w,
+                    &alpha,
+                    &rows,
+                    &terms,
+                    &point,
+                    b,
+                    live_x_cols,
+                    col_bits,
+                    ring_bits,
+                );
+                let reference = build_stage2_bivariate_skip_proof_from_m_compact_reference(
+                    &w,
+                    &alpha,
+                    &rows,
+                    Some(&trace),
+                    &point,
+                    b,
+                    live_x_cols,
+                    col_bits,
+                    ring_bits,
+                );
+                assert_eq!(
+                    actual, reference,
+                    "basis={b}, ring_bits={ring_bits}, corner={corner}"
+                );
+            }
+        }
+    }
 }
 
 #[test]

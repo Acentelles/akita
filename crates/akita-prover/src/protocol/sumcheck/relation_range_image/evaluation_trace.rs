@@ -752,18 +752,18 @@ impl<E: FieldCore> PreparedProverLinearTerms<E> {
         Ok(())
     }
 
+    /// Visit the exact source slices and scalar factors supported by one lane.
+    /// Consumers that are linear in the source can apply each factor after
+    /// their inner reduction instead of multiplying every coefficient.
     #[inline]
-    fn values_in_lane<const N: usize>(&self, lane: usize, coefficients: [usize; N]) -> [E; N] {
-        let mut values = [E::zero(); N];
+    pub(crate) fn for_each_lane_source(&self, lane: usize, mut visit: impl FnMut(E, &[E])) {
         match &self.lane_weights {
             PreparedLaneWeights::Dense(dense) => {
-                if self.coeff_count == 1 && coefficients.iter().all(|&coefficient| coefficient == 0)
-                {
-                    if let Some(&value) = dense.get(lane) {
-                        values.fill(value);
+                if self.coeff_count == 1 {
+                    if let Some(value) = dense.get(lane) {
+                        visit(E::one(), std::slice::from_ref(value));
                     }
                 }
-                values
             }
             PreparedLaneWeights::Packing(packing) => {
                 packing.for_each_segment(lane, |segment_index| {
@@ -780,37 +780,45 @@ impl<E: FieldCore> PreparedProverLinearTerms<E> {
                         return;
                     };
                     let source_lane = segment.source_lane_start + lane_offset;
-                    let source_lane_start = source_lane * self.coeff_count;
-                    for (value, coefficient) in values.iter_mut().zip(coefficients) {
-                        if let Some(source_value) =
-                            source.values.get(source_lane_start + coefficient)
-                        {
-                            *value += segment.factor * *source_value;
-                        }
+                    let start = source_lane * self.coeff_count;
+                    if let Some(values) = source.values.get(start..start + self.coeff_count) {
+                        visit(segment.factor, values);
                     }
                 });
-                values
             }
             PreparedLaneWeights::Sparse(lane_terms) => {
                 let Some(terms) = lane_terms.get(lane) else {
-                    return values;
+                    return;
                 };
                 for term in terms {
                     let Some(source) = self.sources.get(term.source_index) else {
                         continue;
                     };
-                    let source_lane_start = term.lane * self.coeff_count;
-                    for (value, coefficient) in values.iter_mut().zip(coefficients) {
-                        if let Some(source_value) =
-                            source.values.get(source_lane_start + coefficient)
-                        {
-                            *value += term.factor * *source_value;
-                        }
+                    let start = term.lane * self.coeff_count;
+                    if let Some(values) = source.values.get(start..start + self.coeff_count) {
+                        visit(term.factor, values);
                     }
                 }
-                values
             }
         }
+    }
+
+    #[inline]
+    fn values_in_lane<const N: usize>(&self, lane: usize, coefficients: [usize; N]) -> [E; N] {
+        let mut values = [E::zero(); N];
+        if matches!(self.lane_weights, PreparedLaneWeights::Dense(_))
+            && coefficients.iter().any(|&coefficient| coefficient != 0)
+        {
+            return values;
+        }
+        self.for_each_lane_source(lane, |factor, source| {
+            for (value, coefficient) in values.iter_mut().zip(coefficients) {
+                if let Some(source_value) = source.get(coefficient) {
+                    *value += factor * *source_value;
+                }
+            }
+        });
+        values
     }
 
     #[inline]
@@ -849,11 +857,6 @@ impl<E: FieldCore> PreparedProverLinearTerms<E> {
                 self.get(lane0 + 1, 0, coeff_count),
             )
         }
-    }
-
-    pub(crate) fn quad_at(&self, lane: usize, base: usize, coeff_count: usize) -> [E; 4] {
-        debug_assert_eq!(self.coeff_count, coeff_count);
-        self.values_in_lane(lane, [base, base + 1, base + 2, base + 3])
     }
 
     pub(crate) fn validate_len(&self, witness_len: usize) -> Result<(), AkitaError> {
