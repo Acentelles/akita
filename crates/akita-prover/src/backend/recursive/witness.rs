@@ -867,13 +867,14 @@ where
                         plan,
                         view.num_vars(),
                         |position| view.coeffs.get(position).ok_or(AkitaError::InvalidProof),
-                        |position, coefficient_index, coefficient| {
+                        |weight, position, coefficient_index, coefficient| {
                             let flat_index = position * D + coefficient_index;
-                            if flat_index < view.live_coeff_len {
+                            let source = if flat_index < view.live_coeff_len {
                                 F::from_i8(coefficient)
                             } else {
                                 F::zero()
-                            }
+                            };
+                            weight.mul_base(source)
                         },
                     )?;
                 SubringCoefficientPackingPartials::new(

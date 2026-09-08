@@ -3,7 +3,7 @@
 use crate::compute::SubringCoefficientPackingPlan;
 use akita_error::AkitaError;
 use akita_field::parallel::*;
-use akita_field::{ExtField, FieldCore};
+use akita_field::{ExtField, FieldCore, FromPrimitiveInt};
 use akita_types::FpExtEncoding;
 
 fn zero_vec<T: FieldCore>(len: usize) -> Result<Vec<T>, AkitaError> {
@@ -17,6 +17,23 @@ fn zero_vec<T: FieldCore>(len: usize) -> Result<Vec<T>, AkitaError> {
     Ok(values)
 }
 
+/// Weight an exact signed-byte coefficient without multiplying common digits.
+#[inline]
+pub(super) fn weighted_i8<F, E>(weight: E, coefficient: i8) -> E
+where
+    F: FieldCore + FromPrimitiveInt,
+    E: ExtField<F>,
+{
+    match coefficient {
+        0 => E::zero(),
+        1 => weight,
+        -1 => -weight,
+        2 => weight + weight,
+        -2 => -(weight + weight),
+        _ => weight.mul_base(F::from_i8(coefficient)),
+    }
+}
+
 /// Construct canonical partials from an A-ring position source.
 ///
 /// The checked source callback runs once per position. The arithmetic kernel
@@ -24,12 +41,21 @@ fn zero_vec<T: FieldCore>(len: usize) -> Result<Vec<T>, AkitaError> {
 /// fallible callback in its innermost multiply-accumulate loop. This helper is
 /// shared by dense and recursive representations; sparse representations may
 /// implement a direct scatter while comparing against this path in tests.
-#[tracing::instrument(skip_all, name = "coefficient_packing_partials")]
+#[tracing::instrument(
+    skip_all,
+    name = "coefficient_packing_partials",
+    fields(
+        source_element_bytes = std::mem::size_of::<S>(),
+        source_num_vars,
+        ring_count = plan.point.num_live_positions(),
+        ring_degree = D,
+    )
+)]
 pub(super) fn partials_from_position_source<'a, F, E, S, const D: usize>(
     plan: SubringCoefficientPackingPlan<'_, E>,
     source_num_vars: usize,
     position_at: impl Fn(usize) -> Result<&'a [S; D], AkitaError> + Sync,
-    coefficient: impl Fn(usize, usize, S) -> F + Sync,
+    weighted_coefficient: impl Fn(E, usize, usize, S) -> E + Sync,
 ) -> Result<Vec<F>, AkitaError>
 where
     F: FieldCore,
@@ -102,12 +128,12 @@ where
                     let mut packed_position = E::zero();
                     for (low_index, &packing_weight) in weights.iter().enumerate() {
                         let coefficient_index = subring_offset + low_index;
-                        let source = coefficient(
+                        packed_position += weighted_coefficient(
+                            packing_weight,
                             position,
                             coefficient_index,
                             source_position[coefficient_index],
                         );
-                        packed_position += packing_weight.mul_base(source);
                     }
                     *accumulator += packed_position;
                 }

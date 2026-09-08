@@ -3,6 +3,8 @@
 //! [`DensePoly`] uses standard dense algorithms — balanced-digit decomposition,
 //! NTT-based matrix-vector multiply, and parallel block folds.
 
+#[cfg(test)]
+mod coefficient_packing_tests;
 mod commit;
 mod kernels;
 mod ops;

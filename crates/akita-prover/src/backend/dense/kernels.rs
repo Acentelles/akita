@@ -1,7 +1,8 @@
 //! CpuBackend kernels over dense polynomial views.
 
 use super::views::{DenseBatchView, DenseView};
-use crate::backend::coefficient_packing::partials_from_position_source;
+use super::DensePoly;
+use crate::backend::coefficient_packing::{partials_from_position_source, weighted_i8};
 use crate::compute::{
     BatchDecomposeFoldOutcome, CommitInnerPlan, CpuBackend, DecomposeFoldBatchPlan,
     DecomposeFoldPlan, OpeningBatchKernel, OpeningFoldKernel, OpeningFoldOutput, OpeningFoldPlan,
@@ -124,31 +125,15 @@ where
         source: DenseBatchView<'_, F, D>,
         plan: SubringCoefficientPackingPlan<'_, E>,
     ) -> Result<Vec<SubringCoefficientPackingPartials<F>>, AkitaError> {
+        // Set once by the application before starting proving threads. Reading
+        // once per batch keeps this experimental ablation out of the inner loop.
+        let small_packing =
+            std::env::var_os("AERIE_CACHED_SMALL_PACKING").is_some_and(|value| value == "1");
         source
             .polys
             .iter()
             .map(|poly| {
-                let rings = poly.ring_coeffs::<D>()?;
-                // Dense roots authenticate the complete Boolean hypercube, so
-                // every stored ring is live. Exact-prefix storage is reserved
-                // for recursive witness views.
-                if rings.len() != plan.point.num_live_positions() {
-                    return Err(AkitaError::InvalidSize {
-                        expected: plan.point.num_live_positions(),
-                        actual: rings.len(),
-                    });
-                }
-                let coordinates = partials_from_position_source::<F, E, F, D>(
-                    plan,
-                    RootPolyMeta::<F>::num_vars(*poly),
-                    |position| {
-                        rings
-                            .get(position)
-                            .map(|ring| ring.coefficients())
-                            .ok_or(AkitaError::InvalidProof)
-                    },
-                    |_, _, coefficient| coefficient,
-                )?;
+                let coordinates = poly.coefficient_packing_partials::<E, D>(plan, small_packing)?;
                 SubringCoefficientPackingPartials::new(
                     plan.point.geometry(),
                     plan.point.num_live_blocks(),
@@ -156,5 +141,51 @@ where
                 )
             })
             .collect()
+    }
+}
+
+impl<F: FieldCore + CanonicalField> DensePoly<F> {
+    pub(super) fn coefficient_packing_partials<E, const D: usize>(
+        &self,
+        plan: SubringCoefficientPackingPlan<'_, E>,
+        small_packing: bool,
+    ) -> Result<Vec<F>, AkitaError>
+    where
+        E: ExtField<F> + akita_types::FpExtEncoding<F>,
+    {
+        let rings = self.ring_coeffs::<D>()?;
+        // Dense roots authenticate the complete Boolean hypercube, so every
+        // stored ring is live. Exact prefixes belong to recursive witnesses.
+        if rings.len() != plan.point.num_live_positions() {
+            return Err(AkitaError::InvalidSize {
+                expected: plan.point.num_live_positions(),
+                actual: rings.len(),
+            });
+        }
+        if let Some(small) = small_packing
+            .then(|| self.small_i8_ring_coeffs::<D>())
+            .flatten()
+        {
+            // The existing exact cache includes the same physical zero padding
+            // as `rings`. Geometry is checked above before selecting the cache.
+            partials_from_position_source::<F, E, i8, D>(
+                plan,
+                RootPolyMeta::<F>::num_vars(self),
+                |position| small.get(position).ok_or(AkitaError::InvalidProof),
+                |weight, _, _, coefficient| weighted_i8::<F, E>(weight, coefficient),
+            )
+        } else {
+            partials_from_position_source::<F, E, F, D>(
+                plan,
+                RootPolyMeta::<F>::num_vars(self),
+                |position| {
+                    rings
+                        .get(position)
+                        .map(|ring| ring.coefficients())
+                        .ok_or(AkitaError::InvalidProof)
+                },
+                |weight, _, _, coefficient| weight.mul_base(coefficient),
+            )
+        }
     }
 }
