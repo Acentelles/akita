@@ -1,6 +1,9 @@
 use super::*;
 
+mod sparse_dot;
+
 struct I8ColumnScratch<W: PrimeWidth, const K: usize, const D: usize> {
+    sparse_batch: bool,
     rhs: [[MontCoeff<W>; D]; K],
     lazy_dot: [[MontCoeff<W>; D]; I32_LAZY_DOT_BATCH],
 }
@@ -8,6 +11,8 @@ struct I8ColumnScratch<W: PrimeWidth, const K: usize, const D: usize> {
 impl<W: PrimeWidth, const K: usize, const D: usize> I8ColumnScratch<W, K, D> {
     fn new() -> Self {
         Self {
+            sparse_batch: std::env::var_os("AKITA_SPARSE_DOT").as_deref()
+                == Some(std::ffi::OsStr::new("1")),
             rhs: [[MontCoeff::from_raw(W::default()); D]; K],
             lazy_dot: [[MontCoeff::from_raw(W::default()); D]; I32_LAZY_DOT_BATCH],
         }
@@ -39,6 +44,11 @@ fn accumulate_i8_columns<W: PrimeWidth, const K: usize, const D: usize, const CH
                 &mut scratch.rhs,
             );
         }
+        return;
+    }
+
+    if CHECK_ZERO && scratch.sparse_batch {
+        sparse_dot::accumulate(accs, ntt_mat, column_start, digits, params, lut, scratch);
         return;
     }
 
@@ -79,7 +89,7 @@ fn accumulate_i8_columns<W: PrimeWidth, const K: usize, const D: usize, const CH
         CyclotomicCrtNtt::add_assign_col_pointwise_dot_i8_multi_with_lut_scratch(
             accs,
             ntt_mat,
-            column_start + batch_start,
+            |index| column_start + batch_start + index,
             batch,
             params,
             lut,

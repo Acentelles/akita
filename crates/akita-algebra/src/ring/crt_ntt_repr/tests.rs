@@ -76,7 +76,7 @@ fn lazy_pointwise_dot_rejects_non_i32_parameter_sets() {
     CyclotomicCrtNtt::add_assign_col_pointwise_dot_i8_multi_with_lut_scratch(
         &mut accs,
         &ntt_mat,
-        0,
+        |_| 0,
         &digits,
         &params,
         &lut,

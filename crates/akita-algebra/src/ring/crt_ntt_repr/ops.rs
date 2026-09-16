@@ -362,9 +362,11 @@ impl<W: PrimeWidth, const K: usize, const D: usize> CyclotomicCrtNtt<W, K, D> {
         }
     }
 
-    /// Transform a short run of signed-i8 columns and accumulate their
+    /// Transform selected signed-i8 columns and accumulate their
     /// pointwise dot product into every output row.
     ///
+    /// `column_index(i)` selects the matrix column for `digits[i]`. This may
+    /// describe consecutive columns or a packed sequence with zero planes removed.
     /// The backend processes one CRT limb at a time, so six-product lazy
     /// reduction needs `6 * D` scratch coefficients instead of `6 * K * D`.
     /// The caller must select a backend whose [`CrtNttParamSet::pointwise_dot_batch_size`]
@@ -378,7 +380,7 @@ impl<W: PrimeWidth, const K: usize, const D: usize> CyclotomicCrtNtt<W, K, D> {
     pub fn add_assign_col_pointwise_dot_i8_multi_with_lut_scratch(
         accs: &mut [Self],
         ntt_mat: &[&[Self]],
-        column_start: usize,
+        column_index: impl Fn(usize) -> usize,
         digits: &[[i8; D]],
         params: &CrtNttParamSet<W, K, D>,
         lut: &DigitMontLut<W, K>,
@@ -408,7 +410,7 @@ impl<W: PrimeWidth, const K: usize, const D: usize> CyclotomicCrtNtt<W, K, D> {
             for (acc, matrix_row) in accs.iter_mut().zip(ntt_mat) {
                 let lhs_pointers: [*const i32; I32_LAZY_DOT_BATCH] = std::array::from_fn(|index| {
                     digits.get(index).map_or(std::ptr::null(), |_| {
-                        matrix_row[column_start + index].limbs[k]
+                        matrix_row[column_index(index)].limbs[k]
                             .as_ptr()
                             .cast::<i32>()
                     })
