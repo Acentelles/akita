@@ -561,8 +561,9 @@ LimbGram mode binds the required limb evaluations instead. Group, chunk, row,
 coefficient, and padding selectors come from the shared physical plan.
 
 The transcript samples the Stage 2 batching challenge only after it has
-absorbed the Stage 1 claims. A prover cannot choose two false relations that
-cancel under a challenge known in advance.
+absorbed the Stage 1 claims. Physical-L2 virtual claims use positive powers
+of this challenge, reserving the constant term for the separate relation;
+see the private-backport degree accounting below.
 
 ### Transcript and serialization
 
@@ -1455,3 +1456,25 @@ fully folded into the Book.
 * `specs/fold-linf-rejection.md` for the base universal Linf policy.
 * `specs/sis-quantum128-scalar-n-table.md` for the production quantum security
   policy.
+
+
+## Private backport: physical-L2 virtual batching
+
+The private backport of upstream PR 28 batches `m` physical-L2 virtual
+claims with coefficients `eta, eta^2, ..., eta^m`. The constant coefficient
+is reserved for the separate relation/opening residual. The challenge is
+sampled only after the Stage-1 claims have been absorbed. The resulting
+identity has degree at most `m` in `eta`, with local random-challenge error
+at most `m / |E|` for a nonzero identity, including `m = 1`. This local
+algebraic bound is not a complete Fiat–Shamir security accounting.
+
+The shared types helper defines this rule for both prover and verifier.
+No evaluation, round, nonce byte, or norm-proof scalar is added. Existing
+Direct and LimbGram shapes and integer admission caps remain unchanged.
+The old pin's fixed-width fold nonce remains in use; the newer upstream
+grinding-policy framework is not part of this backport.
+
+Descriptor/catalog epoch `0x8000_001c` is reserved in this Aerie fork's
+`specs/aerie-private-epochs.md` registry. It must not be represented as
+upstream descriptor v5 compatibility. All catalogs must be regenerated
+with this epoch; epoch-2 descriptors and catalogs remain incompatible.

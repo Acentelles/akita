@@ -137,7 +137,9 @@ where
             overflow_possible: q.saturating_sub(threshold) > i128::MAX as u128,
         };
 
-        if num_digits == 1 {
+        // The single-plane fast path below stores each digit in i8. Wider
+        // valid bases need the I16-capable partitioned decomposition path.
+        if num_digits == 1 && log_basis <= 8 {
             if let Some(small_coeffs) = self.small_i8_ring_coeffs::<D>() {
                 let coeff_accum: Vec<[i32; D]> = {
                     let _span =

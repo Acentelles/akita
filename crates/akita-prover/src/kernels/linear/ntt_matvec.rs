@@ -156,6 +156,20 @@ pub(crate) fn mat_vec_mul_ntt_dense_digits_i8<F: FieldCore + CanonicalField, con
     log_basis: u32,
 ) -> Result<Vec<Vec<CyclotomicRing<F, D>>>, AkitaError> {
     validate_i8_log_basis(log_basis)?;
+    // Experimental prover-only selector for already-implemented zero-plane
+    // elision. Keep the original dense kernel as the default/reference path.
+    if std::env::var_os("AKITA_DENSE_DIGITS_SKIP_ZERO").as_deref()
+        == Some(std::ffi::OsStr::new("1"))
+    {
+        return Ok(dispatch_slot!(
+            slot,
+            num_rows,
+            num_cols,
+            mat_vec_mul_digits_i8_with_params,
+            blocks,
+            log_basis
+        ));
+    }
     Ok(dispatch_slot!(
         slot,
         num_rows,

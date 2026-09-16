@@ -7,10 +7,11 @@
 //!
 //! ## Descriptor version policy
 //!
-//! Akita is under active development. The version remains `1` until the
-//! protocol is frozen for audit. Integrators must pin an exact revision because
-//! no backward compatibility is guaranteed. After audit freeze, incompatible
-//! descriptor-bound protocol changes increment the version.
+//! Akita is under active development. Integrators must pin an exact revision;
+//! no backward compatibility is guaranteed. This private backport assigns a
+//! distinct epoch to its corrected physical-L2 batching convention. The private
+//! value is reserved in this Aerie fork; see `specs/aerie-private-epochs.md`.
+//! It makes no allocation or compatibility claim for upstream Akita.
 
 mod fold_linf_binding;
 #[cfg(test)]
@@ -35,7 +36,9 @@ use blake2::{Blake2b, Digest};
 use std::io::{Read, Write};
 
 /// Descriptor schema version for the in-development transcript preamble.
-pub const AKITA_INSTANCE_DESCRIPTOR_VERSION: u32 = 2;
+// Reserved Aerie-private epoch; registry: specs/aerie-private-epochs.md.
+// This is not upstream descriptor v5; the pinned schema and nonce stay intact.
+pub const AKITA_INSTANCE_DESCRIPTOR_VERSION: u32 = 0x8000_001c;
 
 /// Fixed-size Blake2b digest used inside the descriptor.
 pub type DescriptorDigest = [u8; 32];

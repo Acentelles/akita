@@ -16,8 +16,9 @@ use akita_field::unreduced::ReduceTo;
 use akita_field::AdditiveGroup;
 
 use akita_types::{
-    dispatch_for_field, DigitRangeEqualityPoint, InnerCommitSecurityRoute, OpeningClaimsLayout,
-    OpeningFamily, PhysicalResponsePlan, RelationRangeImagePlan,
+    batch_l2_virtual_evaluations, dispatch_for_field, DigitRangeEqualityPoint,
+    InnerCommitSecurityRoute, OpeningClaimsLayout, OpeningFamily, PhysicalResponsePlan,
+    RelationRangeImagePlan,
 };
 
 pub(in crate::protocol::core) struct PhysicalL2ProverReplay<E: FieldCore> {
@@ -532,14 +533,8 @@ where
             transcript,
             akita_transcript::labels::CHALLENGE_L2_VIRTUAL_BATCH,
         );
-        let mut power = E::one();
-        replay.batching = Vec::with_capacity(replay.virtual_evaluations.len());
-        replay.claim = E::zero();
-        for &evaluation in &replay.virtual_evaluations {
-            replay.batching.push(power);
-            replay.claim += evaluation * power;
-            power *= eta;
-        }
+        (replay.claim, replay.batching) =
+            batch_l2_virtual_evaluations(eta, &replay.virtual_evaluations);
         replay
     });
     let stage1_proof = Some(stage1_proof);

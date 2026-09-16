@@ -151,8 +151,8 @@ pub use proof::{
     MAX_UNTRUSTED_COMMITMENT_COEFFICIENTS, SETUP_PREFIX_CONTENT_TAG, SETUP_SUMCHECK_DEGREE,
 };
 pub use proof::{
-    append_digit_range_child_claims, reconstruct_l2_sq_from_gram, DigitRangeEqualityPoint,
-    DigitRangePlan, FlatBooleanDomain,
+    append_digit_range_child_claims, batch_l2_virtual_evaluations, reconstruct_l2_sq_from_gram,
+    DigitRangeEqualityPoint, DigitRangePlan, FlatBooleanDomain,
 };
 pub use proof_size::{level_proof_bytes, FOLD_GRIND_NONCE_BYTES};
 pub use schedule::{

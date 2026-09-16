@@ -813,6 +813,54 @@ mod tests {
     use akita_challenges::SparseChallengeConfig;
 
     #[test]
+    fn physical_l2_backport_rejects_epoch_two_catalog() {
+        let table = crate::generated::fp128_onehot_recursive_table();
+        assert_eq!(
+            table.identity.protocol_epoch,
+            AKITA_INSTANCE_DESCRIPTOR_VERSION
+        );
+        let policy = PlannerPolicy {
+            cost_model: table.identity.cost_model,
+            selective_l2_response_model: table.identity.selective_l2_response_model,
+            selection_policy: table.identity.selection_policy,
+            recursive_split_search_policy: table.identity.recursive_split_search_policy,
+            setup_field_budget: table.identity.setup_field_budget,
+            min_offloaded_witness_contraction: table.identity.min_offloaded_witness_contraction,
+            sis_modulus_profile: table.identity.sis_modulus_profile,
+            sis_security_policy: table.identity.sis_security_policy,
+            sis_table_digest: table.identity.sis_table_digest,
+            sis_l2_table_digest: table.identity.sis_l2_table_digest,
+            decomposition: table.identity.decomposition,
+            claim_ext_degree: table.identity.claim_ext_degree,
+            chal_ext_degree: table.identity.chal_ext_degree,
+            inner_basis_range: table.identity.inner_basis_range,
+            opening_basis_range: table.identity.opening_basis_range,
+            witness_chunk: table.identity.witness_chunk,
+            recursive_setup_planning: table.identity.recursive_setup_planning,
+            ring_dimension_schedule_mode: table.identity.ring_dimension_schedule_mode,
+        };
+        let challenge = |d| {
+            SparseChallengeConfig::production_for_ring_dim(d).ok_or_else(|| {
+                AkitaError::InvalidSetup(format!("unsupported test ring dimension {d}"))
+            })
+        };
+        validate_catalog_identity(&table, &policy, challenge)
+            .expect("regenerated current catalog must validate");
+        let stale = GeneratedScheduleTable {
+            identity: GeneratedScheduleCatalogIdentity {
+                protocol_epoch: 2,
+                ..table.identity
+            },
+            ..table
+        };
+        let err = validate_catalog_identity(&stale, &policy, challenge)
+            .expect_err("pre-backport epoch must reject, including after a cache hit");
+        assert!(err
+            .to_string()
+            .contains("schedule catalog identity mismatch"));
+    }
+
+    #[test]
     fn full_prefix_catalog_identity_rejects_old_zero_padded_digest() {
         let table = crate::generated::fp128_onehot_recursive_table();
         let old_digest = entries_key_digest_with_setup_prefix_content_mode(table.entries, false);

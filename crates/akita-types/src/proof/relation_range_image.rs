@@ -12,6 +12,23 @@ use crate::{
     RelationAddressGeometry, RelationRowFamily, RelationWitnessGeometry, WitnessLayout,
 };
 
+/// Batch physical-L2 virtual evaluations while reserving the constant term
+/// for the separate Stage-2 relation/opening residual. For `m` evaluations,
+/// the coefficients are eta through eta^m (degree at most m, not m - 1).
+/// The challenge must be sampled after the evaluations are transcript-bound.
+#[must_use]
+pub fn batch_l2_virtual_evaluations<E: FieldCore>(eta: E, evaluations: &[E]) -> (E, Vec<E>) {
+    let mut claim = E::zero();
+    let mut coefficients = Vec::with_capacity(evaluations.len());
+    let mut power = eta;
+    for &evaluation in evaluations {
+        coefficients.push(power);
+        claim += evaluation * power;
+        power *= eta;
+    }
+    (claim, coefficients)
+}
+
 #[derive(Clone, Debug, Eq, PartialEq)]
 struct PhysicalResponseSegment {
     physical_start: usize,
@@ -629,6 +646,42 @@ mod tests {
         dyadic_block_ranges, CommitmentSliceCount, PolynomialGroupLayout, RelationGroupRows,
         RelationRhsLayout, RelationRowGeometry, WitnessQuotientRowLayout, WitnessUnitLayout,
     };
+
+    #[test]
+    fn l2_virtual_batch_cannot_cancel_the_stage2_constant_at_eta_zero() {
+        use akita_field::Prime32Offset99 as F;
+
+        let residual = F::from_u64(17);
+        let zero = F::from_u64(0);
+        let (batch, coefficients) =
+            batch_l2_virtual_evaluations(zero, &[-residual, F::from_u64(29)]);
+        assert_eq!(coefficients, vec![zero, zero]);
+        assert_eq!(residual + batch, residual);
+    }
+
+    #[test]
+    fn l2_virtual_batch_uses_positive_powers_and_preserves_shape() {
+        use akita_field::Prime32Offset99 as F;
+
+        // Honest linear combinations, including the one-evaluation boundary.
+        // eta = 0 is allowed; it must not leave an unrandomized first term.
+        for challenge in [0, 1, 3, 17] {
+            let eta = F::from_u64(challenge);
+            for count in [0, 1, 2, 8] {
+                let evaluations: Vec<F> = (0..count).map(|i| F::from_u64((i + 2) as u64)).collect();
+                let (claim, coefficients) = batch_l2_virtual_evaluations(eta, &evaluations);
+                assert_eq!(coefficients.len(), evaluations.len());
+                let mut expected = F::from_u64(0);
+                for (i, &evaluation) in evaluations.iter().enumerate() {
+                    // Independent, direct exponentiation by repeated multiplication.
+                    let coefficient = (0..=i).fold(F::from_u64(1), |value, _| value * eta);
+                    assert_eq!(coefficients[i], coefficient);
+                    expected += coefficient * evaluation;
+                }
+                assert_eq!(claim, expected);
+            }
+        }
+    }
 
     fn test_relation_geometry(
         opening_batch: &OpeningClaimsLayout,

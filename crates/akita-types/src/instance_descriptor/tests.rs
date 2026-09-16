@@ -266,9 +266,9 @@ fn call_section_rejects_mismatched_polynomial_count_before_allocation() {
 }
 
 #[test]
-fn rejects_non_v1_descriptor_version() {
+fn rejects_pre_backport_descriptor_version() {
     let mut descriptor = sample_descriptor();
-    descriptor.version = AKITA_INSTANCE_DESCRIPTOR_VERSION - 1;
+    descriptor.version = 2;
     assert!(matches!(
         descriptor.check(),
         Err(SerializationError::InvalidData(_))

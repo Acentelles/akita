@@ -8,6 +8,19 @@ fn selective_l2_proof_rejects_transcript_mutations() {
     type L2Cfg = OneHotCfg;
     type L2Scheme = AkitaCommitmentScheme<L2Cfg>;
 
+    let schedule = L2Cfg::resolve_catalog_row_for_opening(
+        &OpeningClaimsLayout::new(NV, BATCH_SIZE).expect("Direct opening layout"),
+    )
+    .expect("Direct catalog row")
+    .into_schedule();
+    assert!(schedule.recursive_folds.iter().any(|step| matches!(
+        step.params.inner().matrix.security_route(),
+        akita_types::InnerCommitSecurityRoute::L2 {
+            norm_proof_shape: akita_types::PhysicalL2NormProofShape::Direct { .. },
+            ..
+        }
+    )));
+
     let layout = akita_batched_root_layout::<L2Cfg>(NV, BATCH_SIZE).expect("L2 root layout");
     let polys: Vec<OneHotPoly<OneHotF, u8>> = (0..BATCH_SIZE)
         .map(|index| debug_make_onehot_poly(NV, layout.d_a(), 0x0bee_fcaf_1200_0000 + index as u64))
