@@ -1460,7 +1460,8 @@ fully folded into the Book.
 
 ## Private backport: physical-L2 virtual batching
 
-The private backport of upstream PR 28 batches `m` physical-L2 virtual
+The private backport of upstream commit
+`0e0283d0ab87db22e98805b87e94b675fa3a7f5c` batches `m` physical-L2 virtual
 claims with coefficients `eta, eta^2, ..., eta^m`. The constant coefficient
 is reserved for the separate relation/opening residual. The challenge is
 sampled only after the Stage-1 claims have been absorbed. The resulting
