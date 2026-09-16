@@ -416,8 +416,18 @@ relation derived from the schedule. It proves that each final physical response
 or limb evaluation is the balanced basis recomposition of the committed Z digit
 plane evaluations at the same point. The transcript samples the batching
 challenge after it has absorbed all Stage 1 claims, including the ordinary
-range image. This order prevents one false virtual relation from canceling
-another.
+range image. Virtual residual $i$, indexed from zero, receives weight
+$\eta^{i+1}$. The separate ordinary relation/opening residual owns the
+constant coefficient. Thus the combined identity is
+$R+\sum_{i=0}^{m-1}\eta^{i+1}V_i=0$, of degree at most $m$.
+Starting the virtual weights at one would allow $R$ and $V_0$ to cancel
+without depending on the challenge. Binding the claims before sampling and
+reserving this constant coefficient are both necessary.
+
+This fork uses private descriptor epoch `0x8000001c` for that convention.
+Both prover and verifier call `batch_l2_virtual_evaluations`; old epoch-2
+descriptors and catalogs are rejected. This local correction does not
+establish a complete composed Fiat-Shamir security bound.
 
 ### Start with the ordinary ring relation
 
