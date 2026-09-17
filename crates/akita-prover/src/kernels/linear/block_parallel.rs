@@ -10,9 +10,11 @@ struct I8ColumnScratch<W: PrimeWidth, const K: usize, const D: usize> {
 
 impl<W: PrimeWidth, const K: usize, const D: usize> I8ColumnScratch<W, K, D> {
     fn new() -> Self {
+        static SPARSE_BATCH: std::sync::OnceLock<bool> = std::sync::OnceLock::new();
         Self {
-            sparse_batch: std::env::var_os("AKITA_SPARSE_DOT").as_deref()
-                == Some(std::ffi::OsStr::new("1")),
+            sparse_batch: *SPARSE_BATCH.get_or_init(|| {
+                std::env::var_os("AKITA_SPARSE_DOT").as_deref() == Some(std::ffi::OsStr::new("1"))
+            }),
             rhs: [[MontCoeff::from_raw(W::default()); D]; K],
             lazy_dot: [[MontCoeff::from_raw(W::default()); D]; I32_LAZY_DOT_BATCH],
         }

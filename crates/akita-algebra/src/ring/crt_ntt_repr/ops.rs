@@ -1,3 +1,4 @@
+use std::borrow::Borrow;
 #[cfg(any(target_arch = "aarch64", target_arch = "x86", target_arch = "x86_64"))]
 use std::mem::size_of;
 #[cfg(any(target_arch = "x86", target_arch = "x86_64"))]
@@ -366,7 +367,7 @@ impl<W: PrimeWidth, const K: usize, const D: usize> CyclotomicCrtNtt<W, K, D> {
     /// pointwise dot product into every output row.
     ///
     /// `column_index(i)` selects the matrix column for `digits[i]`. This may
-    /// describe consecutive columns or a packed sequence with zero planes removed.
+    /// describe consecutive columns or borrowed planes with zero planes removed.
     /// The backend processes one CRT limb at a time, so six-product lazy
     /// reduction needs `6 * D` scratch coefficients instead of `6 * K * D`.
     /// The caller must select a backend whose [`CrtNttParamSet::pointwise_dot_batch_size`]
@@ -381,7 +382,7 @@ impl<W: PrimeWidth, const K: usize, const D: usize> CyclotomicCrtNtt<W, K, D> {
         accs: &mut [Self],
         ntt_mat: &[&[Self]],
         column_index: impl Fn(usize) -> usize,
-        digits: &[[i8; D]],
+        digits: &[impl Borrow<[i8; D]>],
         params: &CrtNttParamSet<W, K, D>,
         lut: &DigitMontLut<W, K>,
         scratch: &mut [[MontCoeff<W>; D]; I32_LAZY_DOT_BATCH],
@@ -398,7 +399,7 @@ impl<W: PrimeWidth, const K: usize, const D: usize> CyclotomicCrtNtt<W, K, D> {
 
         for k in 0..K {
             for (dst, digit) in scratch.iter_mut().zip(digits) {
-                lut.fill_negacyclic_limb(k, digit, params, dst);
+                lut.fill_negacyclic_limb(k, digit.borrow(), params, dst);
             }
             let rhs_pointers: [*const i32; I32_LAZY_DOT_BATCH] = std::array::from_fn(|index| {
                 digits

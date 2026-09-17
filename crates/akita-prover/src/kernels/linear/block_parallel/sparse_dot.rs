@@ -12,14 +12,15 @@ pub(super) fn accumulate<W: PrimeWidth, const K: usize, const D: usize>(
     scratch: &mut I8ColumnScratch<W, K, D>,
 ) {
     let batch_size = params.pointwise_dot_batch_size();
-    let mut packed = [[0i8; D]; I32_LAZY_DOT_BATCH];
+    let empty = [0i8; D];
+    let mut packed = [&empty; I32_LAZY_DOT_BATCH];
     let mut columns = [0usize; I32_LAZY_DOT_BATCH];
     let mut count = 0;
     for (offset, digit) in digits.iter().enumerate() {
         if is_zero_plane(digit) {
             continue;
         }
-        packed[count] = *digit;
+        packed[count] = digit;
         columns[count] = column_start + offset;
         count += 1;
         if count == batch_size {
@@ -40,7 +41,7 @@ pub(super) fn accumulate<W: PrimeWidth, const K: usize, const D: usize>(
             accs,
             matrix,
             columns[0],
-            &packed[0],
+            packed[0],
             params,
             lut,
             &mut scratch.rhs,
