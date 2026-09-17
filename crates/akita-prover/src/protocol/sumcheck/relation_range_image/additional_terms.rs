@@ -2,8 +2,10 @@
 
 use akita_algebra::{offset_eq::OffsetEqWindow, poly::trim_trailing_zeros, UniPoly};
 use akita_error::AkitaError;
+#[cfg(feature = "parallel")]
+use akita_field::parallel::*;
 use akita_field::unreduced::HasUnreducedOps;
-use akita_field::{FieldCore, FromPrimitiveInt, Zero};
+use akita_field::{cfg_chunks, FieldCore, FromPrimitiveInt, Zero};
 use akita_sumcheck::reduce_signed_accum;
 use std::cmp::Ordering;
 use std::ops::Range;
@@ -32,11 +34,14 @@ impl<E: FieldCore + FromPrimitiveInt> AdditionalRelationTerms<E> {
     pub(crate) fn new(
         compact_witness: &[i8],
         domain_len: usize,
-        linear_weights: Vec<(usize, E)>,
+        mut linear_weights: Vec<(usize, E)>,
         binary_intervals: &[Range<usize>],
         binary_equality_point: &[E],
         binary_batching: E,
-    ) -> Result<Self, AkitaError> {
+    ) -> Result<Self, AkitaError>
+    where
+        E: HasUnreducedOps,
+    {
         if !domain_len.is_power_of_two() || compact_witness.len() > domain_len {
             return Err(AkitaError::InvalidSize {
                 expected: domain_len,
@@ -50,15 +55,18 @@ impl<E: FieldCore + FromPrimitiveInt> AdditionalRelationTerms<E> {
                 actual: binary_equality_point.len(),
             });
         }
-        let mut collapsed_linear = Vec::<(usize, E)>::with_capacity(linear_weights.len());
-        for (index, value) in linear_weights {
+        let mut write = 0usize;
+        for read in 0..linear_weights.len() {
+            let (index, value) = linear_weights[read];
             if index >= domain_len {
                 return Err(AkitaError::InvalidSize {
                     expected: domain_len,
                     actual: index.saturating_add(1),
                 });
             }
-            if let Some((previous_index, previous_value)) = collapsed_linear.last_mut() {
+            if let Some((previous_index, previous_value)) =
+                write.checked_sub(1).map(|last| &mut linear_weights[last])
+            {
                 if index < *previous_index {
                     return Err(AkitaError::InvalidInput(
                         "compression relation weights are not sorted".into(),
@@ -69,9 +77,11 @@ impl<E: FieldCore + FromPrimitiveInt> AdditionalRelationTerms<E> {
                     continue;
                 }
             }
-            collapsed_linear.push((index, value));
+            linear_weights[write] = (index, value);
+            write += 1;
         }
-        collapsed_linear.retain(|(_, value)| !value.is_zero());
+        linear_weights.truncate(write);
+        linear_weights.retain(|(_, value)| !value.is_zero());
 
         let mut previous_end = 0usize;
         let mut binary_support_len = 0usize;
@@ -92,13 +102,13 @@ impl<E: FieldCore + FromPrimitiveInt> AdditionalRelationTerms<E> {
 
         // Both sources are already sorted. Merge them directly instead of
         // paying one tree lookup and allocation per compression coordinate.
-        let capacity = collapsed_linear
+        let capacity = linear_weights
             .len()
             .checked_add(binary_support_len)
             .ok_or_else(|| AkitaError::InvalidSetup("sparse weight capacity overflow".into()))?;
         let binary_equality = OffsetEqWindow::new(binary_equality_point)?;
         let mut weights = Vec::with_capacity(capacity);
-        let mut linear = collapsed_linear.into_iter().peekable();
+        let mut linear = linear_weights.into_iter().peekable();
         let mut binary = binary_intervals
             .iter()
             .flat_map(|interval| interval.clone())
@@ -154,13 +164,24 @@ impl<E: FieldCore + FromPrimitiveInt> AdditionalRelationTerms<E> {
                 (None, None) => break,
             }
         }
-        let input_claim = weights.iter().fold(E::zero(), |sum, weight| {
-            let witness = compact_witness
-                .get(weight.index)
-                .map_or_else(E::zero, |&value| E::from_i64(i64::from(value)));
-            sum + witness * weight.linear
-                + binary_batching * weight.binary * witness * (witness + E::one())
-        });
+        // Signed-byte products fit the narrow accumulators. Each chunk adds
+        // at most 1024 * 16512 times one field element, well within their
+        // 64-bit multiplier headroom. Reduce before combining chunks.
+        let input_claim = cfg_chunks!(weights, 1024)
+            .map(|chunk| {
+                let mut sums = [E::MulU64Accum::zero(); 4];
+                for weight in chunk {
+                    let witness = compact_witness
+                        .get(weight.index)
+                        .copied()
+                        .map_or(0, i64::from);
+                    super::accum_small_signed(&mut sums, 0, weight.linear, witness);
+                    super::accum_small_signed(&mut sums, 2, weight.binary, witness * (witness + 1));
+                }
+                reduce_signed_accum::<E>(sums[0], sums[1])
+                    + binary_batching * reduce_signed_accum::<E>(sums[2], sums[3])
+            })
+            .sum();
         Ok(Self {
             weights,
             binary_batching,
@@ -197,6 +218,13 @@ impl<E: FieldCore + FromPrimitiveInt> AdditionalRelationTerms<E> {
             let dw = witness[1] - witness[0];
             let d_linear = linear[1] - linear[0];
             let d_binary = binary[1] - binary[0];
+
+            if binary[0].is_zero() && binary[1].is_zero() {
+                coefficients[0] += witness[0] * linear[0];
+                coefficients[1] += witness[0] * d_linear + dw * linear[0];
+                coefficients[2] += dw * d_linear;
+                continue;
+            }
 
             let witness_square_constant = witness[0] * (witness[0] + E::one());
             let witness_square_linear = dw * (witness[0] + witness[0] + E::one());
@@ -272,6 +300,13 @@ impl<E: FieldCore + FromPrimitiveInt> AdditionalRelationTerms<E> {
             let witness_delta = witness_at(2 * parent + 1) - witness;
             let linear_delta = linear[1] - linear[0];
             let binary_delta = binary[1] - binary[0];
+            if binary[0].is_zero() && binary[1].is_zero() {
+                super::accum_small_signed(&mut coefficients, 0, linear[0], witness);
+                super::accum_small_signed(&mut coefficients, 2, linear_delta, witness);
+                super::accum_small_signed(&mut coefficients, 2, linear[0], witness_delta);
+                super::accum_small_signed(&mut coefficients, 4, linear_delta, witness_delta);
+                continue;
+            }
             let witness_square_constant = witness * (witness + 1);
             let witness_square_linear = witness_delta * (2 * witness + 1);
             let witness_square_quadratic = witness_delta * witness_delta;
@@ -567,5 +602,50 @@ mod tests {
             F::one(),
         )
         .is_err());
+    }
+
+    #[test]
+    fn chunked_claim_matches_dense_oracle_at_signed_extremes() {
+        let domain_len = 4096;
+        let point = equality_point(domain_len);
+        let rho = -F::from_u64(17);
+        let intervals = [3..1025, 2047..3074];
+        for live_len in [0, 1, 1023, 1024, 1025, 3075] {
+            let witness: Vec<i8> = (0..live_len)
+                .map(|i| [-128, 127, -1, 0, 1, -2][i % 6])
+                .collect();
+            let mut linear = Vec::new();
+            let mut expected = F::zero();
+            for index in 0..domain_len {
+                let value = -F::from_u64(1 + index as u64);
+                // Cancellation followed by a live duplicate exercises in-place
+                // compaction without losing the sortedness check.
+                linear.extend([(index, value), (index, -value), (index, value)]);
+                let w = F::from_i64(witness.get(index).copied().map_or(0, i64::from));
+                expected += w * value;
+                if intervals.iter().any(|interval| interval.contains(&index)) {
+                    expected += rho * eq_eval_at_index(&point, index) * w * (w + F::one());
+                }
+            }
+            let mut terms =
+                AdditionalRelationTerms::new(&witness, domain_len, linear, &intervals, &point, rho)
+                    .unwrap();
+            assert_eq!(terms.input_claim(), expected);
+            let polynomial = terms.round_polynomial_compact(&witness, None);
+            for t in [F::zero(), F::one(), -F::from_u64(11)] {
+                assert_eq!(
+                    polynomial.evaluate(&t),
+                    reference_round_evaluation(&terms, &witness, t)
+                );
+            }
+            let challenge = F::from_u64(19);
+            let next_claim = polynomial.evaluate(&challenge);
+            terms.bind(challenge);
+            let next = terms.round_polynomial_compact(&witness, Some(challenge));
+            assert_eq!(
+                next.evaluate(&F::zero()) + next.evaluate(&F::one()),
+                next_claim
+            );
+        }
     }
 }
