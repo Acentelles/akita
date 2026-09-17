@@ -10,9 +10,8 @@
 //! shuffles. Because `len` is always a power of two, each stage hits exactly
 //! one width with no remainder.
 //!
-//! These kernels are not selected by production dispatch. They remain available
-//! to direct architecture tests and benchmark-only experiments; the true
-//! 256-bit AVX2 transform wins every measured target degree on Ice Lake.
+//! These kernels require `AKITA_AVX512_NTT=1` and runtime feature checks. The
+//! default remains AVX2, which won the measured Ice Lake workloads.
 
 #[cfg(target_arch = "x86")]
 use std::arch::x86::*;
@@ -335,7 +334,7 @@ unsafe fn reduce_range_all<const D: usize>(a: &mut [MontCoeff<i32>; D], prime: N
 ///
 /// # Safety
 ///
-/// The caller must ensure AVX-512F/DQ/BW are available.
+/// The caller must ensure AVX2 and AVX-512F/DQ/BW are available.
 #[target_feature(enable = "avx512f,avx512dq,avx512bw,avx2")]
 pub(super) unsafe fn forward_ntt_i32<const D: usize>(
     a: &mut [MontCoeff<i32>; D],
@@ -352,11 +351,52 @@ pub(super) unsafe fn forward_ntt_i32<const D: usize>(
     }
 }
 
+/// Signed-digit conversion, Montgomery entry and negacyclic twist in one pass.
+///
+/// # Safety
+///
+/// AVX2 and AVX-512F/DQ/BW must be available, and `D` must be a power of two.
+#[target_feature(enable = "avx512f,avx512dq,avx512bw,avx2")]
+pub(super) unsafe fn forward_ntt_i8_i32<const D: usize>(
+    a: &mut [MontCoeff<i32>; D],
+    digits: &[i8; D],
+    prime: NttPrime<i32>,
+    tw: &NttTwiddles<i32, D>,
+) {
+    let p = _mm512_set1_epi32(prime.p);
+    let pinv = _mm512_set1_epi32(prime.pinv);
+    let mut i = 0;
+    while i + 16 <= D {
+        // SAFETY: both arrays contain D elements; this iteration accesses 16.
+        unsafe {
+            let packed = _mm_loadu_si128(digits.as_ptr().add(i).cast());
+            let values = _mm512_cvtepi8_epi32(packed);
+            let factors = _mm512_loadu_si512(tw.psi_pows_r2.as_ptr().add(i).cast());
+            _mm512_storeu_si512(
+                a.as_mut_ptr().add(i).cast(),
+                mont_mul_16x_i32_avx512(values, factors, p, pinv),
+            );
+        }
+        i += 16;
+    }
+    while i < D {
+        a[i] = MontCoeff::from_raw(prime.mont_mul_raw(i32::from(digits[i]), tw.psi_pows_r2[i]));
+        i += 1;
+    }
+    // SAFETY: the same feature and transform-geometry contract applies.
+    unsafe {
+        forward_dif_stages(a, prime, tw);
+        if !batched_four_point_eligible::<D>(4) {
+            reduce_range_all(a, prime);
+        }
+    }
+}
+
 /// Width-aware AVX-512 inverse negacyclic NTT for one `i32` CRT limb.
 ///
 /// # Safety
 ///
-/// The caller must ensure AVX-512F/DQ/BW are available.
+/// The caller must ensure AVX2 and AVX-512F/DQ/BW are available.
 #[target_feature(enable = "avx512f,avx512dq,avx512bw,avx2")]
 pub(super) unsafe fn inverse_ntt_i32<const D: usize>(
     a: &mut [MontCoeff<i32>; D],
@@ -374,7 +414,7 @@ pub(super) unsafe fn inverse_ntt_i32<const D: usize>(
 ///
 /// # Safety
 ///
-/// The caller must ensure AVX-512F/DQ/BW are available.
+/// The caller must ensure AVX2 and AVX-512F/DQ/BW are available.
 #[target_feature(enable = "avx512f,avx512dq,avx512bw,avx2")]
 pub(super) unsafe fn forward_ntt_cyclic_i32<const D: usize>(
     a: &mut [MontCoeff<i32>; D],
@@ -394,7 +434,7 @@ pub(super) unsafe fn forward_ntt_cyclic_i32<const D: usize>(
 ///
 /// # Safety
 ///
-/// The caller must ensure AVX-512F/DQ/BW are available.
+/// The caller must ensure AVX2 and AVX-512F/DQ/BW are available.
 #[target_feature(enable = "avx512f,avx512dq,avx512bw,avx2")]
 pub(super) unsafe fn inverse_ntt_cyclic_i32<const D: usize>(
     a: &mut [MontCoeff<i32>; D],
@@ -413,7 +453,8 @@ mod tests {
     use super::*;
 
     fn has_avx512_ntt() -> bool {
-        std::is_x86_feature_detected!("avx512f")
+        std::is_x86_feature_detected!("avx2")
+            && std::is_x86_feature_detected!("avx512f")
             && std::is_x86_feature_detected!("avx512dq")
             && std::is_x86_feature_detected!("avx512bw")
     }

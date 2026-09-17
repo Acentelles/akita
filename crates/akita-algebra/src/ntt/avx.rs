@@ -2,8 +2,10 @@
 //!
 //! `AKITA_SCALAR_NTT=1` forces the scalar fallback for all CRT NTT SIMD.
 //! Production pointwise and transform kernels use AVX2 after it won the
-//! measured Ice Lake workloads.
+//! measured Ice Lake workloads. `AKITA_AVX512_NTT=1` enables the optional i32
+//! backend only after checking AVX2 and AVX-512F/DQ/BW support.
 
+mod dot512;
 mod montgomery;
 mod pointwise;
 mod runtime;

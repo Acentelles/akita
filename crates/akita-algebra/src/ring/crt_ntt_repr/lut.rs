@@ -215,13 +215,14 @@ impl<W: PrimeWidth, const K: usize> DigitMontLut<W, K> {
             // SAFETY: PrimeWidth is sealed to i16 and i32, so the width check
             // identifies W as i32. MontCoeff is transparent, while NttPrime
             // and NttTwiddles have stable C layouts. Both arrays contain D
-            // elements, do not overlap, and the prepared plan proves AVX2.
+            // elements, do not overlap, and the prepared plan proves all CPU features.
             unsafe {
                 avx::forward_ntt_i8_i32(
                     &mut *(dst as *mut _ as *mut [MontCoeff<i32>; D]),
                     digits,
                     *(&prime as *const _ as *const NttPrime<i32>),
                     &*(tw as *const _ as *const NttTwiddles<i32, D>),
+                    params.kernel_plan().uses_avx512_i32(),
                 );
             }
             return;
@@ -233,7 +234,7 @@ impl<W: PrimeWidth, const K: usize> DigitMontLut<W, K> {
             // SAFETY: PrimeWidth is sealed to i16 and i32, so the width check
             // identifies W as i16. MontCoeff is transparent, while NttPrime
             // and NttTwiddles have stable C layouts. Both arrays contain D
-            // elements, do not overlap, and the prepared plan proves AVX2.
+            // elements, do not overlap, and the prepared plan proves all CPU features.
             unsafe {
                 avx::forward_ntt_i8_i16(
                     &mut *(dst as *mut _ as *mut [MontCoeff<i16>; D]),

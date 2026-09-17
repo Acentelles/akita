@@ -176,6 +176,7 @@ impl<W: PrimeWidth, const K: usize, const D: usize> CyclotomicCrtNtt<W, K, D> {
                         D,
                         prime.p.to_i64() as i32,
                         prime.pinv.to_i64() as i32,
+                        params.kernel_plan().uses_avx512_i32(),
                     )
                 }
             }
@@ -440,6 +441,7 @@ impl<W: PrimeWidth, const K: usize, const D: usize> CyclotomicCrtNtt<W, K, D> {
                         D,
                         prime.p.to_i64() as i32,
                         prime.pinv.to_i64() as i32,
+                        params.kernel_plan().uses_avx512_i32(),
                     );
                 }
             }

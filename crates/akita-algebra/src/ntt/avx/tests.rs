@@ -1,25 +1,62 @@
+use super::runtime::detect_cpu_features;
 use super::*;
 use crate::ntt::butterfly::NttTwiddles;
 use crate::ntt::prime::{MontCoeff, NttPrime, I32_LAZY_DOT_BATCH};
 use crate::ntt::tables::{I16_TAIL_PRIME, Q128_RAW_PRIMES};
 
-const AVX2_ONLY: AvxCpuFeatures = AvxCpuFeatures { avx2: true };
+const AVX2_ONLY: AvxCpuFeatures = AvxCpuFeatures {
+    avx2: true,
+    avx512f: false,
+    avx512dq: false,
+    avx512bw: false,
+};
 
-const NO_AVX2: AvxCpuFeatures = AvxCpuFeatures { avx2: false };
+const NO_AVX2: AvxCpuFeatures = AvxCpuFeatures {
+    avx2: false,
+    avx512f: false,
+    avx512dq: false,
+    avx512bw: false,
+};
 
 #[test]
 fn avx_mode_defaults_to_avx2_when_supported() {
-    assert_eq!(select_avx_ntt_mode(None, AVX2_ONLY), Some(AvxNttMode::Avx2));
+    assert_eq!(
+        select_avx_ntt_mode(None, None, AVX2_ONLY),
+        Some(AvxNttMode::Avx2)
+    );
 }
 
 #[test]
 fn x86_ntt_requires_avx2() {
-    assert_eq!(select_avx_ntt_mode(None, NO_AVX2), None);
+    assert_eq!(select_avx_ntt_mode(None, None, NO_AVX2), None);
 }
 
 #[test]
 fn scalar_kill_switch_disables_x86_ntt_simd() {
-    assert_eq!(select_avx_ntt_mode(Some("1"), AVX2_ONLY), None);
+    assert_eq!(select_avx_ntt_mode(Some("1"), None, AVX2_ONLY), None);
+}
+
+#[test]
+fn avx512_selection_requires_opt_in_and_every_cpu_feature() {
+    for mask in 0_u8..16 {
+        let features = AvxCpuFeatures {
+            avx2: mask & 1 != 0,
+            avx512f: mask & 2 != 0,
+            avx512dq: mask & 4 != 0,
+            avx512bw: mask & 8 != 0,
+        };
+        let fallback = features.avx2.then_some(AvxNttMode::Avx2);
+        for setting in [None, Some("0"), Some("true")] {
+            assert_eq!(select_avx_ntt_mode(None, setting, features), fallback);
+        }
+        let expected = if mask == 15 {
+            Some(AvxNttMode::Avx512)
+        } else {
+            fallback
+        };
+        assert_eq!(select_avx_ntt_mode(None, Some("1"), features), expected);
+        assert_eq!(select_avx_ntt_mode(Some("1"), Some("1"), features), None);
+    }
 }
 
 fn random_mont_array_i32<const D: usize>(prime: NttPrime<i32>, seed: u64) -> [MontCoeff<i32>; D] {
@@ -465,15 +502,15 @@ fn avx2_ntt_i32_transforms_match_scalar() {
     assert_avx2_ntt_i32_transforms_match_scalar::<512>();
 }
 
-fn assert_avx2_fused_i8_ntt_i32_matches_scalar<const D: usize>() {
+fn assert_fused_i8_ntt_i32_matches_scalar<const D: usize>(wide: bool) {
     let digits: [i8; D] =
         std::array::from_fn(|index| [i8::MIN, -17, -1, 0, 1, 13, 63, i8::MAX][index % 8]);
     for raw_prime in Q128_RAW_PRIMES {
         let prime = NttPrime::compute(raw_prime);
         let tw = NttTwiddles::<i32, D>::compute(prime);
         let mut actual = [MontCoeff::from_raw(0_i32); D];
-        // SAFETY: the caller checks AVX2 support.
-        unsafe { forward_ntt_i8_i32(&mut actual, &digits, prime, &tw) };
+        // SAFETY: the caller checks the requested CPU features.
+        unsafe { forward_ntt_i8_i32(&mut actual, &digits, prime, &tw, wide) };
 
         let mut expected = digits.map(|digit| prime.from_canonical(i32::from(digit)));
         scalar_forward_ntt_i32(&mut expected, prime, &tw);
@@ -486,8 +523,8 @@ fn avx2_fused_i8_ntt_i32_matches_scalar() {
     if !std::is_x86_feature_detected!("avx2") {
         return;
     }
-    assert_avx2_fused_i8_ntt_i32_matches_scalar::<64>();
-    assert_avx2_fused_i8_ntt_i32_matches_scalar::<256>();
+    assert_fused_i8_ntt_i32_matches_scalar::<64>(false);
+    assert_fused_i8_ntt_i32_matches_scalar::<256>(false);
 }
 
 fn assert_avx2_ntt_i16_transforms_match_scalar<const D: usize>() {
@@ -615,6 +652,7 @@ fn avx2_lazy_i32_dot_matches_repeated_reduction() {
                     D,
                     prime.p,
                     prime.pinv,
+                    false,
                 );
             }
             let mut expected = initial;
@@ -768,4 +806,96 @@ fn avx2_add_reduce_i16_matches_scalar_with_tail() {
     let mut scalar_acc = acc_init;
     scalar_add_reduce_i16(&mut scalar_acc, &other, prime);
     assert_eq!(avx_acc, scalar_acc);
+}
+
+#[test]
+fn avx512_fused_i8_ntt_matches_scalar_all_vector_boundaries() {
+    if select_avx_ntt_mode(None, Some("1"), detect_cpu_features()) != Some(AvxNttMode::Avx512) {
+        return;
+    }
+    assert_fused_i8_ntt_i32_matches_scalar::<1>(true);
+    assert_fused_i8_ntt_i32_matches_scalar::<2>(true);
+    assert_fused_i8_ntt_i32_matches_scalar::<4>(true);
+    assert_fused_i8_ntt_i32_matches_scalar::<8>(true);
+    assert_fused_i8_ntt_i32_matches_scalar::<16>(true);
+    assert_fused_i8_ntt_i32_matches_scalar::<32>(true);
+    assert_fused_i8_ntt_i32_matches_scalar::<64>(true);
+    assert_fused_i8_ntt_i32_matches_scalar::<128>(true);
+    assert_fused_i8_ntt_i32_matches_scalar::<256>(true);
+    assert_fused_i8_ntt_i32_matches_scalar::<512>(true);
+}
+
+#[test]
+fn avx512_lazy_dot_matches_scalar_extremes_counts_and_tails() {
+    if select_avx_ntt_mode(None, Some("1"), detect_cpu_features()) != Some(AvxNttMode::Avx512) {
+        return;
+    }
+    for raw_prime in Q128_RAW_PRIMES {
+        let prime = NttPrime::compute(raw_prime);
+        for d in [0, 1, 7, 8, 15, 16, 17, 19, 31, 32, 64, 128] {
+            for pattern in 0..3 {
+                let lhs: [Vec<i32>; I32_LAZY_DOT_BATCH] = std::array::from_fn(|product| {
+                    (0..d)
+                        .map(|i| match pattern {
+                            0 => prime.p - 1,
+                            1 => 1 - prime.p,
+                            _ => [0, 1, -1, prime.p - 1, 1 - prime.p][(i + product) % 5],
+                        })
+                        .collect()
+                });
+                let rhs: [Vec<i32>; I32_LAZY_DOT_BATCH] = std::array::from_fn(|product| {
+                    (0..d)
+                        .map(|i| {
+                            if pattern < 2 || (i + product) % 2 == 0 {
+                                prime.p - 1
+                            } else {
+                                1 - prime.p
+                            }
+                        })
+                        .collect()
+                });
+                let lp = lhs.each_ref().map(|x| x.as_ptr());
+                let rp = rhs.each_ref().map(|x| x.as_ptr());
+                for count in 0..=I32_LAZY_DOT_BATCH {
+                    let mut expected = vec![prime.p - 1; d];
+                    for product in 0..count {
+                        for (i, value) in expected.iter_mut().enumerate() {
+                            let term = prime.mul(
+                                MontCoeff::from_raw(lhs[product][i]),
+                                MontCoeff::from_raw(rhs[product][i]),
+                            );
+                            *value = prime
+                                .reduce_range(MontCoeff::from_raw(*value + term.raw()))
+                                .raw();
+                        }
+                    }
+                    // Sentinels detect stores past the requested output slice.
+                    let mut actual = vec![prime.p - 1; d + 2];
+                    actual[0] = i32::MIN;
+                    actual[d + 1] = i32::MAX;
+                    // SAFETY: runtime feature check; all inputs cover d elements,
+                    // output covers d elements and each residue has magnitude < p.
+                    unsafe {
+                        pointwise_dot_acc_i32(
+                            actual.as_mut_ptr().add(1),
+                            lp.as_ptr(),
+                            rp.as_ptr(),
+                            count,
+                            d,
+                            prime.p,
+                            prime.pinv,
+                            true,
+                        );
+                    }
+                    assert_eq!(
+                        &actual[1..d + 1],
+                        &expected,
+                        "p={raw_prime} d={d} count={count} pattern={pattern}"
+                    );
+                    assert_eq!(actual[0], i32::MIN);
+                    assert_eq!(actual[d + 1], i32::MAX);
+                }
+            }
+        }
+    }
 }

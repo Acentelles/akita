@@ -104,7 +104,7 @@ impl<W: PrimeWidth, const K: usize, const D: usize> CrtNttParamSet<W, K, D> {
         #[cfg(any(target_arch = "x86", target_arch = "x86_64"))]
         {
             core::mem::size_of::<W>() == core::mem::size_of::<i32>()
-                && self.kernel_plan.uses_avx2_i32_dot()
+                && self.kernel_plan.uses_x86_transform()
         }
         #[cfg(target_arch = "aarch64")]
         {

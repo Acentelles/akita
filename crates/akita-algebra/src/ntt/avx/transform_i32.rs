@@ -236,7 +236,8 @@ unsafe fn inverse_dit_radix4_stage_i32_avx2(
 ///
 /// # Safety
 ///
-/// The caller must ensure AVX2 is available.
+/// The caller must ensure AVX2 is available, plus AVX-512F/DQ/BW when
+/// `use_avx512` is true.
 #[target_feature(enable = "avx2")]
 pub(crate) unsafe fn forward_ntt_i32<const D: usize>(
     a: &mut [MontCoeff<i32>; D],
@@ -285,14 +286,21 @@ pub(crate) unsafe fn forward_ntt_i32<const D: usize>(
 ///
 /// # Safety
 ///
-/// The caller must ensure AVX2 is available.
+/// The caller must ensure AVX2 is available, and AVX-512F/DQ/BW when
+/// `use_avx512` is true.
 #[target_feature(enable = "avx2")]
 pub(crate) unsafe fn forward_ntt_i8_i32<const D: usize>(
     a: &mut [MontCoeff<i32>; D],
     digits: &[i8; D],
     prime: NttPrime<i32>,
     tw: &NttTwiddles<i32, D>,
+    use_avx512: bool,
 ) {
+    if use_avx512 {
+        // SAFETY: the caller's prepared plan proves AVX2 and AVX-512F/DQ/BW.
+        unsafe { return wide512::forward_ntt_i8_i32(a, digits, prime, tw) };
+    }
+
     let p256 = _mm256_set1_epi32(prime.p);
     let pinv256 = _mm256_set1_epi32(prime.pinv);
     let a_ptr = a.as_mut_ptr() as *mut i32;
@@ -436,7 +444,8 @@ unsafe fn forward_ntt_i32_from_twisted<const D: usize>(
 ///
 /// # Safety
 ///
-/// The caller must ensure AVX2 is available.
+/// The caller must ensure AVX2 is available, plus AVX-512F/DQ/BW when
+/// `use_avx512` is true.
 #[target_feature(enable = "avx2")]
 pub(crate) unsafe fn inverse_ntt_i32<const D: usize>(
     a: &mut [MontCoeff<i32>; D],
@@ -572,7 +581,8 @@ pub(crate) unsafe fn inverse_ntt_i32<const D: usize>(
 ///
 /// # Safety
 ///
-/// The caller must ensure AVX2 is available.
+/// The caller must ensure AVX2 is available, plus AVX-512F/DQ/BW when
+/// `use_avx512` is true.
 #[target_feature(enable = "avx2")]
 pub(crate) unsafe fn forward_ntt_cyclic_i32<const D: usize>(
     a: &mut [MontCoeff<i32>; D],
@@ -695,7 +705,8 @@ pub(crate) unsafe fn forward_ntt_cyclic_i32<const D: usize>(
 ///
 /// # Safety
 ///
-/// The caller must ensure AVX2 is available.
+/// The caller must ensure AVX2 is available, plus AVX-512F/DQ/BW when
+/// `use_avx512` is true.
 #[target_feature(enable = "avx2")]
 pub(crate) unsafe fn inverse_ntt_cyclic_i32<const D: usize>(
     a: &mut [MontCoeff<i32>; D],

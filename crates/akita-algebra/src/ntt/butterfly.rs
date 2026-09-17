@@ -180,7 +180,7 @@ pub fn forward_ntt<W: PrimeWidth, const D: usize>(
                 &mut *(a as *mut _ as *mut [MontCoeff<i32>; D]),
                 *(&prime as *const _ as *const NttPrime<i32>),
                 &*(tw as *const _ as *const NttTwiddles<i32, D>),
-                false,
+                plan.uses_avx512_i32(),
             );
         }
         return;
@@ -264,7 +264,7 @@ pub fn inverse_ntt<W: PrimeWidth, const D: usize>(
                 &mut *(a as *mut _ as *mut [MontCoeff<i32>; D]),
                 *(&prime as *const _ as *const NttPrime<i32>),
                 &*(tw as *const _ as *const NttTwiddles<i32, D>),
-                false,
+                plan.uses_avx512_i32(),
             );
         }
         return;
@@ -336,7 +336,7 @@ pub fn forward_ntt_cyclic<W: PrimeWidth, const D: usize>(
                 &mut *(a as *mut _ as *mut [MontCoeff<i32>; D]),
                 *(&prime as *const _ as *const NttPrime<i32>),
                 &*(tw as *const _ as *const NttTwiddles<i32, D>),
-                false,
+                plan.uses_avx512_i32(),
             );
         }
         return;
@@ -404,7 +404,7 @@ pub fn inverse_ntt_cyclic<W: PrimeWidth, const D: usize>(
                 &mut *(a as *mut _ as *mut [MontCoeff<i32>; D]),
                 *(&prime as *const _ as *const NttPrime<i32>),
                 &*(tw as *const _ as *const NttTwiddles<i32, D>),
-                false,
+                plan.uses_avx512_i32(),
             );
         }
         return;

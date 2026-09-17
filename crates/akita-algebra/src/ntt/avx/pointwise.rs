@@ -9,7 +9,7 @@ use super::montgomery::{
 };
 use crate::ntt::prime::{MontCoeff, NttPrime, I32_LAZY_DOT_BATCH};
 
-/// AVX2 pointwise dot-product accumulation for up to six i32 CRT entries.
+/// x86 pointwise dot-product accumulation for up to six i32 CRT entries.
 ///
 /// Raw signed products are accumulated in i64 lanes and Montgomery-reduced
 /// once per batch. For `B <= 6` and `p < 2^30`, the reduction numerator is
@@ -17,10 +17,12 @@ use crate::ntt::prime::{MontCoeff, NttPrime, I32_LAZY_DOT_BATCH};
 ///
 /// # Safety
 ///
-/// The caller must ensure AVX2 is available. `acc` must be valid for `d`
+/// The caller must ensure AVX2 is available, plus AVX-512F/DQ/BW when
+/// `use_avx512` is true. `acc` must be valid for `d`
 /// writable i32 elements. Each of the first `count` pointers in `lhs` and
 /// `rhs` must be valid for `d` readable i32 elements. The pointed-to ranges
 /// must obey Rust's aliasing rules with `acc`.
+#[allow(clippy::too_many_arguments)] // Raw pointers, length, modulus and CPU dispatch.
 #[target_feature(enable = "avx2")]
 pub(crate) unsafe fn pointwise_dot_acc_i32(
     acc: *mut i32,
@@ -30,12 +32,20 @@ pub(crate) unsafe fn pointwise_dot_acc_i32(
     d: usize,
     p: i32,
     pinv: i32,
+    use_avx512: bool,
 ) {
     debug_assert!(count <= I32_LAZY_DOT_BATCH);
     macro_rules! dispatch_count {
         ($count:literal) => {{
-            // SAFETY: inherited pointer contract and AVX2 target feature.
-            unsafe { pointwise_dot_acc_i32_count::<$count>(acc, lhs, rhs, d, p, pinv) }
+            // SAFETY: inherited pointer contract; the caller supplies the
+            // stronger CPU feature contract when selecting AVX-512.
+            unsafe {
+                if use_avx512 {
+                    super::dot512::pointwise_dot_acc_i32_count::<$count>(acc, lhs, rhs, d, p, pinv)
+                } else {
+                    pointwise_dot_acc_i32_count::<$count>(acc, lhs, rhs, d, p, pinv)
+                }
+            }
         }};
     }
     match count {
