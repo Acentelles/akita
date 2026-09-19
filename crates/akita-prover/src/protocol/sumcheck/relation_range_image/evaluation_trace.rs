@@ -973,3 +973,11 @@ impl<E: FieldCore> PreparedProverLinearTerms<E> {
 
 #[cfg(test)]
 mod tests;
+
+#[cfg(all(test, feature = "resident-stage2-prototype"))]
+#[path = "resident_stage2_factored_fixture.rs"]
+pub(super) mod resident_stage2_factored_fixture;
+
+#[cfg(feature = "resident-stage2-prototype")]
+#[path = "resident_stage2_descriptors.rs"]
+pub(crate) mod resident_stage2_descriptors;

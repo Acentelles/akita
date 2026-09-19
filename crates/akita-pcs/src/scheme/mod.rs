@@ -190,6 +190,70 @@ where
         Ok(proof)
     }
 
+    /// Experimental concrete-field opening with resident Stage2 on supported root and recursive folds.
+    ///
+    /// # Errors
+    /// Returns protocol, admission, or native errors without CPU replay.
+    #[cfg(feature = "resident-stage2-owned")]
+    #[allow(clippy::too_many_arguments)]
+    pub fn batched_prove_resident_stage2<'a, T, P, B>(
+        setup: &AkitaProverSetup<Cfg::Field>,
+        opening: SelectedProverOpeningData<'a, Cfg::ExtField, P, Cfg::Field>,
+        stacks: &'a impl LevelProveStacks<
+            'a,
+            Cfg::Field,
+            Commit = B,
+            Opening = B,
+            Tensor = B,
+            RingSwitch = B,
+        >,
+        transcript: &mut T,
+        basis: BasisMode,
+    ) -> Result<AkitaBatchedProof<Cfg::Field, Cfg::ExtField>, AkitaError>
+    where
+        Cfg: CommitmentConfig<
+            Field = akita_field::Prime64Offset59,
+            ExtField = akita_field::Ext2<akita_field::Prime64Offset59>,
+        >,
+        T: Transcript<Cfg::Field> + ProverTranscriptGrind<Cfg::Field>,
+        Cfg::Field: FromPrimitiveInt + HasWide + RandomSampling + 'static,
+        <Cfg::Field as HasWide>::Wide: From<Cfg::Field> + ReduceTo<Cfg::Field> + AdditiveGroup,
+        P: PreparedGroupProveOps<Cfg::Field, Cfg::ExtField, B>,
+        B: ComputeBackendSetup<Cfg::Field>
+            + RuntimeCommitBackendFor<Cfg::Field, akita_prover::RecursiveWitnessFlat>
+            + RuntimeOpeningProveBackendFor<Cfg::Field, RecursiveFoldSource<Cfg::Field>>
+            + RuntimeCoefficientPackingBackendFor<
+                Cfg::Field,
+                RecursiveFoldSource<Cfg::Field>,
+                Cfg::ExtField,
+            > + SuffixOpeningProveBackend<Cfg::Field>
+            + DigitRowsComputeBackend<Cfg::Field>
+            + RuntimeTensorBackendFor<Cfg::Field, RecursiveFoldSource<Cfg::Field>, Cfg::ExtField>
+            + SuffixTensorProveBackend<Cfg::Field, Cfg::ExtField>
+            + RuntimeRingSwitchProveBackend<Cfg::Field>
+            + 'a,
+        <B as ComputeBackendSetup<Cfg::Field>>::PreparedSetup: 'a,
+    {
+        let t_prove_total = Instant::now();
+        akita_config::validate_config_policy::<Cfg>()?;
+        let proof = akita_prover::batched_prove_resident_stage2::<Cfg, T, P, B, B, B, B>(
+            &setup.expanded,
+            &setup.prefix_slots,
+            stacks,
+            opening,
+            transcript,
+            basis,
+        )?;
+
+        tracing::info!(
+            levels = proof.num_fold_levels(),
+            elapsed_s = t_prove_total.elapsed().as_secs_f64(),
+            "akita batched prove complete"
+        );
+
+        Ok(proof)
+    }
+
     /// Verify a fused batched opening proof over ordered commitment groups.
     ///
     /// # Errors

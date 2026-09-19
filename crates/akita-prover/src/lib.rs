@@ -321,3 +321,10 @@ impl<F: FieldCore> CommitInnerWitness<F> {
         self.inner_rows
     }
 }
+
+#[cfg(feature = "resident-stage2-owned")]
+pub use protocol::batched_prove_resident_stage2;
+
+/// Explicit diagnostic-only Stage2 route records; absent from normal builds.
+#[cfg(feature = "resident-stage2-observer")]
+pub mod stage2_observer;

@@ -66,7 +66,13 @@ mod fold_kernels;
 mod prove;
 mod root_fold;
 mod root_group;
+mod stage2_executor;
 mod suffix;
+#[cfg(feature = "resident-stage2-owned")]
+pub use prove::batched_prove_resident_stage2;
+#[cfg(feature = "resident-stage2-owned")]
+use stage2_executor::ResidentStage2;
+use stage2_executor::{CpuStage2, Stage2Context, Stage2Executor};
 #[cfg(test)]
 mod tests;
 

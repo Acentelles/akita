@@ -85,6 +85,80 @@ where
     <TS as ComputeBackendSetup<Cfg::Field>>::PreparedSetup: 'a,
     <R as ComputeBackendSetup<Cfg::Field>>::PreparedSetup: 'a,
 {
+    batched_prove_with_stage2::<Cfg, T, P, C, O, TS, R, _>(
+        &CpuStage2,
+        expanded,
+        prefix_slots,
+        stacks,
+        opening,
+        transcript,
+        basis,
+    )
+}
+
+pub(super) fn batched_prove_with_stage2<'a, Cfg, T, P, C, O, TS, R, D>(
+    stage2: &D,
+    expanded: &Arc<AkitaExpandedSetup<Cfg::Field>>,
+    prefix_slots: &SetupPrefixProverRegistry<Cfg::Field>,
+    stacks: &'a impl LevelProveStacks<
+        'a,
+        Cfg::Field,
+        Commit = C,
+        Opening = O,
+        Tensor = TS,
+        RingSwitch = R,
+    >,
+    opening: SelectedProverOpeningData<'a, Cfg::ExtField, P, Cfg::Field>,
+    transcript: &mut T,
+    basis: BasisMode,
+) -> Result<AkitaBatchedProof<Cfg::Field, Cfg::ExtField>, AkitaError>
+where
+    D: Stage2Executor<Cfg::Field, Cfg::ExtField>,
+    Cfg: CommitmentConfig,
+    Cfg::Field: FieldCore
+        + CanonicalField
+        + RandomSampling
+        + HasWide
+        + HalvingField
+        + Invertible
+        + PseudoMersenneField,
+    Cfg::ExtField: FpExtEncoding<Cfg::Field> + MulBaseUnreduced<Cfg::Field>,
+    Cfg::ExtField: FpExtEncoding<Cfg::Field>
+        + ExtField<Cfg::Field>
+        + FrobeniusExtField<Cfg::Field>
+        + HasUnreducedOps
+        + HasOptimizedFold
+        + FromPrimitiveInt
+        + AkitaSerialize,
+    T: Transcript<Cfg::Field> + ProverTranscriptGrind<Cfg::Field>,
+    Cfg::Field: FromPrimitiveInt + 'static,
+    <Cfg::Field as HasWide>::Wide: From<Cfg::Field> + ReduceTo<Cfg::Field> + AdditiveGroup,
+    P: PreparedGroupProveOps<Cfg::Field, Cfg::ExtField, O>,
+    C: ComputeBackendSetup<Cfg::Field>
+        + RuntimeCommitBackendFor<Cfg::Field, RecursiveWitnessFlat>
+        + 'a,
+    O: ComputeBackendSetup<Cfg::Field>
+        + RuntimeOpeningProveBackendFor<Cfg::Field, RecursiveFoldSource<Cfg::Field>>
+        + RuntimeCoefficientPackingBackendFor<
+            Cfg::Field,
+            RecursiveFoldSource<Cfg::Field>,
+            Cfg::ExtField,
+        > + SuffixOpeningProveBackend<Cfg::Field>
+        + DigitRowsComputeBackend<Cfg::Field>
+        + 'a,
+    TS: ComputeBackendSetup<Cfg::Field>
+        + RuntimeTensorBackendFor<Cfg::Field, RecursiveFoldSource<Cfg::Field>, Cfg::ExtField>
+        + SuffixTensorProveBackend<Cfg::Field, Cfg::ExtField>
+        + 'a,
+    R: ComputeBackendSetup<Cfg::Field>
+        + RuntimeRingSwitchProveBackend<Cfg::Field>
+        + DigitRowsComputeBackend<Cfg::Field>
+        + 'a,
+    <C as ComputeBackendSetup<Cfg::Field>>::PreparedSetup: 'a,
+    <O as ComputeBackendSetup<Cfg::Field>>::PreparedSetup: 'a,
+    <TS as ComputeBackendSetup<Cfg::Field>>::PreparedSetup: 'a,
+    <R as ComputeBackendSetup<Cfg::Field>>::PreparedSetup: 'a,
+{
     let (selection, claims) = opening.into_low_level_parts();
     let opening_claims = claims.opening_claims();
     let opening_batch = claims.opening_layout()?;
@@ -105,7 +179,8 @@ where
         transcript,
     )?;
 
-    prove::<Cfg, T, P, C, O, TS, R>(
+    prove_with_stage2::<Cfg, T, P, C, O, TS, R, D>(
+        stage2,
         expanded,
         prefix_slots,
         stacks,
@@ -148,6 +223,82 @@ pub fn prove<'a, Cfg, T, P, C, O, TS, R>(
     basis: BasisMode,
 ) -> Result<(AkitaBatchedProof<Cfg::Field, Cfg::ExtField>, usize), AkitaError>
 where
+    Cfg: CommitmentConfig,
+    Cfg::Field: FieldCore
+        + CanonicalField
+        + RandomSampling
+        + HasWide
+        + HalvingField
+        + Invertible
+        + PseudoMersenneField,
+    Cfg::ExtField: FpExtEncoding<Cfg::Field> + MulBaseUnreduced<Cfg::Field>,
+    Cfg::ExtField: FpExtEncoding<Cfg::Field>
+        + ExtField<Cfg::Field>
+        + FrobeniusExtField<Cfg::Field>
+        + HasUnreducedOps
+        + HasOptimizedFold
+        + FromPrimitiveInt
+        + AkitaSerialize,
+    T: Transcript<Cfg::Field> + ProverTranscriptGrind<Cfg::Field>,
+    Cfg::Field: FromPrimitiveInt + 'static,
+    <Cfg::Field as HasWide>::Wide: From<Cfg::Field> + ReduceTo<Cfg::Field> + AdditiveGroup,
+    P: PreparedGroupProveOps<Cfg::Field, Cfg::ExtField, O>,
+    C: ComputeBackendSetup<Cfg::Field>
+        + RuntimeCommitBackendFor<Cfg::Field, RecursiveWitnessFlat>
+        + 'a,
+    O: ComputeBackendSetup<Cfg::Field>
+        + RuntimeOpeningProveBackendFor<Cfg::Field, RecursiveFoldSource<Cfg::Field>>
+        + RuntimeCoefficientPackingBackendFor<
+            Cfg::Field,
+            RecursiveFoldSource<Cfg::Field>,
+            Cfg::ExtField,
+        > + SuffixOpeningProveBackend<Cfg::Field>
+        + DigitRowsComputeBackend<Cfg::Field>
+        + 'a,
+    TS: ComputeBackendSetup<Cfg::Field>
+        + RuntimeTensorBackendFor<Cfg::Field, RecursiveFoldSource<Cfg::Field>, Cfg::ExtField>
+        + SuffixTensorProveBackend<Cfg::Field, Cfg::ExtField>
+        + 'a,
+    R: ComputeBackendSetup<Cfg::Field>
+        + RuntimeRingSwitchProveBackend<Cfg::Field>
+        + DigitRowsComputeBackend<Cfg::Field>
+        + 'a,
+    <C as ComputeBackendSetup<Cfg::Field>>::PreparedSetup: 'a,
+    <O as ComputeBackendSetup<Cfg::Field>>::PreparedSetup: 'a,
+    <TS as ComputeBackendSetup<Cfg::Field>>::PreparedSetup: 'a,
+    <R as ComputeBackendSetup<Cfg::Field>>::PreparedSetup: 'a,
+{
+    prove_with_stage2::<Cfg, T, P, C, O, TS, R, _>(
+        &CpuStage2,
+        expanded,
+        prefix_slots,
+        stacks,
+        transcript,
+        claims,
+        schedule,
+        basis,
+    )
+}
+
+pub(super) fn prove_with_stage2<'a, Cfg, T, P, C, O, TS, R, D>(
+    stage2: &D,
+    expanded: &Arc<AkitaExpandedSetup<Cfg::Field>>,
+    prefix_slots: &SetupPrefixProverRegistry<Cfg::Field>,
+    stacks: &'a impl LevelProveStacks<
+        'a,
+        Cfg::Field,
+        Commit = C,
+        Opening = O,
+        Tensor = TS,
+        RingSwitch = R,
+    >,
+    transcript: &mut T,
+    claims: ProverOpeningData<'a, Cfg::ExtField, P, Cfg::Field>,
+    schedule: &FoldSchedule,
+    basis: BasisMode,
+) -> Result<(AkitaBatchedProof<Cfg::Field, Cfg::ExtField>, usize), AkitaError>
+where
+    D: Stage2Executor<Cfg::Field, Cfg::ExtField>,
     Cfg: CommitmentConfig,
     Cfg::Field: FieldCore
         + CanonicalField
@@ -241,7 +392,8 @@ where
         },
     );
 
-    let root = prove_root::<Cfg::Field, Cfg::ExtField, T, P, C, O, TS, R, Cfg>(
+    let root = prove_root::<Cfg::Field, Cfg::ExtField, T, P, C, O, TS, R, Cfg, D>(
+        stage2,
         expanded,
         prefix_slots,
         stacks,
@@ -261,7 +413,8 @@ where
     // at this exact root/suffix boundary through the lifecycle hook.
     stacks.after_root_fold()?;
 
-    let suffix = crate::prove_suffix::<Cfg, T, C, O, TS, R>(
+    let suffix = super::suffix::prove_suffix_with_stage2::<Cfg, T, C, O, TS, R, D>(
+        stage2,
         expanded,
         prefix_slots,
         stacks,
@@ -278,4 +431,86 @@ where
         },
         suffix.num_levels,
     ))
+}
+
+/// Prove with the experimental resident Stage2 backend for the concrete FP64 extension.
+/// Unsupported static shapes select CPU before Stage2 absorption; selected-backend errors are fatal.
+///
+/// # Errors
+/// Returns admission, native execution, or ordinary protocol errors.
+#[cfg(feature = "resident-stage2-owned")]
+#[allow(clippy::too_many_arguments, clippy::type_complexity)]
+pub fn batched_prove_resident_stage2<'a, Cfg, T, P, C, O, TS, R>(
+    expanded: &Arc<AkitaExpandedSetup<Cfg::Field>>,
+    prefix_slots: &SetupPrefixProverRegistry<Cfg::Field>,
+    stacks: &'a impl LevelProveStacks<
+        'a,
+        Cfg::Field,
+        Commit = C,
+        Opening = O,
+        Tensor = TS,
+        RingSwitch = R,
+    >,
+    opening: SelectedProverOpeningData<'a, Cfg::ExtField, P, Cfg::Field>,
+    transcript: &mut T,
+    basis: BasisMode,
+) -> Result<AkitaBatchedProof<Cfg::Field, Cfg::ExtField>, AkitaError>
+where
+    Cfg: CommitmentConfig<
+        Field = akita_field::Prime64Offset59,
+        ExtField = akita_field::Ext2<akita_field::Prime64Offset59>,
+    >,
+    Cfg::Field: FieldCore
+        + CanonicalField
+        + RandomSampling
+        + HasWide
+        + HalvingField
+        + Invertible
+        + PseudoMersenneField,
+    Cfg::ExtField: FpExtEncoding<Cfg::Field> + MulBaseUnreduced<Cfg::Field>,
+    Cfg::ExtField: FpExtEncoding<Cfg::Field>
+        + ExtField<Cfg::Field>
+        + FrobeniusExtField<Cfg::Field>
+        + HasUnreducedOps
+        + HasOptimizedFold
+        + FromPrimitiveInt
+        + AkitaSerialize,
+    T: Transcript<Cfg::Field> + ProverTranscriptGrind<Cfg::Field>,
+    Cfg::Field: FromPrimitiveInt + 'static,
+    <Cfg::Field as HasWide>::Wide: From<Cfg::Field> + ReduceTo<Cfg::Field> + AdditiveGroup,
+    P: PreparedGroupProveOps<Cfg::Field, Cfg::ExtField, O>,
+    C: ComputeBackendSetup<Cfg::Field>
+        + RuntimeCommitBackendFor<Cfg::Field, RecursiveWitnessFlat>
+        + 'a,
+    O: ComputeBackendSetup<Cfg::Field>
+        + RuntimeOpeningProveBackendFor<Cfg::Field, RecursiveFoldSource<Cfg::Field>>
+        + RuntimeCoefficientPackingBackendFor<
+            Cfg::Field,
+            RecursiveFoldSource<Cfg::Field>,
+            Cfg::ExtField,
+        > + SuffixOpeningProveBackend<Cfg::Field>
+        + DigitRowsComputeBackend<Cfg::Field>
+        + 'a,
+    TS: ComputeBackendSetup<Cfg::Field>
+        + RuntimeTensorBackendFor<Cfg::Field, RecursiveFoldSource<Cfg::Field>, Cfg::ExtField>
+        + SuffixTensorProveBackend<Cfg::Field, Cfg::ExtField>
+        + 'a,
+    R: ComputeBackendSetup<Cfg::Field>
+        + RuntimeRingSwitchProveBackend<Cfg::Field>
+        + DigitRowsComputeBackend<Cfg::Field>
+        + 'a,
+    <C as ComputeBackendSetup<Cfg::Field>>::PreparedSetup: 'a,
+    <O as ComputeBackendSetup<Cfg::Field>>::PreparedSetup: 'a,
+    <TS as ComputeBackendSetup<Cfg::Field>>::PreparedSetup: 'a,
+    <R as ComputeBackendSetup<Cfg::Field>>::PreparedSetup: 'a,
+{
+    batched_prove_with_stage2::<Cfg, T, P, C, O, TS, R, _>(
+        &ResidentStage2,
+        expanded,
+        prefix_slots,
+        stacks,
+        opening,
+        transcript,
+        basis,
+    )
 }

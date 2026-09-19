@@ -265,6 +265,9 @@ mod dense_terms;
 mod evaluation_trace;
 mod lane_prefix;
 mod lifecycle;
+#[cfg(feature = "resident-stage2-prototype")]
+#[allow(dead_code)]
+mod resident_stage2;
 mod round_flow;
 
 pub(crate) use additional_terms::AdditionalRelationTerms;
@@ -328,3 +331,9 @@ impl<E: FieldCore + FromPrimitiveInt + HasUnreducedOps> RelationRangeImageProver
 
 #[cfg(test)]
 mod tests;
+
+#[cfg(all(test, feature = "resident-stage2-prototype"))]
+mod resident_stage2_tests;
+
+#[cfg(feature = "resident-stage2-owned")]
+pub(crate) mod resident_owned;

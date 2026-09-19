@@ -649,3 +649,7 @@ mod tests {
         }
     }
 }
+
+#[cfg(feature = "resident-stage2-prototype")]
+#[path = "resident_stage2_additional.rs"]
+pub(crate) mod resident_additional;
