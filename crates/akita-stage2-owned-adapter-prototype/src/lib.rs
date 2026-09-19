@@ -80,7 +80,7 @@ impl Config {
         if lanes == 0
             || !coefficients.is_power_of_two()
             || coefficients < 8
-            || ![4, 8].contains(&basis)
+            || ![4, 8, 16, 32, 64].contains(&basis)
             || max_payload_bytes == 0
             || max_payload_bytes > MAX_BYTES
         {

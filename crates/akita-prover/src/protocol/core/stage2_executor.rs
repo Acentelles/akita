@@ -35,7 +35,7 @@ impl Stage2Context {
     }
     #[cfg(feature = "resident-stage2-owned")]
     fn decline_reason(self) -> Option<&'static str> {
-        if ![4, 8].contains(&self.basis) {
+        if ![4, 8, 16, 32, 64].contains(&self.basis) {
             Some("digit-basis")
         } else if self.columns < 8 || !self.columns.is_power_of_two() {
             Some("coefficient-width")

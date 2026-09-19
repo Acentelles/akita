@@ -61,6 +61,8 @@ pub(crate) struct ResidentRelationProver {
     owner: Option<Owner>,
     phase: Phase,
     first: Option<F>,
+    initial_coefficients: usize,
+    deferred_prefix: bool,
     additional: Option<UniPoly<F>>,
     awaiting_challenge: bool,
     #[cfg(feature = "resident-stage2-observer")]
@@ -75,10 +77,9 @@ impl ResidentRelationProver {
             .ok_or_else(|| invalid("domain overflow"))?;
         let live = l.checked_mul(c).ok_or_else(|| invalid("live overflow"))?;
         if cpu.rounds_completed != 0
-            || !cpu.using_deferred_compact_prefix()
             || !c.is_power_of_two()
             || c < 8
-            || ![4, 8].contains(&cpu.b)
+            || ![4, 8, 16, 32, 64].contains(&cpu.b)
             || live > domain
             || domain > CAP
         {
@@ -103,11 +104,14 @@ impl ResidentRelationProver {
         drop(descriptor);
         let config = Config::new(l, c, cpu.b, 8 << 30, domain).map_err(native)?;
         let owner = Owner::create(config, compact).map_err(native)?;
+        let deferred_prefix = cpu.using_deferred_compact_prefix();
         Ok(Self {
             cpu,
             owner: Some(owner),
             phase: Phase::Prefix,
             first: None,
+            initial_coefficients: c,
+            deferred_prefix,
             additional: None,
             awaiting_challenge: false,
             #[cfg(feature = "resident-stage2-observer")]
@@ -326,23 +330,32 @@ impl ResidentRelationProver {
                     .first
                     .take()
                     .ok_or_else(|| invalid("missing first challenge"))?;
-                let c = self.cpu.common_alpha_factor.len();
                 self.bind_host(r);
-                let alpha = RelationRangeImageProver::fold_alpha_two_rounds(
-                    &self.cpu.common_alpha_factor,
-                    r0,
-                    r,
-                );
-                self.cpu.linear_terms.fold_two_coefficients(r0, r);
-                self.cpu.common_alpha_factor = alpha;
+                if self.deferred_prefix {
+                    let alpha = RelationRangeImageProver::fold_alpha_two_rounds(
+                        &self.cpu.common_alpha_factor,
+                        r0,
+                        r,
+                    );
+                    self.cpu.linear_terms.fold_two_coefficients(r0, r);
+                    self.cpu.common_alpha_factor = alpha;
+                } else {
+                    // Wider bases retained the original CPU first fold and its
+                    // initialized N/2 witness. Fold only the second challenge's
+                    // host factors here; native entry still consumes original
+                    // compact input with both challenges. This CPU work and
+                    // temporary allocation remain part of the proof lifecycle.
+                    self.cpu.fold_linear_terms_for_current_round(r);
+                    fold_evals_in_place(&mut self.cpu.common_alpha_factor, r);
+                }
                 self.cpu.rounds_completed += 1;
                 self.cpu.deferred_compact_prefix = None;
                 self.cpu.compact_prefix_stage1_point = None;
-                // The original compact host allocation is released after the
+                // The compact or CPU first-fold allocation is released after the
                 // owner already copied it at admission. Empty state is private
                 // to this wrapper and never read by the CPU while resident.
                 self.cpu.witness_state = WitnessState::FoldedSuffix(Vec::new());
-                self.dispatch(c, r0, r, true)?;
+                self.dispatch(self.initial_coefficients, r0, r, true)?;
             }
             Phase::Resident => {
                 let c = self.cpu.common_alpha_factor.len();

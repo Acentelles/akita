@@ -115,18 +115,14 @@ fn fixture(seed: u64) {
         assert_eq!(route.level, level);
         assert!(route.lanes > 0 && route.columns.is_power_of_two());
         assert!(route.domain.is_power_of_two() && route.domain >= route.lanes * route.columns);
-        if route.declined.is_none() {
-            assert_eq!(route.compact_entries, 1);
-            assert_eq!(route.exports, 1);
-            assert_eq!(route.advances, route.columns.ilog2() as usize - 3);
-        } else {
-            assert_eq!(
-                (route.compact_entries, route.advances, route.exports),
-                (0, 0, 0)
-            );
-            assert_eq!(route.declined, Some("digit-basis"));
-            assert!(![4, 8].contains(&route.basis));
-        }
+        assert!(
+            route.declined.is_none(),
+            "all five scheduled folds are admitted"
+        );
+        assert!([4, 8, 16, 32, 64].contains(&route.basis));
+        assert_eq!(route.compact_entries, 1);
+        assert_eq!(route.exports, 1);
+        assert_eq!(route.advances, route.columns.ilog2() as usize - 3);
         eprintln!("full_pcs_route seed={seed} level={} basis={} columns={} lanes={} domain={} compression_layers={} declined={:?} entry={} advance={} export={}",
             route.level, route.basis, route.columns, route.lanes, route.domain, route.compression_layers,
             route.declined, route.compact_entries, route.advances, route.exports);
@@ -143,9 +139,10 @@ fn fixture(seed: u64) {
             && r.negative_binary_intervals > 0),
         "an actual compressed recursive suffix must execute resident Stage2"
     );
-    assert!(
-        routes.iter().any(|r| r.declined == Some("digit-basis")),
-        "unsupported basis selection must be exercised"
+    assert_eq!(routes.len(), 5, "shipped NV20 root plus four suffix folds");
+    assert_eq!(
+        routes.iter().map(|r| r.basis).collect::<Vec<_>>(),
+        [8, 8, 16, 16, 32]
     );
     let (mut cpu_bytes, mut resident_bytes) = (Vec::new(), Vec::new());
     cpu.serialize_compressed(&mut cpu_bytes)
@@ -179,7 +176,7 @@ fn fixture(seed: u64) {
         verifier_next.push(next(&mut vt));
     }
     assert_eq!(verifier_next[0], verifier_next[1]);
-    eprintln!("full_pcs_parity seed={seed} root=resident compressed_suffix=resident proof_bytes=equal verified=2 next_challenge=equal");
+    eprintln!("full_pcs_parity seed={seed} all_folds=resident folds=5 cpu_first_fold_wide=retained proof_bytes=equal verified=2 next_challenge=equal");
 }
 
 #[test]

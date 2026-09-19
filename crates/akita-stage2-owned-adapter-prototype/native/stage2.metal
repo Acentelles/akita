@@ -101,13 +101,29 @@ kernel void stage2_compact(
     for(ulong j=ulong(group)*256+tid;j<count;j+=p.groups*256) {
         const ulong lane=j/pairs_per_lane,k=j%pairs_per_lane;
         const ulong s=lane*p.coefficients+8*k,o=lane*m+2*k;
+        Ext w0,w1;
+        if(p.basis<=8) {
         const uint bits=p.basis==4?2:3;
         uint i0=0,i1=0;
         for(uint q=0;q<4;q++) {
             i0|=uint(int(source[s+q])+int(p.basis/2))<<(bits*q);
             i1|=uint(int(source[s+4+q])+int(p.basis/2))<<(bits*q);
         }
-        const Ext w0=lut[i0],w1=lut[i1];
+        w0=lut[i0];w1=lut[i1];
+        } else {
+            // Wide balanced digits use b² first-challenge pairs, not b⁴ quads.
+            const uint bits=p.basis==16?4:(p.basis==32?5:6), digit_bias=uint(p.basis/2);
+            uint index[4];
+            for(uint pair=0;pair<4;pair++) {
+                const uint x=uint(int(source[s+2*pair])+int(digit_bias));
+                const uint y=uint(int(source[s+2*pair+1])+int(digit_bias));
+                index[pair]=x|(y<<bits);
+            }
+            const Ext a0=lut[index[0]],a1=lut[index[1]];
+            const Ext b0=lut[index[2]],b1=lut[index[3]];
+            w0=ext_add(a0,ext_mul(p.r1,ext_sub(a1,a0)));
+            w1=ext_add(b0,ext_mul(p.r1,ext_sub(b1,b0)));
+        }
         output[o]=w0;output[o+1]=w1;
         const Ext dw=ext_sub(w1,w0),one=Ext{1,0};
         const Ext e=ext_mul(first[j&(p.first_len-1)],second[j/p.first_len]);
@@ -133,6 +149,14 @@ kernel void stage2_compact(
 
 inline Ext signed_digit(int d) {return Ext{d<0?0xffffffffffffffc5ul-ulong(-d):ulong(d),0};}
 kernel void compact_lut(device Ext* lut [[buffer(0)]],constant CompactParams& p [[buffer(1)]],uint idx [[thread_position_in_grid]]) {
+    if(p.basis>8) {
+        const uint bits=p.basis==16?4:(p.basis==32?5:6),count=uint(p.basis*p.basis);
+        if(idx>=count)return;
+        const Ext a=signed_digit(int(idx&uint(p.basis-1))-int(p.basis/2));
+        const Ext b=signed_digit(int(idx>>bits)-int(p.basis/2));
+        lut[idx]=ext_add(a,ext_mul(p.rho,ext_sub(b,a)));
+        return;
+    }
     const uint bits=p.basis==4?2:3,count=1u<<(4*bits);if(idx>=count)return;
     Ext q[4];for(uint k=0;k<4;k++)q[k]=signed_digit(int((idx>>(bits*k))&uint(p.basis-1))-int(p.basis/2));
     const Ext a=ext_add(q[0],ext_mul(p.rho,ext_sub(q[1],q[0])));

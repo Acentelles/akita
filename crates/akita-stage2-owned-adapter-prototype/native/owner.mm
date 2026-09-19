@@ -39,7 +39,7 @@ static bool extspan(const Ext* p,uint64_t n){if(n>MaxN || (n && !p))return false
 static bool add_bytes(uint64_t& total,uint64_t count,uint64_t width,uint64_t cap){if(count>cap/width)return false;uint64_t n=count*width;if(n>cap-total)return false;total+=n;return true;}
 static uint64_t initial_bytes(uint64_t n){return n+16*(n/4+n/8)+4096*16+6*1024*16+96+8*512;}
 static uint32_t admission(const AkitaStage2Config* c,const int8_t* p,uint64_t n){
-    if(!c || !c->lanes || !power2(c->coefficients) || c->coefficients<8 || c->lanes>MaxN/c->coefficients || (c->basis!=4 && c->basis!=8) || c->max_payload_bytes>MaxCap || n!=c->lanes*c->coefficients || !p)return AKITA_STAGE2_INVALID;
+    if(!c || !c->lanes || !power2(c->coefficients) || c->coefficients<8 || c->lanes>MaxN/c->coefficients || (c->basis!=4 && c->basis!=8 && c->basis!=16 && c->basis!=32 && c->basis!=64) || c->max_payload_bytes>MaxCap || n!=c->lanes*c->coefficients || !p)return AKITA_STAGE2_INVALID;
     if(initial_bytes(n)>c->max_payload_bytes || !power2(c->initial_domain_len) || c->initial_domain_len<n || c->initial_domain_len>MaxN)return AKITA_STAGE2_INVALID;
     for(uint64_t i=0;i<n;i++)if(p[i]<-int(c->basis/2) || p[i]>=int(c->basis/2))return AKITA_STAGE2_INVALID;
     return AKITA_STAGE2_OK;
@@ -94,7 +94,7 @@ struct AkitaStage2Owner {
         std::array<const void*,9> inputs={r.alpha,r.lane_weights,r.eq_first,r.eq_second,r.sources,r.source_records,r.lane_offsets,r.references,r.additional_pairs};
         std::vector<Buffer> temp;temp.reserve(11);for(size_t i=0;i<11;i++){temp.emplace_back(device,sizes[i]);if(i<9)temp.back().copy(inputs[i]);}
         id<MTLCommandBuffer> cmd=[queue commandBuffer];need(cmd!=nil);id<MTLComputeCommandEncoder> enc;
-        if(entry){enc=[cmd computeCommandEncoder];need(enc!=nil);[enc setComputePipelineState:lutPipeline];[enc setBuffer:lut->value offset:256 atIndex:0];[enc setBytes:&cp length:sizeof(cp) atIndex:1];[enc dispatchThreadgroups:MTLSizeMake(config.basis==4?1:16,1,1) threadsPerThreadgroup:MTLSizeMake(256,1,1)];[enc endEncoding];}
+        if(entry){enc=[cmd computeCommandEncoder];need(enc!=nil);[enc setComputePipelineState:lutPipeline];[enc setBuffer:lut->value offset:256 atIndex:0];[enc setBytes:&cp length:sizeof(cp) atIndex:1];[enc dispatchThreadgroups:MTLSizeMake(config.basis==4?1:(config.basis==8?16:(config.basis*config.basis+255)/256),1,1) threadsPerThreadgroup:MTLSizeMake(256,1,1)];[enc endEncoding];}
         enc=[cmd computeCommandEncoder];need(enc!=nil);[enc setComputePipelineState:(entry?entryPipeline:foldPipeline)];
         [enc setBuffer:(entry?compact->value:witness[current]->value) offset:256 atIndex:0];
         for(size_t i=0;i<5;i++)[enc setBuffer:temp[i].value offset:256 atIndex:i+1];

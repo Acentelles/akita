@@ -67,19 +67,21 @@ fn prover(
         &point,
         additional_mode,
     );
+    if digit_basis > 8 {
+        assert!(!p.using_deferred_compact_prefix());
+    }
     p.input_claim += additional.input_claim();
     p.additional_relation_terms = Some(additional);
     p
 }
-#[test]
-fn resident_owned_full_sumcheck_matches_cpu_proof_and_next_challenge() {
+fn parity_matrix(digit_bases: &[usize]) -> usize {
     let mut cases = 0;
     for basis in [
         akita_types::BasisMode::Lagrange,
         akita_types::BasisMode::Monomial,
     ] {
         for full_norm in [false, true] {
-            for digit_basis in [4, 8] {
+            for &digit_basis in digit_bases {
                 for padded in [false, true] {
                     for mode in 0..4 {
                         let mut cpu = prover(basis, full_norm, mode, digit_basis, padded);
@@ -115,8 +117,17 @@ fn resident_owned_full_sumcheck_matches_cpu_proof_and_next_challenge() {
             }
         }
     }
-    assert_eq!(cases, 64);
+    cases
+}
+#[test]
+fn resident_owned_full_sumcheck_matches_cpu_proof_and_next_challenge() {
+    assert_eq!(parity_matrix(&[4, 8]), 64);
     println!("RESIDENT_STAGE2_PARITY cases=64 exact_proof_bytes=true final_witness=true final_claim=true next_challenge=true");
+}
+#[test]
+fn resident_owned_wide_bases_match_cpu_proof_and_next_challenge() {
+    assert_eq!(parity_matrix(&[16, 32, 64]), 96);
+    println!("RESIDENT_STAGE2_WIDE_PARITY cases=96 exact_proof_bytes=true final_witness=true final_claim=true next_challenge=true cpu_first_fold_retained=true");
 }
 #[test]
 fn resident_owned_static_shape_rejects_before_transcript_or_device_route() {
@@ -124,7 +135,7 @@ fn resident_owned_static_shape_rejects_before_transcript_or_device_route() {
     p.rounds_completed = 1;
     assert!(ResidentRelationProver::new(p).is_err());
     let mut p = prover(akita_types::BasisMode::Lagrange, false, 2, 4, false);
-    p.b = 16;
+    p.b = 128;
     assert!(ResidentRelationProver::new(p).is_err());
     let mut p = prover(akita_types::BasisMode::Lagrange, false, 2, 4, false);
     p.num_vars = usize::BITS as usize;
