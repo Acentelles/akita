@@ -35,6 +35,11 @@ features = ["parallel", "schedules-default", "transcript-blake2b"]
 ignored = ["akita-setup"]
 
 [features]
+resident-stage2-observer = [
+  "resident-stage2-owned",
+  "akita-prover/resident-stage2-observer",
+]
+resident-stage2-owned = ["akita-prover/resident-stage2-owned"]
 default = ["parallel", "schedules-default", "transcript-blake2b"]
 transcript-blake2b = [
   "akita-challenges/transcript-blake2b",

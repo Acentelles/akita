@@ -388,7 +388,8 @@ impl<'a> FoldSuccessorParams<'a> {
 /// sumcheck prover fails.
 #[allow(clippy::too_many_arguments)]
 #[inline(never)]
-pub(in crate::protocol::core) fn prove_fold<'stack, F, E, T, C, O, TS, R, Cfg>(
+pub(in crate::protocol::core) fn prove_fold<'stack, F, E, T, C, O, TS, R, Cfg, D>(
+    stage2: &D,
     expanded: &Arc<AkitaExpandedSetup<F>>,
     prefix_slots: &SetupPrefixProverRegistry<F>,
     stack: &'stack ProverComputeStack<'stack, F, C, O, TS, R>,
@@ -401,6 +402,7 @@ pub(in crate::protocol::core) fn prove_fold<'stack, F, E, T, C, O, TS, R, Cfg>(
     prepared_fold: PreparedFold<F, E>,
 ) -> Result<ProveLevelOutput<F, E>, AkitaError>
 where
+    D: Stage2Executor<F, E>,
     F: FieldCore
         + CanonicalField
         + RandomSampling
@@ -641,7 +643,8 @@ where
     let relation_address_geometry = rs.relation_address_geometry;
     let tau1 = rs.tau1.clone();
     let alpha = rs.alpha;
-    let (stage2_sumcheck_proof, sumcheck_challenges, stage2_prover) = prove_stage2::<F, E, T>(
+    let (stage2_sumcheck_proof, sumcheck_challenges, stage2_prover) = prove_stage2::<F, E, T, D>(
+        stage2,
         level,
         transcript,
         batching_coeff,

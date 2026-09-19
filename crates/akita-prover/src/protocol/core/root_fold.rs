@@ -107,7 +107,8 @@ where
 /// ring-relation construction fails, or the folded-root prover fails.
 #[allow(clippy::too_many_arguments)]
 #[inline(never)]
-pub(crate) fn prove_root<'stack, F, E, T, P, C, O, TS, R, Cfg>(
+pub(crate) fn prove_root<'stack, F, E, T, P, C, O, TS, R, Cfg, D>(
+    stage2: &D,
     expanded: &Arc<AkitaExpandedSetup<F>>,
     prefix_slots: &SetupPrefixProverRegistry<F>,
     stacks: &'stack impl LevelProveStacks<
@@ -126,6 +127,7 @@ pub(crate) fn prove_root<'stack, F, E, T, P, C, O, TS, R, Cfg>(
     basis: BasisMode,
 ) -> Result<ProveLevelOutput<F, E>, AkitaError>
 where
+    D: Stage2Executor<F, E>,
     F: FieldCore
         + CanonicalField
         + RandomSampling
@@ -181,7 +183,8 @@ where
         prepare_root::<F, E, T, P, C, O, TS, R>(stack, transcript, claims, root_params, basis)
             .map_err(|err| AkitaError::InvalidInput(format!("prepare root failed: {err:?}")))?;
 
-    prove_fold::<F, E, T, C, O, TS, R, Cfg>(
+    prove_fold::<F, E, T, C, O, TS, R, Cfg, D>(
+        stage2,
         expanded,
         prefix_slots,
         stack,

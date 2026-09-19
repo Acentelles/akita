@@ -86,7 +86,8 @@ where
 }
 
 #[allow(clippy::too_many_arguments)]
-pub(super) fn prove_stage2<F, E, T>(
+pub(super) fn prove_stage2<F, E, T, D>(
+    stage2: &D,
     level: usize,
     transcript: &mut T,
     batching_coeff: E,
@@ -101,6 +102,7 @@ pub(super) fn prove_stage2<F, E, T>(
     plan: RelationRangeImagePlan,
 ) -> Result<RelationRangeImageProveResult<E>, AkitaError>
 where
+    D: Stage2Executor<F, E>,
     F: FieldCore + CanonicalField,
     E: ExtField<F> + HasUnreducedOps + HasOptimizedFold + FromPrimitiveInt + AkitaSerialize,
     T: Transcript<F>,
@@ -171,7 +173,16 @@ where
         - additional_relation_terms
             .as_ref()
             .map_or_else(E::zero, AdditionalRelationTerms::input_claim);
-    let mut stage2_prover = RelationRangeImageProver::new(
+    let stage2_context = Stage2Context {
+        level,
+        basis: plan.digit_range_plan().basis(),
+        columns: expected_factor_len,
+        lanes: live_relation_lane_count,
+        domain: domain_len,
+        compression_layers: plan.witness_layout().compression_layers().len(),
+        negative_binary_intervals: binary_intervals.len(),
+    };
+    let stage2_prover = RelationRangeImageProver::new(
         batching_coeff,
         rs.w_evals_compact,
         stage1_point,
@@ -192,10 +203,8 @@ where
             "stage-2 prover initialization failed at fold level {level}: {err}"
         ))
     })?;
-    let (stage2_sumcheck_proof, sumcheck_challenges, final_claim) = stage2_prover
-        .prove::<F, T, _>(transcript, |tr| {
-            sample_ext_challenge::<F, E, T>(tr, CHALLENGE_SUMCHECK_ROUND)
-        })?;
+    let ((stage2_sumcheck_proof, sumcheck_challenges, final_claim), stage2_prover) =
+        stage2.prove(stage2_prover, transcript, stage2_context)?;
     if final_claim != stage2_prover.expected_final_claim()? {
         return Err(AkitaError::InvalidInput(
             "stage-2 prover final claim disagrees with its folded oracle".into(),

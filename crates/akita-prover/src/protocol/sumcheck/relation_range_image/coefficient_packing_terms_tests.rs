@@ -35,6 +35,10 @@ fn fixture() -> Fixture {
 }
 
 fn fixture_for_basis(basis: BasisMode) -> Fixture {
+    fixture_for_payload(basis, CommitmentPayloadMode::Raw)
+}
+
+fn fixture_for_payload(basis: BasisMode, payload: CommitmentPayloadMode) -> Fixture {
     let s = 64;
     let d_a = 256;
     let d_d = 128;
@@ -50,7 +54,7 @@ fn fixture_for_basis(basis: BasisMode) -> Fixture {
     )
     .with_decomp(4, 6, 2, 2, 2)
     .unwrap();
-    params.payload_mode = CommitmentPayloadMode::Raw;
+    params.payload_mode = payload;
     params.own_group_mut().opening.opening_method = OpeningMethod::SubringCoefficientPacking {
         challenge_subring_dimension: s,
     };
@@ -616,4 +620,70 @@ fn recursive_packing_phases_share_one_relation_authority() {
         prepared.weighted_scalar_opening_claim,
         semantics.stage2_terms().scalar_claim_weight() * authenticated_opening,
     );
+}
+
+/// Actual checked semantic constructor reused by the resident Stage2 gate.
+#[cfg(feature = "resident-stage2-prototype")]
+pub(crate) fn resident_semantic_fixture(
+    basis: BasisMode,
+) -> (PreparedProverLinearTerms<E>, Vec<E>, usize) {
+    let fixture = fixture_for_basis(basis);
+    let semantics = &fixture.batch.groups()[0];
+    let c = semantics.stage2_terms().relation_coefficient_block_len();
+    let dense = materialize_shared(semantics);
+    let authenticated = E::from_u64(19);
+    let prepared =
+        prepare_coefficient_packing_linear_terms(semantics.clone(), authenticated).unwrap();
+    assert_eq!(
+        prepared.weighted_scalar_opening_claim,
+        semantics.stage2_terms().scalar_claim_weight() * authenticated
+    );
+    assert_eq!(prepared.linear_terms.source_count(), 2);
+    (prepared.linear_terms, dense, c)
+}
+
+/// Production compression and binary support construction from a checked WitnessLayout.
+/// This is a bounded constructor fixture, not the full MLDSA witness or a complete proof.
+#[cfg(feature = "resident-stage2-prototype")]
+pub(crate) fn resident_compression_support_fixture(
+) -> (usize, usize, Vec<(usize, E)>, Vec<std::ops::Range<usize>>) {
+    let fixture = fixture_for_payload(BasisMode::Lagrange, CommitmentPayloadMode::Compressed);
+    let layout = fixture.relation_plan.witness_layout();
+    let live = layout.live_coeff_len();
+    let domain = live.next_power_of_two();
+    let seed = AkitaSetupDescriptor {
+        max_num_vars: 0,
+        max_num_batched_polys: 1,
+        num_field_elements: 1 << 18,
+        setup_seed: [0u8; 32].into(),
+    };
+    let matrix =
+        akita_types::derive_public_matrix_prefix::<F>(seed.num_field_elements, &seed.setup_seed);
+    let setup = AkitaExpandedSetup::from_verified_parts(seed, matrix).unwrap();
+    let weights = akita_types::build_compression_relation_weights(
+        &setup,
+        &fixture.relation,
+        E::from_u64(17),
+        &fixture.params,
+        &fixture.tau1,
+        layout,
+        fixture.params.open().matrix.ring_dimension(),
+        domain,
+    )
+    .unwrap()
+    .into_sparse_entries()
+    .unwrap();
+    let binary = akita_types::NegativeBinarySupport::new(layout, domain)
+        .unwrap()
+        .intervals()
+        .to_vec();
+    assert!(!weights.is_empty());
+    assert!(!binary.is_empty());
+    // The actual MLDSA root uses the compressed Linf route; there is no physical L2 addend.
+    assert!(
+        akita_types::PhysicalResponsePlan::new(&fixture.params, &fixture.relation_plan)
+            .unwrap()
+            .is_none()
+    );
+    (live, domain, weights, binary)
 }

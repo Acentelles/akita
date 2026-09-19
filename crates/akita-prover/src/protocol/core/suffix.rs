@@ -112,6 +112,79 @@ where
     <TS as ComputeBackendSetup<Cfg::Field>>::PreparedSetup: 'stack,
     <R as ComputeBackendSetup<Cfg::Field>>::PreparedSetup: 'stack,
 {
+    prove_suffix_with_stage2::<Cfg, T, C, O, TS, R, _>(
+        &CpuStage2,
+        expanded,
+        prefix_slots,
+        stacks,
+        transcript,
+        starting_state,
+        schedule,
+    )
+}
+
+pub(super) fn prove_suffix_with_stage2<'stack, Cfg, T, C, O, TS, R, D>(
+    stage2: &D,
+    expanded: &Arc<AkitaExpandedSetup<Cfg::Field>>,
+    prefix_slots: &SetupPrefixProverRegistry<Cfg::Field>,
+    stacks: &'stack impl LevelProveStacks<
+        'stack,
+        Cfg::Field,
+        Commit = C,
+        Opening = O,
+        Tensor = TS,
+        RingSwitch = R,
+    >,
+    transcript: &mut T,
+    starting_state: SuffixProverState<Cfg::Field, Cfg::ExtField>,
+    schedule: &FoldSchedule,
+) -> Result<RecursiveSuffixOutcome<Cfg::Field, Cfg::ExtField>, AkitaError>
+where
+    D: Stage2Executor<Cfg::Field, Cfg::ExtField>,
+    Cfg: CommitmentConfig,
+    Cfg::Field: FieldCore
+        + CanonicalField
+        + RandomSampling
+        + HasWide
+        + HalvingField
+        + Invertible
+        + PseudoMersenneField
+        + FromPrimitiveInt
+        + 'static,
+    <Cfg::Field as HasWide>::Wide: From<Cfg::Field> + ReduceTo<Cfg::Field> + AdditiveGroup,
+    Cfg::ExtField: FpExtEncoding<Cfg::Field>
+        + FrobeniusExtField<Cfg::Field>
+        + HasUnreducedOps
+        + HasOptimizedFold
+        + FromPrimitiveInt
+        + AkitaSerialize
+        + MulBaseUnreduced<Cfg::Field>,
+    T: Transcript<Cfg::Field> + ProverTranscriptGrind<Cfg::Field>,
+    C: RuntimeCommitBackendFor<Cfg::Field, RecursiveWitnessFlat>
+        + ComputeBackendSetup<Cfg::Field>
+        + 'stack,
+    O: SuffixOpeningProveBackend<Cfg::Field>
+        + RuntimeOpeningProveBackendFor<Cfg::Field, RecursiveFoldSource<Cfg::Field>>
+        + RuntimeCoefficientPackingBackendFor<
+            Cfg::Field,
+            RecursiveFoldSource<Cfg::Field>,
+            Cfg::ExtField,
+        > + DigitRowsComputeBackend<Cfg::Field>
+        + ComputeBackendSetup<Cfg::Field>
+        + 'stack,
+    TS: SuffixTensorProveBackend<Cfg::Field, Cfg::ExtField>
+        + RuntimeTensorBackendFor<Cfg::Field, RecursiveFoldSource<Cfg::Field>, Cfg::ExtField>
+        + ComputeBackendSetup<Cfg::Field>
+        + 'stack,
+    R: RuntimeRingSwitchProveBackend<Cfg::Field>
+        + DigitRowsComputeBackend<Cfg::Field>
+        + ComputeBackendSetup<Cfg::Field>
+        + 'stack,
+    <C as ComputeBackendSetup<Cfg::Field>>::PreparedSetup: 'stack,
+    <O as ComputeBackendSetup<Cfg::Field>>::PreparedSetup: 'stack,
+    <TS as ComputeBackendSetup<Cfg::Field>>::PreparedSetup: 'stack,
+    <R as ComputeBackendSetup<Cfg::Field>>::PreparedSetup: 'stack,
+{
     schedule.validate_nonterminal_opening_execution(Cfg::EXT_DEGREE)?;
     let planned_num_levels = schedule.num_fold_levels();
     if planned_num_levels < 2 {
@@ -165,7 +238,8 @@ where
                 ))
             })?
         };
-        let out = super::fold::prove_fold::<Cfg::Field, Cfg::ExtField, T, C, O, TS, R, Cfg>(
+        let out = super::fold::prove_fold::<Cfg::Field, Cfg::ExtField, T, C, O, TS, R, Cfg, D>(
+            stage2,
             expanded,
             prefix_slots,
             stacks.prove_stack_at_level(level),
