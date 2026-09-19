@@ -1,12 +1,125 @@
 //! Standard sumcheck transcript drivers.
 
-use crate::traits::{SumcheckInstanceProver, SumcheckInstanceVerifier};
+use crate::traits::{
+    FallibleSumcheckInstanceProver, SumcheckInstanceProver, SumcheckInstanceVerifier,
+};
 use crate::types::SumcheckProof;
 use akita_error::AkitaError;
 use akita_field::{CanonicalField, FieldCore};
 use akita_serialization::AkitaSerialize;
 use akita_transcript::labels;
 use akita_transcript::Transcript;
+
+/// Prove a single sumcheck using synchronous fallible operations.
+///
+/// The claim is absorbed first. Each accepted polynomial is absorbed and its
+/// challenge sampled before ingestion. A failed compute or degree check absorbs
+/// no polynomial for that round; failed ingestion leaves that round's challenge
+/// in the transcript. Finalization is called only after all successful ingests.
+/// No partial proof is returned, no retry occurs, and transcript/state rollback
+/// is not attempted. Callers must discard a failed proof attempt.
+///
+/// # Errors
+/// Propagates compute, ingest and finalization failures, or rejects a polynomial
+/// above the declared degree bound.
+#[tracing::instrument(skip_all, name = "prove_sumcheck")]
+#[inline(never)]
+pub fn prove_fallible_sumcheck<F, E, T, S, I>(
+    instance: &mut I,
+    transcript: &mut T,
+    mut sample_challenge: S,
+) -> Result<(SumcheckProof<E>, Vec<E>, E), AkitaError>
+where
+    F: FieldCore + CanonicalField,
+    E: FieldCore + AkitaSerialize,
+    T: Transcript<F>,
+    S: FnMut(&mut T) -> E,
+    I: FallibleSumcheckInstanceProver<E> + ?Sized,
+{
+    let num_rounds = instance.num_rounds();
+    let mut claim = instance.input_claim();
+    tracing::debug!(
+        is_zero = claim.is_zero(),
+        num_rounds,
+        "prove_sumcheck input_claim"
+    );
+    transcript.append_serde(labels::ABSORB_SUMCHECK_CLAIM, &claim);
+
+    let degree_bound = instance.degree_bound();
+    let mut round_polys = Vec::with_capacity(num_rounds);
+    let mut r = Vec::with_capacity(num_rounds);
+
+    for round in 0..num_rounds {
+        let _round_span = tracing::info_span!(
+            "sumcheck_round",
+            round,
+            table_len = 1usize << (num_rounds - round)
+        )
+        .entered();
+        let g = {
+            let _s = tracing::info_span!("sumcheck_round_univariate").entered();
+            instance.compute_round_univariate(round, claim)?
+        };
+        let round_sum = g.evaluate(&E::zero()) + g.evaluate(&E::one());
+        debug_assert!(
+            round_sum == claim,
+            "sumcheck round {round} univariate does not match previous claim hint"
+        );
+
+        let compressed = g.compress();
+        if compressed.degree() > degree_bound {
+            return Err(AkitaError::InvalidInput(format!(
+                "sumcheck round poly degree {} exceeds bound {}",
+                compressed.degree(),
+                degree_bound
+            )));
+        }
+
+        transcript.append_serde(labels::ABSORB_SUMCHECK_ROUND, &compressed);
+        let r_i = sample_challenge(transcript);
+        r.push(r_i);
+
+        claim = compressed.eval_from_hint(&claim, &r_i);
+        {
+            let _s = tracing::info_span!("sumcheck_round_fold").entered();
+            instance.ingest_challenge(round, r_i)?;
+        }
+        round_polys.push(compressed);
+    }
+
+    instance.finalize()?;
+    Ok((SumcheckProof { round_polys }, r, claim))
+}
+
+struct InfallibleProver<'a, I>(&'a mut I);
+impl<E: FieldCore, I: SumcheckInstanceProver<E>> FallibleSumcheckInstanceProver<E>
+    for InfallibleProver<'_, I>
+{
+    fn num_rounds(&self) -> usize {
+        self.0.num_rounds()
+    }
+    fn degree_bound(&self) -> usize {
+        self.0.degree_bound()
+    }
+    fn input_claim(&self) -> E {
+        self.0.input_claim()
+    }
+    fn compute_round_univariate(
+        &mut self,
+        round: usize,
+        claim: E,
+    ) -> Result<akita_algebra::uni_poly::UniPoly<E>, AkitaError> {
+        Ok(self.0.compute_round_univariate(round, claim))
+    }
+    fn ingest_challenge(&mut self, round: usize, challenge: E) -> Result<(), AkitaError> {
+        self.0.ingest_challenge(round, challenge);
+        Ok(())
+    }
+    fn finalize(&mut self) -> Result<(), AkitaError> {
+        self.0.finalize();
+        Ok(())
+    }
+}
 
 /// Plain extension for standard sumcheck provers.
 pub trait SumcheckInstanceProverExt<E>: SumcheckInstanceProver<E> + Sized
@@ -21,12 +134,10 @@ where
     /// # Errors
     ///
     /// Returns an error if any per-round polynomial exceeds the instance's degree bound.
-    #[tracing::instrument(skip_all, name = "prove_sumcheck")]
-    #[inline(never)]
     fn prove<F, T, S>(
         &mut self,
         transcript: &mut T,
-        mut sample_challenge: S,
+        sample_challenge: S,
     ) -> Result<(SumcheckProof<E>, Vec<E>, E), AkitaError>
     where
         F: FieldCore + CanonicalField,
@@ -34,59 +145,11 @@ where
         E: AkitaSerialize,
         S: FnMut(&mut T) -> E,
     {
-        let num_rounds = self.num_rounds();
-        let mut claim = self.input_claim();
-        tracing::debug!(
-            is_zero = claim.is_zero(),
-            num_rounds,
-            "prove_sumcheck input_claim"
-        );
-        transcript.append_serde(labels::ABSORB_SUMCHECK_CLAIM, &claim);
-
-        let degree_bound = self.degree_bound();
-        let mut round_polys = Vec::with_capacity(num_rounds);
-        let mut r = Vec::with_capacity(num_rounds);
-
-        for round in 0..num_rounds {
-            let _round_span = tracing::info_span!(
-                "sumcheck_round",
-                round,
-                table_len = 1usize << (num_rounds - round)
-            )
-            .entered();
-            let g = {
-                let _s = tracing::info_span!("sumcheck_round_univariate").entered();
-                self.compute_round_univariate(round, claim)
-            };
-            let round_sum = g.evaluate(&E::zero()) + g.evaluate(&E::one());
-            debug_assert!(
-                round_sum == claim,
-                "sumcheck round {round} univariate does not match previous claim hint"
-            );
-
-            let compressed = g.compress();
-            if compressed.degree() > degree_bound {
-                return Err(AkitaError::InvalidInput(format!(
-                    "sumcheck round poly degree {} exceeds bound {}",
-                    compressed.degree(),
-                    degree_bound
-                )));
-            }
-
-            transcript.append_serde(labels::ABSORB_SUMCHECK_ROUND, &compressed);
-            let r_i = sample_challenge(transcript);
-            r.push(r_i);
-
-            claim = compressed.eval_from_hint(&claim, &r_i);
-            {
-                let _s = tracing::info_span!("sumcheck_round_fold").entered();
-                self.ingest_challenge(round, r_i);
-            }
-            round_polys.push(compressed);
-        }
-
-        self.finalize();
-        Ok((SumcheckProof { round_polys }, r, claim))
+        prove_fallible_sumcheck::<F, E, T, S, _>(
+            &mut InfallibleProver(self),
+            transcript,
+            sample_challenge,
+        )
     }
 }
 
@@ -203,3 +266,10 @@ where
     }
     Ok(())
 }
+
+#[cfg(test)]
+#[path = "fallible_tests.rs"]
+mod fallible_tests;
+#[cfg(test)]
+#[path = "standard_original_test_oracle.rs"]
+mod standard_original_test_oracle;
